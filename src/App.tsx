@@ -6,7 +6,7 @@ import UserDashboard from './components/UserDashboard';
 import PurchasePoints from './components/PurchasePoints';
 import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { app, auth, db } from './services/firebase';
+import { auth } from './services/firebase';
 import { saveEvaluation, getUserPoints, decrementUserPoints } from './services/database';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -110,7 +110,7 @@ const App: React.FC = () => {
           <WebsiteInput onSubmit={handleEvaluation} isLoading={isLoading} />
           {isLoading && <p>Evaluating website...</p>}
           {error && <p style={{ color: 'red' }}>{error}</p>}
-          {evaluationResults && <EvaluationResults results={evaluationResults} />}
+          {evaluationResults && <EvaluationResults result={evaluationResults} />}
           <PurchasePoints userId={user.uid} onPurchase={handlePurchase} />
           <UserDashboard userId={user.uid} />
         </>

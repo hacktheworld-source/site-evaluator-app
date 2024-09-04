@@ -1,22 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { auth } from '../services/firebase';
 import { signInWithPopup, GoogleAuthProvider, User, signOut } from 'firebase/auth';
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 const Auth: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [user, loading, error] = useAuthState(auth);
 
   useEffect(() => {
-    // Listen for messages from the popup
     const handleMessage = (event: MessageEvent) => {
       if (event.data === 'popup_closed') {
         console.log('Authentication popup was closed');
-        // Handle popup closure here (e.g., update UI, retry authentication)
       }
     };
 
     window.addEventListener('message', handleMessage);
-
     return () => {
       window.removeEventListener('message', handleMessage);
     };
@@ -24,8 +21,7 @@ const Auth: React.FC = () => {
 
   const signIn = async () => {
     try {
-      const result = await signInWithPopup(auth, new GoogleAuthProvider());
-      setUser(result.user);
+      await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (error) {
       console.error('Sign-in error:', error);
     }
@@ -34,12 +30,18 @@ const Auth: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setUser(null);
     } catch (error) {
       console.error('Sign-out error:', error);
-      setError(`Failed to sign out. Error: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
 
   if (user) {
     return (

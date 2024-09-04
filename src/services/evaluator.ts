@@ -3,12 +3,13 @@ import { analyzeContent } from './aiService';
 import { getRateLimiter } from './rateLimiter';
 import DOMPurify from 'dompurify';
 
-interface EvaluationResult {
+export interface EvaluationResult {
   overall: number;
   categories: {
     [key: string]: number;
   };
   aiAnalysis: string;
+  isLimited: boolean;
 }
 
 const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute
@@ -18,33 +19,54 @@ export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
     throw new Error('Rate limit exceeded. Please try again later.');
   }
 
+  let htmlContent: string;
+  let isLimited = false;
+
   try {
-    const response = await axios.get(url);
-    const htmlContent = response.data;
-
-    const seoScore = evaluateSEO(htmlContent);
-    const accessibilityScore = evaluateAccessibility(htmlContent);
-    const performanceScore = evaluatePerformance(response);
-    const contentScore = evaluateContent(htmlContent);
-
-    const overall = ((seoScore + accessibilityScore + performanceScore + contentScore) / 4);
-
-    const aiAnalysis = await analyzeContent(extractTextContent(htmlContent));
-
-    return {
-      overall: parseFloat(overall.toFixed(1)),
-      categories: {
-        seo: seoScore,
-        accessibility: accessibilityScore,
-        performance: performanceScore,
-        content: contentScore,
-      },
-      aiAnalysis
-    };
-  } catch (error) {
-    console.error('Error evaluating website:', error);
-    throw error;
+    // Try direct request first
+    const directResponse = await axios.get(url, { timeout: 5000 });
+    htmlContent = directResponse.data;
+  } catch (directError) {
+    try {
+      // If direct request fails, try CORS proxy
+      const corsProxyUrl = 'https://api.allorigins.win/raw?url=';
+      const proxyResponse = await axios.get(corsProxyUrl + encodeURIComponent(url), { timeout: 5000 });
+      htmlContent = proxyResponse.data;
+    } catch (proxyError) {
+      // If both fail, do a simple availability check
+      try {
+        await axios.head(url, { timeout: 5000 });
+        isLimited = true;
+        htmlContent = '<html><body>Limited content available for evaluation.</body></html>';
+      } catch (headError) {
+        throw new Error('Unable to access the website through any method.');
+      }
+    }
   }
+
+  // Evaluation logic
+  const seoScore = evaluateSEO(htmlContent);
+  const accessibilityScore = evaluateAccessibility(htmlContent);
+  const performanceScore = isLimited ? 5 : evaluatePerformance(htmlContent); // Adjust if limited
+  const contentScore = evaluateContent(htmlContent);
+
+  const overall = ((seoScore + accessibilityScore + performanceScore + contentScore) / 4);
+
+  const aiAnalysis = isLimited 
+    ? "Limited evaluation due to access restrictions."
+    : await analyzeContent(extractTextContent(htmlContent));
+
+  return {
+    overall: parseFloat(overall.toFixed(1)),
+    categories: {
+      seo: seoScore,
+      accessibility: accessibilityScore,
+      performance: performanceScore,
+      content: contentScore,
+    },
+    aiAnalysis,
+    isLimited
+  };
 }
 
 function evaluateSEO(htmlContent: string): number {
@@ -69,14 +91,13 @@ function evaluateAccessibility(htmlContent: string): number {
   return score;
 }
 
-function evaluatePerformance(response: any): number {
-  // Simple performance evaluation
+function evaluatePerformance(htmlContent: string): number {
+  // Simple performance evaluation based on content size
   let score = 5;
-  const contentLength = response.headers['content-length'];
-  if (contentLength && parseInt(contentLength) < 500000) score += 2;
-  if (response.status === 200) score += 1;
-  if (response.headers['cache-control']) score += 1;
-  if (response.headers['content-encoding'] === 'gzip') score += 1;
+  if (htmlContent.length < 100000) score += 2; // Arbitrary threshold
+  if (htmlContent.includes('<link rel="preload"')) score += 1;
+  if (htmlContent.includes('<meta name="viewport"')) score += 1;
+  if (!htmlContent.includes('<table')) score += 1; // Assuming tables might slow rendering
   return score;
 }
 

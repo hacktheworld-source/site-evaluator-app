@@ -1,37 +1,41 @@
 import React from 'react';
+import { EvaluationResult } from '../services/evaluator'; // Make sure to import the correct type
 
 interface EvaluationResultsProps {
-  results: {
-    overall: number;
-    categories: {
-      [key: string]: number;
-    };
-    aiAnalysis: string;
-  };
+  result: EvaluationResult;
 }
 
-const EvaluationResults: React.FC<EvaluationResultsProps> = ({ results }) => {
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return 'green';
-    if (score >= 6) return 'orange';
-    return 'red';
-  };
-
+const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
   return (
-    <div>
-      <h2>Evaluation Results</h2>
-      <p>Overall Score: <span style={{ color: getScoreColor(results.overall) }}>{results.overall.toFixed(1)}</span></p>
-      <h3>Category Scores:</h3>
-      <ul style={{ listStyleType: 'none', padding: 0 }}>
-        {Object.entries(results.categories).map(([category, score]) => (
-          <li key={category} style={{ marginBottom: '10px' }}>
-            <strong>{category.charAt(0).toUpperCase() + category.slice(1)}:</strong> 
-            <span style={{ color: getScoreColor(score) }}> {score.toFixed(1)}</span>
-          </li>
-        ))}
-      </ul>
-      <h3>AI Content Analysis:</h3>
-      <p>{results.aiAnalysis}</p>
+    <div className="evaluation-results">
+      {result.isLimited && (
+        <div className="limited-warning">
+          <p className="text-yellow-500 font-bold mb-2">
+            ⚠️ Limited Evaluation
+          </p>
+          <p className="text-sm text-gray-600 mb-4">
+            We were unable to fully access the website content. This evaluation may be incomplete or less accurate.
+          </p>
+        </div>
+      )}
+
+      <h2 className="text-xl font-bold mb-2">Overall Score: {result.overall}</h2>
+      
+      <div className="categories mb-4">
+        <h3 className="text-lg font-semibold mb-2">Category Scores:</h3>
+        <ul>
+          {Object.entries(result.categories).map(([category, score]) => (
+            <li key={category} className="mb-1">
+              <span className="capitalize">{category}:</span> {score}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="ai-analysis">
+        <h3 className="text-lg font-semibold mb-2">AI Analysis:</h3>
+        <p>{result.aiAnalysis}</p>
+      </div>
     </div>
   );
 };
