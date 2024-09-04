@@ -1,23 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { auth } from '../services/firebase';
-import { signInWithPopup, GoogleAuthProvider, User, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
 const Auth: React.FC = () => {
   const [user, loading, error] = useAuthState(auth);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data === 'popup_closed') {
-        console.log('Authentication popup was closed');
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, []);
 
   const signIn = async () => {
     try {
@@ -36,23 +23,27 @@ const Auth: React.FC = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return null;
   }
 
   if (error) {
-    return <div>Error: {error.message}</div>;
+    return <div className="auth-error">Error: {error.message}</div>;
   }
 
   if (user) {
     return (
-      <div>
-        <p>Welcome, {user.displayName}!</p>
-        <button onClick={handleSignOut}>Sign Out</button>
+      <div className="auth-container">
+        <span className="user-greeting">Welcome, {user.displayName}!</span>
+        <button onClick={handleSignOut} className="sign-out-button">Sign Out</button>
       </div>
     );
   }
 
-  return <button onClick={signIn}>Sign In with Google</button>;
+  return (
+    <div className="auth-container">
+      <button onClick={signIn} className="sign-in-button">Sign In with Google</button>
+    </div>
+  );
 };
 
 export default Auth;

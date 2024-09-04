@@ -1,0 +1,218 @@
+:root {
+  --deep-black: #121212;
+  --off-white: #f0f0f0;
+  --error-color: #FF5252;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--deep-black);
+  color: var(--off-white);
+}
+
+.App {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background-color: transparent;
+  z-index: 1000;
+}
+
+.app-icon {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.user-menu-container {
+  display: flex;
+  align-items: center;
+}
+
+.points-counter {
+  margin-right: 15px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+  color: var(--off-white);
+}
+
+.user-menu-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: var(--deep-black);
+  border: 1px solid var(--off-white);
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-menu-dropdown button {
+  background: none;
+  border: none;
+  color: var(--off-white);
+  padding: 10px 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.user-menu-dropdown button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--off-white);
+  text-align: center;
+}
+
+button {
+  background-color: var(--off-white);
+  color: var(--deep-black);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #d0d0d0;
+}
+
+input[type="text"], input[type="number"] {
+  background-color: var(--off-white);
+  color: var(--deep-black);
+  border: none;
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 18px;
+  width: 100%;
+  max-width: 500px;
+  margin: 20px 0;
+}
+
+.evaluation-results {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.error-message {
+  color: var(--error-color);
+}
+
+.history-toggle {
+  position: fixed;
+  top: 70px;
+  left: 20px;
+  z-index: 1000;
+  font-size: 20px;
+  background: none;
+  border: none;
+  color: var(--off-white);
+  cursor: pointer;
+  padding: 5px;
+}
+
+.history-panel {
+  position: fixed;
+  top: 0;
+  left: -300px;
+  width: 300px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: left 0.3s ease;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.history-panel.open {
+  left: 0;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+}
+
+.app-description {
+  font-style: italic;
+  text-align: center;
+  max-width: 600px;
+  margin-bottom: 30px;
+}
+
+.sign-in-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.sign-in-popup-content {
+  background-color: var(--deep-black);
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.sign-in-popup-content h2 {
+  margin-top: 0;
+}
+
+.sign-in-popup-content button {
+  margin: 10px;
+}
+
+.content-wrapper {
+  display: flex;
+  justify-content: center;
+  padding-top: 60px; /* Add space for the header */
+}
