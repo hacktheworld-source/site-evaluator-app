@@ -8,11 +8,14 @@ import {
   getDoc, 
   setDoc, 
   doc, 
-  runTransaction 
+  runTransaction, 
+  deleteDoc, 
+  writeBatch 
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 export interface Evaluation {
+  id?: string;  // Make id optional
   userId: string;
   websiteUrl: string;
   overall: number;
@@ -23,9 +26,10 @@ export interface Evaluation {
   timestamp: Date;
 }
 
-export async function saveEvaluation(evaluation: Evaluation): Promise<void> {
+export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promise<void> {
   try {
-    await addDoc(collection(db, 'evaluations'), evaluation);
+    const docRef = await addDoc(collection(db, 'evaluations'), evaluation);
+    // If you need the ID, you can get it from docRef.id
   } catch (error) {
     console.error('Error saving evaluation:', error);
     // Store locally if offline
@@ -38,7 +42,11 @@ export async function saveEvaluation(evaluation: Evaluation): Promise<void> {
 export async function getUserEvaluations(userId: string): Promise<Evaluation[]> {
   const q = query(collection(db, 'evaluations'), where('userId', '==', userId));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => doc.data() as Evaluation);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    timestamp: doc.data().timestamp.toDate()
+  } as Evaluation));
 }
 
 export async function getUserPoints(userId: string): Promise<number> {
@@ -86,3 +94,20 @@ export async function syncOfflineData() {
 
 // Call this function when the app comes online
 window.addEventListener('online', syncOfflineData);
+
+export async function deleteEvaluation(userId: string, evaluationId: string): Promise<void> {
+  const evaluationRef = doc(db, 'evaluations', evaluationId);
+  await deleteDoc(evaluationRef);
+}
+
+export async function clearAllEvaluations(userId: string): Promise<void> {
+  const q = query(collection(db, 'evaluations'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  const batch = writeBatch(db);
+  
+  querySnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+}

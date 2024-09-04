@@ -14,40 +14,73 @@ export interface EvaluationResult {
 
 const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute
 
+async function fetchWithTimeout(url: string, timeout: number): Promise<string> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return await response.text();
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
   if (!rateLimiter.tryRemoveTokens(1)) {
     throw new Error('Rate limit exceeded. Please try again later.');
   }
 
-  let htmlContent: string;
+  let htmlContent: string = '';
   let isLimited = false;
 
-  try {
-    // Try direct request first
-    const directResponse = await axios.get(url, { timeout: 5000 });
-    htmlContent = directResponse.data;
-  } catch (directError) {
-    try {
-      // If direct request fails, try CORS proxy
-      const corsProxyUrl = 'https://api.allorigins.win/raw?url=';
-      const proxyResponse = await axios.get(corsProxyUrl + encodeURIComponent(url), { timeout: 5000 });
-      htmlContent = proxyResponse.data;
-    } catch (proxyError) {
-      // If both fail, do a simple availability check
-      try {
-        await axios.head(url, { timeout: 5000 });
-        isLimited = true;
-        htmlContent = '<html><body>Limited content available for evaluation.</body></html>';
-      } catch (headError) {
-        throw new Error('Unable to access the website through any method.');
-      }
+  const methods = [
+    // Method 1: Direct request
+    async () => {
+      const response = await axios.get(url, { timeout: 5000 });
+      return response.data;
+    },
+    // Method 2: Fetch API with timeout
+    async () => await fetchWithTimeout(url, 5000),
+    // Method 3: CORS Anywhere proxy
+    async () => {
+      const corsAnywhereUrl = 'https://cors-anywhere.herokuapp.com/';
+      const response = await axios.get(corsAnywhereUrl + url, { timeout: 5000 });
+      return response.data;
+    },
+    // Method 4: AllOrigins proxy
+    async () => {
+      const allOriginsUrl = 'https://api.allorigins.win/raw?url=';
+      const response = await axios.get(allOriginsUrl + encodeURIComponent(url), { timeout: 5000 });
+      return response.data;
+    },
+    // Method 5: Simple HEAD request (limited evaluation)
+    async () => {
+      await axios.head(url, { timeout: 5000 });
+      isLimited = true;
+      return '<html><body>Limited content available for evaluation.</body></html>';
     }
+  ];
+
+  for (const method of methods) {
+    try {
+      htmlContent = await method();
+      break;
+    } catch (error) {
+      console.error(`Method failed: ${(error as Error).message}`);
+      continue;
+    }
+  }
+
+  if (!htmlContent) {
+    throw new Error('Unable to access the website through any method.');
   }
 
   // Evaluation logic
   const seoScore = evaluateSEO(htmlContent);
   const accessibilityScore = evaluateAccessibility(htmlContent);
-  const performanceScore = isLimited ? 5 : evaluatePerformance(htmlContent); // Adjust if limited
+  const performanceScore = isLimited ? 5 : evaluatePerformance(htmlContent);
   const contentScore = evaluateContent(htmlContent);
 
   const overall = ((seoScore + accessibilityScore + performanceScore + contentScore) / 4);

@@ -1,61 +1,91 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { getUserEvaluations, Evaluation } from '../services/database';
+import React, { useEffect, useState } from 'react';
+import { getUserEvaluations, Evaluation, deleteEvaluation, clearAllEvaluations } from '../services/database';
 
 interface UserDashboardProps {
   userId: string;
+  refreshTrigger: number;
+  onDetailPopupOpen: (evaluation: Evaluation) => void;
+  onConfirmDialogOpen: (action: () => void) => void;
 }
 
-const UserDashboard: React.FC<UserDashboardProps> = ({ userId }) => {
+const UserDashboard: React.FC<UserDashboardProps> = ({ 
+  userId, 
+  refreshTrigger, 
+  onDetailPopupOpen, 
+  onConfirmDialogOpen 
+}) => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
-
-  const fetchEvaluations = useCallback(async () => {
-    const userEvaluations = await getUserEvaluations(userId);
-    setEvaluations(userEvaluations);
-    setIsLoading(false);
-  }, [userId]);
 
   useEffect(() => {
     fetchEvaluations();
-  }, [fetchEvaluations]);
+  }, [userId, refreshTrigger]);
+
+  const fetchEvaluations = async () => {
+    try {
+      const userEvaluations = await getUserEvaluations(userId);
+      setEvaluations(userEvaluations);
+    } catch (error) {
+      console.error('Error fetching evaluations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = (evaluation: Evaluation) => {
+    onConfirmDialogOpen(async () => {
+      if (evaluation.id) {
+        await deleteEvaluation(userId, evaluation.id);
+        fetchEvaluations();
+      } else {
+        console.error('Evaluation ID is missing');
+      }
+    });
+  };
+
+  const handleClearAll = () => {
+    onConfirmDialogOpen(async () => {
+      await clearAllEvaluations(userId);
+      fetchEvaluations();
+    });
+  };
 
   if (isLoading) {
     return <p>Loading your evaluations...</p>;
   }
 
   return (
-    <div>
-      <h2>Your Past Evaluations</h2>
+    <div className="history-panel-content">
+      <h3 className="history-panel-title">Your Evaluations</h3>
+      <button className="clear-all-button" onClick={handleClearAll}>Clear All</button>
       {evaluations.length === 0 ? (
         <p>You haven't evaluated any websites yet.</p>
       ) : (
         <div>
-          <ul>
-            {evaluations.map((evaluation, index) => (
-              <li key={index}>
-                <p>Website: {evaluation.websiteUrl}</p>
-                <p>Overall Score: {evaluation.overall}</p>
-                <p>Date: {evaluation.timestamp.toLocaleString()}</p>
-                <button onClick={() => setSelectedEvaluation(evaluation)}>View Details</button>
-              </li>
-            ))}
-          </ul>
-          {selectedEvaluation && (
-            <div>
-              <h3>Detailed Evaluation for {selectedEvaluation.websiteUrl}</h3>
-              <p>Overall Score: {selectedEvaluation.overall}</p>
-              <h4>Category Scores:</h4>
-              <ul>
-                {Object.entries(selectedEvaluation.categories).map(([category, score]) => (
-                  <li key={category}>{category}: {score}</li>
-                ))}
-              </ul>
-              <h4>AI Analysis:</h4>
-              <p>{selectedEvaluation.aiAnalysis}</p>
-              <button onClick={() => setSelectedEvaluation(null)}>Close Details</button>
+          {evaluations.map((evaluation) => (
+            <div 
+              key={evaluation.id || evaluation.websiteUrl} 
+              className="history-item"
+              onClick={() => onDetailPopupOpen(evaluation)}
+            >
+              <p>Website: {evaluation.websiteUrl}</p>
+              <p>Overall Score: {evaluation.overall}</p>
+              <p>Date: {evaluation.timestamp.toLocaleString()}</p>
+              <div className="history-item-actions">
+                {evaluation.id && (
+                  <button 
+                    className="delete-button" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      handleDelete(evaluation); 
+                    }}
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>

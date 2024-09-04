@@ -10,6 +10,7 @@ import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { saveEvaluation, getUserPoints, decrementUserPoints } from './services/database';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Evaluation } from './services/database'; // Add this import
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -23,11 +24,24 @@ const App: React.FC = () => {
   const [showSignInPopup, setShowSignInPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const historyPanelRef = useRef<HTMLDivElement>(null);
+  const [refreshHistory, setRefreshHistory] = useState(0);
+  const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<{ show: boolean; action: () => void } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      if (historyPanelRef.current && 
+          !historyPanelRef.current.contains(event.target as Node) && 
+          !(event.target as Element).closest('.history-toggle') &&
+          !(event.target as Element).closest('.detail-popup-overlay') &&
+          !(event.target as Element).closest('.confirm-dialog-overlay') &&
+          isHistoryOpen) {
+        setIsHistoryOpen(false);
       }
     };
 
@@ -35,7 +49,7 @@ const App: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isHistoryOpen]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -120,6 +134,7 @@ const App: React.FC = () => {
         ...results,
         timestamp: new Date(),
       });
+      setRefreshHistory(prev => prev + 1); // Trigger history refresh
     } catch (error) {
       console.error('Error evaluating website:', error);
       setError('An error occurred while evaluating the website. Please try again.');
@@ -135,8 +150,7 @@ const App: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setCurrentPage('home');
-      setShowUserMenu(false);
+      window.location.reload(); // Reload the page after signing out
     } catch (error) {
       console.error('Sign-out error:', error);
     }
@@ -204,16 +218,70 @@ const App: React.FC = () => {
           {isHistoryOpen ? '📁' : '📂'}
         </button>
       )}
-      <div className="content-wrapper">
+      <div className={`content-wrapper ${(isHistoryOpen || isDetailPopupOpen) ? 'blur' : ''}`}>
         <main className="main-content">
           {renderPage()}
         </main>
       </div>
-      {user && isHistoryOpen && currentPage === 'home' && (
-        <div className={`history-panel ${isHistoryOpen ? 'open' : ''}`}>
-          <UserDashboard userId={user.uid} />
+      {user && (
+        <div ref={historyPanelRef} className={`history-panel ${isHistoryOpen ? 'open' : ''}`}>
+          <UserDashboard 
+            userId={user.uid} 
+            refreshTrigger={refreshHistory} 
+            onDetailPopupOpen={(evaluation) => {
+              setSelectedEvaluation(evaluation);
+              setIsDetailPopupOpen(true);
+            }}
+            onConfirmDialogOpen={(action) => {
+              setShowConfirmDialog({ 
+                show: true, 
+                action: () => {
+                  action();
+                  setShowConfirmDialog(null);
+                }
+              });
+            }}
+          />
         </div>
       )}
+      {selectedEvaluation && (
+        <div className="detail-popup-overlay">
+          <div className="detail-popup">
+            <button className="detail-popup-close" onClick={() => {
+              setSelectedEvaluation(null);
+              setIsDetailPopupOpen(false);
+              // We're not closing the history panel here
+            }}>&times;</button>
+            <div className="detail-popup-content">
+              <h3>Detailed Evaluation for {selectedEvaluation.websiteUrl}</h3>
+              <p>Overall Score: {selectedEvaluation.overall}</p>
+              <h4>Category Scores:</h4>
+              <ul>
+                {Object.entries(selectedEvaluation.categories).map(([category, score]) => (
+                  <li key={category}>{category}: {score}</li>
+                ))}
+              </ul>
+              <h4>AI Analysis:</h4>
+              <p>{selectedEvaluation.aiAnalysis}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {showConfirmDialog && (
+        <div className="confirm-dialog-overlay">
+          <div className="confirm-dialog">
+            <p>Are you sure you want to proceed?</p>
+            <div className="confirm-dialog-actions">
+              <button onClick={() => {
+                showConfirmDialog.action();
+                setShowConfirmDialog(null);
+              }}>Yes</button>
+              <button onClick={() => setShowConfirmDialog(null)}>No</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <ToastContainer position="top-right" autoClose={5000} />
       {showSignInPopup && (
         <div className="sign-in-popup">
           <div className="sign-in-popup-content">
@@ -224,7 +292,6 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      <ToastContainer position="top-right" autoClose={5000} />
     </div>
   );
 };
