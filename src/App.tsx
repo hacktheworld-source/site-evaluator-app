@@ -6,11 +6,15 @@ import UserDashboard from './components/UserDashboard';
 import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './services/firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { saveEvaluation, getUserPoints, decrementUserPoints } from './services/database';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Evaluation } from './services/database'; // Add this import
+import ProfilePage from './components/ProfilePage';
+import PointsManagementPage from './components/PointsManagementPage';
+import AuthModal from './components/AuthModal';
+import defaultUserIcon from './assets/default-user-icon.png'; // Change .svg to .png
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -21,7 +25,6 @@ const App: React.FC = () => {
   const [isOffline, setIsOffline] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
-  const [showSignInPopup, setShowSignInPopup] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const historyPanelRef = useRef<HTMLDivElement>(null);
@@ -29,6 +32,7 @@ const App: React.FC = () => {
   const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<{ show: boolean; action: () => void } | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,22 +95,9 @@ const App: React.FC = () => {
     setError(message);
   };
 
-  const handleSignInRequired = () => {
-    setShowSignInPopup(true);
-  };
-
-  const handleSignIn = async () => {
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      setShowSignInPopup(false);
-    } catch (error) {
-      console.error('Sign-in error:', error);
-    }
-  };
-
   const handleEvaluation = async (website: string) => {
     if (!user) {
-      handleSignInRequired();
+      handleError('You must be signed in to evaluate a website.');
       return;
     }
 
@@ -156,6 +147,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSignInClick = () => {
+    setShowAuthModal(true);
+  };
+
+  const handleCloseAuthModal = () => {
+    setShowAuthModal(false);
+  };
+
+  const handleSignInRequired = () => {
+    setShowAuthModal(true);
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -175,9 +178,9 @@ const App: React.FC = () => {
           </div>
         );
       case 'profile':
-        return <div>User Profile Page (To be implemented)</div>;
+        return <ProfilePage />;
       case 'points':
-        return <div>Points Management Page (To be implemented)</div>;
+        return <PointsManagementPage />;
       default:
         return <div>Page not found</div>;
     }
@@ -200,7 +203,11 @@ const App: React.FC = () => {
               {userPoints !== null ? `${userPoints} pts` : 'Loading...'}
             </div>
             <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
-              <img src={user.photoURL || undefined} alt={user.displayName || 'User'} className="user-avatar" />
+              <img 
+                src={user.photoURL || defaultUserIcon} 
+                alt={user.displayName || 'User'} 
+                className="user-avatar"
+              />
             </button>
             {showUserMenu && (
               <div className="user-menu-dropdown">
@@ -210,7 +217,7 @@ const App: React.FC = () => {
             )}
           </div>
         ) : (
-          <Auth />
+          <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
         )}
       </header>
       {currentPage === 'home' && user && (
@@ -281,17 +288,8 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
       <ToastContainer position="top-right" autoClose={5000} />
-      {showSignInPopup && (
-        <div className="sign-in-popup">
-          <div className="sign-in-popup-content">
-            <h2>Sign In Required</h2>
-            <p>Please sign in to evaluate websites.</p>
-            <button onClick={handleSignIn}>Sign In with Google</button>
-            <button onClick={() => setShowSignInPopup(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

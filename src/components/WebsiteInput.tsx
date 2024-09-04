@@ -44,19 +44,22 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({ onSubmit, isLoading, isLogg
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <input
-        type="text"
-        value={website}
-        onChange={(e) => setWebsite(e.target.value)}
-        placeholder="Enter website URL (e.g., google.com)"
-        disabled={isLoading}
-        aria-describedby="website-input-error"
-      />
+    <form onSubmit={handleSubmit} className="website-input-form">
+      <div className="input-wrapper">
+        <input
+          type="text"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="Enter website URL (e.g., google.com)"
+          disabled={isLoading}
+          aria-describedby="website-input-error"
+        />
+        {isLoading && <div className="loading-indicator"></div>}
+      </div>
       <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Evaluating...' : 'Evaluate'}
+        Evaluate
       </button>
-      {error && <p id="website-input-error" style={{ color: 'red' }}>{error}</p>}
+      {error && <p id="website-input-error" className="error-message">{error}</p>}
     </form>
   );
 };
