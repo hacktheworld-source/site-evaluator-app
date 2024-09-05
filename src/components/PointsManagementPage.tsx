@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../services/firebase';
 import { getUserPoints, updateUserPoints } from '../services/database';
-import PurchasePoints from './PurchasePoints';
 
 const PointsManagementPage: React.FC = () => {
   const [userPoints, setUserPoints] = useState<number | null>(null);

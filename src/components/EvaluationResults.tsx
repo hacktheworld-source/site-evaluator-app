@@ -1,5 +1,5 @@
 import React from 'react';
-import { EvaluationResult } from '../services/evaluator'; // Make sure to import the correct type
+import { EvaluationResult } from '../services/evaluator';
 
 interface EvaluationResultsProps {
   result: EvaluationResult;
@@ -32,6 +32,18 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
         </ul>
       </div>
 
+      <div className="metrics mb-4">
+        <h3 className="text-lg font-semibold mb-2">Metrics:</h3>
+        <ul>
+          {Object.entries(result.metrics).map(([metric, value]) => (
+            <li key={metric} className="mb-1">
+              <span className="capitalize">{metric.replace(/([A-Z])/g, ' $1').trim()}:</span>{' '}
+              {renderMetricValue(metric, value)}
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <div className="ai-analysis">
         <h3 className="text-lg font-semibold mb-2">AI Analysis:</h3>
         <p>{result.aiAnalysis}</p>
@@ -39,5 +51,20 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
     </div>
   );
 };
+
+function renderMetricValue(metric: string, value: any): React.ReactNode {
+  if (typeof value === 'number') {
+    if (metric.includes('Time') || metric.includes('Paint')) {
+      return `${value.toFixed(2)} ms`;
+    } else if (metric === 'pageSize') {
+      return `${(value / 1024).toFixed(2)} KB`;
+    } else if (metric === 'domElements' || metric === 'requests') {
+      return value.toFixed(0);
+    } else {
+      return value.toFixed(2);
+    }
+  }
+  return value;
+}
 
 export default EvaluationResults;
