@@ -7,7 +7,7 @@ import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './services/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { saveEvaluation, getUserPoints, decrementUserPoints } from './services/database';
+import { saveEvaluation, getUserPoints, decrementUserPoints, updateUserPoints } from './services/database';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Evaluation } from './services/database'; // Add this import
@@ -131,11 +131,19 @@ const App: React.FC = () => {
         timestamp: new Date(),
       };
 
-      await saveEvaluation(evaluationData);
-      setRefreshHistory(prev => prev + 1); // Trigger history refresh
+      try {
+        await saveEvaluation(evaluationData);
+        setRefreshHistory(prev => prev + 1); // Trigger history refresh
+      } catch (saveError) {
+        console.error('Error saving evaluation:', saveError);
+        toast.warn('Evaluation completed, but there was an issue saving it. It has been stored locally.');
+      }
     } catch (error) {
       console.error('Error evaluating website:', error);
       setError('An error occurred while evaluating the website. Please try again.');
+      // Refund the point if the evaluation failed
+      await updateUserPoints(user.uid, (userPoints || 0) + 1);
+      setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
     } finally {
       setIsLoading(false);
     }
