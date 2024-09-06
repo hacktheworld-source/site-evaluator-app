@@ -71,7 +71,7 @@ async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
     sendStatus('Launching browser...');
-    await sleep(1000); // Wait for 1 second
+    await sleep(1000);
     browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
@@ -89,20 +89,61 @@ async function evaluateWebsite(url, sendStatus) {
     sendStatus('Gathering performance metrics...');
     await sleep(1500);
     const metrics = await page.evaluate(() => {
-      const performance = window.performance;
-      const timing = performance.timing;
+      return new Promise((resolve) => {
+        const startTime = performance.now();
+        let lcpValue = 0;
+        let clsValue = 0;
+        const measurementTime = 5000; // 5 seconds
 
+        const lcpObserver = new PerformanceObserver((entryList) => {
+          const entries = entryList.getEntries();
+          const lastEntry = entries[entries.length - 1];
+          lcpValue = lastEntry.startTime;
+        });
+
+        const clsObserver = new PerformanceObserver((entryList) => {
+          for (const entry of entryList.getEntries()) {
+            if (!entry.hadRecentInput) {
+              clsValue += entry.value;
+            }
+          }
+        });
+
+        lcpObserver.observe({type: 'largest-contentful-paint', buffered: true});
+        clsObserver.observe({type: 'layout-shift', buffered: true});
+
+        setTimeout(() => {
+          lcpObserver.disconnect();
+          clsObserver.disconnect();
+
+          const performance = window.performance;
+          const timing = performance.timing;
+          const endTime = performance.now();
+          const actualMeasurementTime = endTime - startTime;
+
+          const tti = performance.timing.domInteractive - performance.timing.navigationStart;
+
+          resolve({
+            loadTime: timing.loadEventEnd - timing.navigationStart,
+            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+            firstPaint: performance.getEntriesByType('paint')[0]?.startTime || null,
+            firstContentfulPaint: performance.getEntriesByType('paint')[1]?.startTime || null,
+            domElements: document.getElementsByTagName('*').length,
+            pageSize: document.documentElement.innerHTML.length,
+            requests: performance.getEntriesByType('resource').length,
+            timeToInteractive: tti > actualMeasurementTime ? `>${actualMeasurementTime.toFixed(2)}` : tti.toFixed(2),
+            largestContentfulPaint: lcpValue > actualMeasurementTime ? `>${actualMeasurementTime.toFixed(2)}` : lcpValue.toFixed(2),
+            cumulativeLayoutShift: clsValue.toFixed(4),
+            actualMeasurementTime: actualMeasurementTime.toFixed(2),
+          });
+        }, measurementTime);
+      });
+    });
+
+    sendStatus('Analyzing page content...');
+    await sleep(1000);
+    const contentMetrics = await page.evaluate(() => {
       return {
-        loadTime: timing.loadEventEnd - timing.navigationStart,
-        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-        firstPaint: performance.getEntriesByType('paint')[0]?.startTime || 0,
-        firstContentfulPaint: performance.getEntriesByType('paint')[1]?.startTime || 0,
-        domElements: document.getElementsByTagName('*').length,
-        pageSize: document.documentElement.innerHTML.length,
-        requests: performance.getEntriesByType('resource').length,
-        timeToInteractive: performance.getEntriesByName('TTI')[0]?.startTime || 0,
-        largestContentfulPaint: performance.getEntriesByType('largest-contentful-paint')[0]?.startTime || 0,
-        cumulativeLayoutShift: performance.getEntriesByType('layout-shift').reduce((sum, entry) => sum + entry.value, 0),
         colorContrast: analyzeColorContrast(),
         fontSizes: analyzeFontSizes(),
         responsiveness: checkResponsiveness(),
@@ -175,6 +216,8 @@ async function evaluateWebsite(url, sendStatus) {
       }
     });
 
+    const combinedMetrics = { ...metrics, ...contentMetrics };
+
     sendStatus('Capturing page content...');
     await sleep(1000);
     const htmlContent = await page.content();
@@ -185,12 +228,12 @@ async function evaluateWebsite(url, sendStatus) {
 
     sendStatus('Performing AI analysis...');
     await sleep(2000);
-    const aiAnalysis = await performAIAnalysis(metrics, htmlContent, url);
+    const aiAnalysis = await performAIAnalysis(combinedMetrics, htmlContent, url);
 
     sendStatus('Finalizing results...');
     await sleep(1000);
     return {
-      ...metrics,
+      ...combinedMetrics,
       htmlContent,
       screenshot,
       aiAnalysis,
