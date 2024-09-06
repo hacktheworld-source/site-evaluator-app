@@ -110,52 +110,42 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setStatusMessage('Initializing evaluation process...');
+    setEvaluationResults(null);
+
     try {
-      setStatusMessage('Deducting evaluation point...');
       await decrementUserPoints(user.uid);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - 1 : null));
 
-      setStatusMessage('Sending request to evaluate website...');
-      const results = await evaluateWebsite(website);
-      setStatusMessage('Received evaluation results. Processing...');
-      setEvaluationResults(results);
+      const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}`);
 
-      const evaluationData: Omit<Evaluation, 'id'> = {
-        userId: user.uid,
-        websiteUrl: website,
-        ...results,
-        metrics: {
-          loadTime: results.loadTime,
-          domContentLoaded: results.domContentLoaded,
-          firstPaint: results.firstPaint,
-          firstContentfulPaint: results.firstContentfulPaint,
-          timeToInteractive: results.timeToInteractive,
-          largestContentfulPaint: results.largestContentfulPaint,
-          cumulativeLayoutShift: results.cumulativeLayoutShift,
-        },
-        timestamp: new Date(),
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.status) {
+          setStatusMessage(data.status);
+        } else if (data.result) {
+          setEvaluationResults(data.result);
+          eventSource.close();
+          setIsLoading(false);
+          setStatusMessage('Evaluation complete!');
+          setTimeout(() => setStatusMessage(''), 2000); // Clear status message after 2 seconds
+        }
       };
 
-      try {
-        setStatusMessage('Saving evaluation results...');
-        await saveEvaluation(evaluationData);
-        setStatusMessage('Evaluation complete and saved successfully!');
-        setRefreshHistory(prev => prev + 1); // Trigger history refresh
-      } catch (saveError) {
-        console.error('Error saving evaluation:', saveError);
-        setStatusMessage('Evaluation complete, but there was an issue saving it. It has been stored locally.');
-        toast.warn('Evaluation completed, but there was an issue saving it. It has been stored locally.');
-      }
+      eventSource.onerror = (error) => {
+        console.error('EventSource failed:', error);
+        eventSource.close();
+        setIsLoading(false);
+        setError('An error occurred while evaluating the website. Please try again.');
+        setStatusMessage('');
+      };
     } catch (error) {
       console.error('Error evaluating website:', error);
       setError('An error occurred while evaluating the website. Please try again.');
-      setStatusMessage('Evaluation failed. Refunding point...');
+      setIsLoading(false);
+      setStatusMessage('');
       // Refund the point if the evaluation failed
       await updateUserPoints(user.uid, (userPoints || 0) + 1);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => setStatusMessage(''), 5000); // Clear status message after 5 seconds
     }
   };
 

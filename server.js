@@ -12,35 +12,82 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+// Warm-up function
+async function warmUpOpenAI() {
+  try {
+    console.log('Warming up OpenAI...');
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Hello, this is a warm-up request." }
+      ],
+      max_tokens: 5
+    });
+    console.log('OpenAI warmed up successfully');
+  } catch (error) {
+    console.error('Error warming up OpenAI:', error);
+  }
+}
+
 app.get('/api/evaluate', async (req, res) => {
   const { url } = req.query;
   
   try {
-    // Perform website evaluation here
-    const evaluationResult = await evaluateWebsite(url);
+    // Set up Server-Sent Events
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    // Function to send status updates
+    const sendStatus = (message) => {
+      res.write(`data: ${JSON.stringify({ status: message })}\n\n`);
+    };
+
+    sendStatus('Initializing evaluation process...');
     
-    res.json(evaluationResult);
+    // Perform website evaluation here
+    const evaluationResult = await evaluateWebsite(url, sendStatus);
+    
+    // Send the final result
+    res.write(`data: ${JSON.stringify({ result: evaluationResult })}\n\n`);
+    res.end();
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'An error occurred during evaluation' });
   }
 });
 
-async function evaluateWebsite(url) {
+// Add this sleep function
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
+    sendStatus('Launching browser...');
+    await sleep(1000); // Wait for 1 second
     browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
       defaultViewport: null
     });
 
+    sendStatus('Opening page...');
+    await sleep(1000);
     const page = await browser.newPage();
     await page.goto(url, { 
       waitUntil: 'networkidle0',
       timeout: 60000
     });
 
+    sendStatus('Gathering performance metrics...');
+    await sleep(1500);
     const metrics = await page.evaluate(() => {
       const performance = window.performance;
       const timing = performance.timing;
@@ -128,12 +175,20 @@ async function evaluateWebsite(url) {
       }
     });
 
+    sendStatus('Capturing page content...');
+    await sleep(1000);
     const htmlContent = await page.content();
+    
+    sendStatus('Taking screenshot...');
+    await sleep(1500);
     const screenshot = await page.screenshot({ encoding: 'base64' });
 
-    // Perform AI analysis
+    sendStatus('Performing AI analysis...');
+    await sleep(2000);
     const aiAnalysis = await performAIAnalysis(metrics, htmlContent, url);
 
+    sendStatus('Finalizing results...');
+    await sleep(1000);
     return {
       ...metrics,
       htmlContent,
@@ -142,17 +197,20 @@ async function evaluateWebsite(url) {
     };
   } finally {
     if (browser) {
+      sendStatus('Closing browser...');
+      await sleep(1000);
       await browser.close();
     }
   }
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 async function performAIAnalysis(metrics, htmlContent, url) {
-  const prompt = `Analyze the following website metrics for ${url}:
+  const maxRetries = 3;
+  const retryDelay = 1000; // 1 second
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const prompt = `Analyze the following website metrics for ${url}:
 
 ${JSON.stringify(metrics, null, 2)}
 
@@ -172,27 +230,31 @@ Recommendations:
 - [recommendation 3]
 `;
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a web development expert analyzing website performance and user experience." },
-        { role: "user", content: prompt }
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
-    });
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a web development expert analyzing website performance and user experience." },
+          { role: "user", content: prompt }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
 
-    const analysis = response.choices[0].message.content;
-    return parseAIResponse(analysis);
-  } catch (error) {
-    console.error('Error in AI analysis:', error);
-    return {
-      overallScore: 0,
-      uiAnalysis: "AI analysis failed",
-      functionalityAnalysis: "AI analysis failed",
-      recommendations: ["Unable to generate recommendations due to AI error"]
-    };
+      const analysis = response.choices[0].message.content;
+      return parseAIResponse(analysis);
+    } catch (error) {
+      console.error(`AI analysis attempt ${attempt} failed:`, error);
+      if (attempt === maxRetries) {
+        console.error('All retry attempts failed');
+        return {
+          overallScore: 0,
+          uiAnalysis: "AI analysis failed after multiple attempts",
+          functionalityAnalysis: "AI analysis failed after multiple attempts",
+          recommendations: ["Unable to generate recommendations due to persistent AI error"]
+        };
+      }
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
   }
 }
 
@@ -232,4 +294,5 @@ function parseAIResponse(analysis) {
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
+  warmUpOpenAI(); // Call the warm-up function when the server starts
 });
