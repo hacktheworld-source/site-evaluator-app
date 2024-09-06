@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { EvaluationResult } from './evaluator';
 import { getAuth } from 'firebase/auth';
+import { compressImage } from '../utils/imageCompression';
 
 export interface Evaluation {
   id?: string;
@@ -49,7 +50,7 @@ export interface Evaluation {
     formsWithSubmitButton: number;
   };
   htmlContent: string;
-  screenshot: string;
+  screenshot?: string;
   aiAnalysis: {
     overallScore: number;
     uiAnalysis: string;
@@ -68,21 +69,44 @@ export interface Evaluation {
   };
 }
 
+const MAX_SCREENSHOT_SIZE = 900000; // Set to 900KB to allow some buffer
+
 export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promise<void> {
   try {
     // Create a new object with only defined properties
     const cleanedEvaluation = Object.fromEntries(
       Object.entries(evaluation).filter(([_, v]) => v !== undefined)
-    );
+    ) as Record<string, any>;
+
+    // Compress the screenshot if it exists and is too large
+    if (cleanedEvaluation.screenshot && cleanedEvaluation.screenshot.length * 0.75 > MAX_SCREENSHOT_SIZE) {
+      console.log('Screenshot needs further compression before saving.');
+      const { compressedImage, quality } = await compressImage(cleanedEvaluation.screenshot, MAX_SCREENSHOT_SIZE);
+      
+      if (compressedImage.length * 0.75 <= MAX_SCREENSHOT_SIZE) {
+        cleanedEvaluation.screenshot = compressedImage;
+        console.log(`Screenshot compressed to quality: ${quality.toFixed(2)} before saving.`);
+      } else {
+        console.warn('Screenshot is still too large. Removing it from the evaluation before saving.');
+        delete cleanedEvaluation.screenshot;
+      }
+    }
+
+    // Final size check
+    if (cleanedEvaluation.screenshot && cleanedEvaluation.screenshot.length * 0.75 > MAX_SCREENSHOT_SIZE) {
+      console.warn('Screenshot is still too large after compression. Removing it from the evaluation.');
+      delete cleanedEvaluation.screenshot;
+    }
 
     const docRef = await addDoc(collection(db, 'evaluations'), cleanedEvaluation);
-    // If you need the ID, you can get it from docRef.id
+    console.log('Evaluation saved successfully with ID:', docRef.id);
   } catch (error) {
     console.error('Error saving evaluation:', error);
-    // Store locally if offline
+    // Store locally if offline or if there's an error
     const offlineEvaluations = JSON.parse(localStorage.getItem('offlineEvaluations') || '[]');
     offlineEvaluations.push(evaluation);
     localStorage.setItem('offlineEvaluations', JSON.stringify(offlineEvaluations));
+    throw error; // Re-throw the error so it can be handled by the caller
   }
 }
 
