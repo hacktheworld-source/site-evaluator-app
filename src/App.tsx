@@ -35,6 +35,36 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        if (user && !isOffline) {
+          const points = await getUserPoints(user.uid);
+          setUserPoints(points);
+          console.log(`User points: ${points}`);
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        setError('An error occurred while initializing the app. Please try refreshing the page.');
+      }
+    };
+
+    initializeApp();
+  }, [user, isOffline]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
@@ -54,41 +84,6 @@ const App: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isHistoryOpen]);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (user && !isOffline) {
-      getUserPoints(user.uid).then(points => {
-        setUserPoints(points);
-        console.log(`User points: ${points}`); // Add this line for debugging
-      });
-    }
-  }, [user, isOffline]);
-
-  useEffect(() => {
-    const initializeFirebase = async () => {
-      try {
-        // Any Firestore operations should be performed here
-        console.log('Firebase initialized successfully');
-      } catch (error) {
-        console.error('Error initializing Firebase:', error);
-      }
-    };
-
-    initializeFirebase();
-  }, []);
 
   const handleError = (message: string) => {
     toast.error(message);
@@ -119,12 +114,24 @@ const App: React.FC = () => {
 
       const results = await evaluateWebsite(website);
       setEvaluationResults(results);
-      await saveEvaluation({
+
+      const evaluationData: Omit<Evaluation, 'id'> = {
         userId: user.uid,
         websiteUrl: website,
         ...results,
+        metrics: {
+          loadTime: results.loadTime,
+          domContentLoaded: results.domContentLoaded,
+          firstPaint: results.firstPaint,
+          firstContentfulPaint: results.firstContentfulPaint,
+          timeToInteractive: results.timeToInteractive,
+          largestContentfulPaint: results.largestContentfulPaint,
+          cumulativeLayoutShift: results.cumulativeLayoutShift,
+        },
         timestamp: new Date(),
-      });
+      };
+
+      await saveEvaluation(evaluationData);
       setRefreshHistory(prev => prev + 1); // Trigger history refresh
     } catch (error) {
       console.error('Error evaluating website:', error);
@@ -257,19 +264,39 @@ const App: React.FC = () => {
             <button className="detail-popup-close" onClick={() => {
               setSelectedEvaluation(null);
               setIsDetailPopupOpen(false);
-              // We're not closing the history panel here
             }}>&times;</button>
             <div className="detail-popup-content">
               <h3>Detailed Evaluation for {selectedEvaluation.websiteUrl}</h3>
-              <p>Overall Score: {selectedEvaluation.overall}</p>
-              <h4>Category Scores:</h4>
+              <p>Overall Score: {selectedEvaluation.aiAnalysis?.overallScore ?? 'N/A'}</p>
+              
+              <h4>Performance Metrics:</h4>
               <ul>
-                {Object.entries(selectedEvaluation.categories).map(([category, score]) => (
-                  <li key={category}>{category}: {score}</li>
-                ))}
+                <li>Load Time: {selectedEvaluation.metrics?.loadTime?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>DOM Content Loaded: {selectedEvaluation.metrics?.domContentLoaded?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>First Paint: {selectedEvaluation.metrics?.firstPaint?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>First Contentful Paint: {selectedEvaluation.metrics?.firstContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>Time to Interactive: {selectedEvaluation.metrics?.timeToInteractive?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>Largest Contentful Paint: {selectedEvaluation.metrics?.largestContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
+                <li>Cumulative Layout Shift: {selectedEvaluation.metrics?.cumulativeLayoutShift?.toFixed(4) ?? 'N/A'}</li>
               </ul>
-              <h4>AI Analysis:</h4>
-              <p>{selectedEvaluation.aiAnalysis}</p>
+
+              <h4>UI Analysis:</h4>
+              <p>{selectedEvaluation.aiAnalysis?.uiAnalysis ?? 'N/A'}</p>
+
+              <h4>Functionality Analysis:</h4>
+              <p>{selectedEvaluation.aiAnalysis?.functionalityAnalysis ?? 'N/A'}</p>
+
+              <h4>Recommendations:</h4>
+              <ul>
+                {selectedEvaluation.aiAnalysis?.recommendations?.map((rec, index) => (
+                  <li key={index}>{rec}</li>
+                )) ?? <li>No recommendations available</li>}
+              </ul>
+
+              <h4>Screenshot:</h4>
+              {selectedEvaluation.screenshot && (
+                <img src={`data:image/png;base64,${selectedEvaluation.screenshot}`} alt="Website Screenshot" style={{maxWidth: '100%'}} />
+              )}
             </div>
           </div>
         </div>

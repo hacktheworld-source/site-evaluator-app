@@ -12,23 +12,70 @@ import {
   deleteDoc, 
   writeBatch 
 } from 'firebase/firestore';
+import { EvaluationResult } from './evaluator';
 import { getAuth } from 'firebase/auth';
 
 export interface Evaluation {
-  id?: string;  // Make id optional
+  id?: string;
   userId: string;
   websiteUrl: string;
-  overall: number;
-  categories: {
-    [key: string]: number;
+  loadTime: number;
+  domContentLoaded: number;
+  firstPaint: number;
+  firstContentfulPaint: number;
+  domElements: number;
+  pageSize: number;
+  requests: number;
+  timeToInteractive: number;
+  largestContentfulPaint: number;
+  cumulativeLayoutShift: number;
+  colorContrast: {
+    lowContrastElements: number;
   };
-  aiAnalysis: string;
+  fontSizes: {
+    [size: string]: number;
+  };
+  responsiveness: {
+    isResponsive: boolean;
+    viewportWidth: number;
+    pageWidth: number;
+  };
+  brokenLinks: {
+    totalLinks: number;
+    brokenLinks: number;
+  };
+  formFunctionality: {
+    totalForms: number;
+    formsWithSubmitButton: number;
+  };
+  htmlContent: string;
+  screenshot: string;
+  aiAnalysis: {
+    overallScore: number;
+    uiAnalysis: string;
+    functionalityAnalysis: string;
+    recommendations: string[];
+  };
   timestamp: Date;
+  metrics: {
+    loadTime: number;
+    domContentLoaded: number;
+    firstPaint: number;
+    firstContentfulPaint: number;
+    timeToInteractive: number;
+    largestContentfulPaint: number;
+    cumulativeLayoutShift: number;
+  };
 }
 
 export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promise<void> {
   try {
-    const docRef = await addDoc(collection(db, 'evaluations'), evaluation);
+    // Create a new object with only defined properties
+    const cleanedEvaluation = Object.fromEntries(
+      Object.entries(evaluation).filter(([_, v]) => v !== undefined)
+    );
+
+    const docRef = await addDoc(collection(db, 'evaluations'), cleanedEvaluation);
     // If you need the ID, you can get it from docRef.id
   } catch (error) {
     console.error('Error saving evaluation:', error);

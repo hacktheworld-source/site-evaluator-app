@@ -1,7 +1,6 @@
 const webpack = require('webpack');
 
 module.exports = {
-  // ... other configurations
   resolve: {
     fallback: {
       "stream": require.resolve("stream-browserify"),

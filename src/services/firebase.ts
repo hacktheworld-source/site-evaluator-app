@@ -1,23 +1,17 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
-import { firebaseConfig } from '../config/firebase';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-// Initialize Firebase
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
+};
+
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firestore with new settings
-const db = initializeFirestore(app, {
-  cacheSizeBytes: 50 * 1024 * 1024, // 50 MB cache size
-  experimentalForceLongPolling: true,
-});
-
-// Initialize Auth
-const auth = getAuth(app);
-
-// Set authentication persistence
-setPersistence(auth, browserLocalPersistence)
-  .then(() => console.log('Auth persistence set to local'))
-  .catch((error) => console.error('Error setting auth persistence:', error));
-
-export { app, auth, db };
+export const db = getFirestore(app);
+export const auth = getAuth(app);

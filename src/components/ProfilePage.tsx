@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../services/firebase';
-import { getUserPoints } from '../services/database';
-import defaultUserIcon from '../assets/default-user-icon.png'; // Import the default user icon
+import { getUserPoints, getUserEvaluations } from '../services/database';
+import defaultUserIcon from '../assets/default-user-icon.png';
 
 const ProfilePage: React.FC = () => {
   const [userPoints, setUserPoints] = useState<number | null>(null);
+  const [evaluationCount, setEvaluationCount] = useState<number>(0);
 
   useEffect(() => {
     const fetchUserData = async () => {
       if (auth.currentUser) {
         const points = await getUserPoints(auth.currentUser.uid);
         setUserPoints(points);
+
+        const evaluations = await getUserEvaluations(auth.currentUser.uid);
+        setEvaluationCount(evaluations.length);
       }
     };
 
@@ -30,6 +34,7 @@ const ProfilePage: React.FC = () => {
           <p><strong>Name:</strong> {auth.currentUser.displayName || 'N/A'}</p>
           <p><strong>Email:</strong> {auth.currentUser.email}</p>
           <p><strong>Points:</strong> {userPoints !== null ? userPoints : 'Loading...'}</p>
+          <p><strong>Evaluations Performed:</strong> {evaluationCount}</p>
         </div>
       )}
     </div>
