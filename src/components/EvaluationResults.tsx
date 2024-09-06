@@ -6,19 +6,26 @@ interface EvaluationResultsProps {
 }
 
 const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
+  const formatMetric = (value: number | string | undefined, decimals: number = 2): string => {
+    if (typeof value === 'number') {
+      return value.toFixed(decimals);
+    }
+    return value?.toString() ?? 'N/A';
+  };
+
   return (
     <div className="evaluation-results">
       <h2>Overall Score: {result.aiAnalysis?.overallScore ?? 'N/A'}</h2>
       
       <h3>Performance Metrics</h3>
       <ul>
-        <li>Load Time: {result.loadTime?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>DOM Content Loaded: {result.domContentLoaded?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>First Paint: {result.firstPaint?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>First Contentful Paint: {result.firstContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>Time to Interactive: {result.timeToInteractive?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>Largest Contentful Paint: {result.largestContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
-        <li>Cumulative Layout Shift: {result.cumulativeLayoutShift?.toFixed(4) ?? 'N/A'}</li>
+        <li>Load Time: {formatMetric(result.loadTime)} ms</li>
+        <li>DOM Content Loaded: {formatMetric(result.domContentLoaded)} ms</li>
+        <li>First Paint: {formatMetric(result.firstPaint)} ms</li>
+        <li>First Contentful Paint: {formatMetric(result.firstContentfulPaint)} ms</li>
+        <li>Time to Interactive: {formatMetric(result.timeToInteractive)} ms</li>
+        <li>Largest Contentful Paint: {formatMetric(result.largestContentfulPaint)} ms</li>
+        <li>Cumulative Layout Shift: {formatMetric(result.cumulativeLayoutShift, 4)}</li>
         <li>DOM Elements: {result.domElements ?? 'N/A'}</li>
         <li>Page Size: {result.pageSize ? (result.pageSize / 1024).toFixed(2) : 'N/A'} KB</li>
         <li>Total Requests: {result.requests ?? 'N/A'}</li>
