@@ -10,11 +10,13 @@ import {
   doc, 
   runTransaction, 
   deleteDoc, 
-  writeBatch 
+  writeBatch,
+  orderBy // Add this import
 } from 'firebase/firestore';
 import { EvaluationResult } from './evaluator';
 import { getAuth } from 'firebase/auth';
 import { compressImage } from '../utils/imageCompression';
+import { FirebaseError } from 'firebase/app';
 
 export interface Evaluation {
   id?: string;
@@ -69,7 +71,13 @@ export interface Evaluation {
   };
 }
 
-const MAX_SCREENSHOT_SIZE = 900000; // Set to 900KB to allow some buffer
+// Firestore has a maximum document size of 1,048,576 bytes (1 MiB)
+// Let's set our maximum document size to be slightly less than that to allow for some buffer
+const MAX_DOCUMENT_SIZE = 1000000; // 1 MB in bytes
+
+// Set the maximum screenshot size to be 80% of the maximum document size
+// This leaves room for other fields in the document
+const MAX_SCREENSHOT_SIZE = Math.floor(MAX_DOCUMENT_SIZE * 0.8); // 800 KB
 
 export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promise<void> {
   try {
@@ -78,23 +86,18 @@ export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promis
       Object.entries(evaluation).filter(([_, v]) => v !== undefined)
     ) as Record<string, any>;
 
-    // Compress the screenshot if it exists and is too large
-    if (cleanedEvaluation.screenshot && cleanedEvaluation.screenshot.length * 0.75 > MAX_SCREENSHOT_SIZE) {
-      console.log('Screenshot needs further compression before saving.');
+    // Compress the screenshot if it exists
+    if (cleanedEvaluation.screenshot) {
+      console.log('Compressing screenshot...');
       const { compressedImage, quality } = await compressImage(cleanedEvaluation.screenshot, MAX_SCREENSHOT_SIZE);
-      
-      if (compressedImage.length * 0.75 <= MAX_SCREENSHOT_SIZE) {
-        cleanedEvaluation.screenshot = compressedImage;
-        console.log(`Screenshot compressed to quality: ${quality.toFixed(2)} before saving.`);
-      } else {
-        console.warn('Screenshot is still too large. Removing it from the evaluation before saving.');
-        delete cleanedEvaluation.screenshot;
-      }
+      cleanedEvaluation.screenshot = compressedImage;
+      console.log(`Screenshot compressed to quality: ${quality.toFixed(2)}`);
     }
 
-    // Final size check
-    if (cleanedEvaluation.screenshot && cleanedEvaluation.screenshot.length * 0.75 > MAX_SCREENSHOT_SIZE) {
-      console.warn('Screenshot is still too large after compression. Removing it from the evaluation.');
+    // Check total document size
+    const docSize = JSON.stringify(cleanedEvaluation).length;
+    if (docSize > MAX_DOCUMENT_SIZE) {
+      console.warn(`Document size (${docSize} bytes) exceeds limit. Removing screenshot.`);
       delete cleanedEvaluation.screenshot;
     }
 
@@ -102,22 +105,51 @@ export async function saveEvaluation(evaluation: Omit<Evaluation, 'id'>): Promis
     console.log('Evaluation saved successfully with ID:', docRef.id);
   } catch (error) {
     console.error('Error saving evaluation:', error);
-    // Store locally if offline or if there's an error
-    const offlineEvaluations = JSON.parse(localStorage.getItem('offlineEvaluations') || '[]');
-    offlineEvaluations.push(evaluation);
-    localStorage.setItem('offlineEvaluations', JSON.stringify(offlineEvaluations));
+    // Attempt to store locally, but handle quota exceeded error
+    try {
+      const offlineEvaluations = JSON.parse(localStorage.getItem('offlineEvaluations') || '[]');
+      // Remove screenshot to reduce size
+      const evaluationWithoutScreenshot = { ...evaluation, screenshot: undefined };
+      offlineEvaluations.push(evaluationWithoutScreenshot);
+      localStorage.setItem('offlineEvaluations', JSON.stringify(offlineEvaluations));
+    } catch (localStorageError) {
+      console.error('Error saving to localStorage:', localStorageError);
+      // If localStorage is full, we'll just log the error and not save offline
+    }
     throw error; // Re-throw the error so it can be handled by the caller
   }
 }
 
 export async function getUserEvaluations(userId: string): Promise<Evaluation[]> {
-  const q = query(collection(db, 'evaluations'), where('userId', '==', userId));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    timestamp: doc.data().timestamp.toDate()
-  } as Evaluation));
+  try {
+    const q = query(
+      collection(db, 'evaluations'),
+      where('userId', '==', userId),
+      orderBy('timestamp', 'desc') // Sort by timestamp in descending order
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp.toDate()
+    } as Evaluation));
+  } catch (error) {
+    if (error instanceof FirebaseError && error.code === 'failed-precondition') {
+      console.warn('Index not yet ready. Fetching evaluations without sorting.');
+      // Fallback query without ordering
+      const q = query(
+        collection(db, 'evaluations'),
+        where('userId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp.toDate()
+      } as Evaluation)).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    }
+    throw error;
+  }
 }
 
 export async function getUserPoints(userId: string): Promise<number> {

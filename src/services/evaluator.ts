@@ -46,7 +46,8 @@ export interface EvaluationResult {
 
 const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute
 
-const MAX_SCREENSHOT_SIZE = 900000; // Set to 900KB to allow some buffer
+// Set the maximum screenshot size to be 80% of the maximum document size (1 MB)
+const MAX_SCREENSHOT_SIZE = 800000; // 800 KB
 
 export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
   if (!rateLimiter.tryRemoveTokens(1)) {
@@ -60,15 +61,10 @@ export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
     
     // Compress the screenshot if it exists
     if (response.data.screenshot) {
-      let { compressedImage, quality } = await compressImage(response.data.screenshot, MAX_SCREENSHOT_SIZE);
-      
-      if (compressedImage.length * 0.75 <= MAX_SCREENSHOT_SIZE) {
-        response.data.screenshot = compressedImage;
-        console.log(`Screenshot compressed to quality: ${quality.toFixed(2)}`);
-      } else {
-        console.warn('Screenshot is too large. Removing it from the evaluation.');
-        delete response.data.screenshot;
-      }
+      console.log('Compressing screenshot in evaluateWebsite...');
+      const { compressedImage, quality } = await compressImage(response.data.screenshot, MAX_SCREENSHOT_SIZE);
+      response.data.screenshot = compressedImage;
+      console.log(`Screenshot compressed to quality: ${quality.toFixed(2)} in evaluateWebsite`);
     }
 
     return response.data;

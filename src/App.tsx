@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<{ show: boolean; action: () => void } | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string>('');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -108,11 +109,15 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
+    setStatusMessage('Initializing evaluation process...');
     try {
+      setStatusMessage('Deducting evaluation point...');
       await decrementUserPoints(user.uid);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - 1 : null));
 
+      setStatusMessage('Sending request to evaluate website...');
       const results = await evaluateWebsite(website);
+      setStatusMessage('Received evaluation results. Processing...');
       setEvaluationResults(results);
 
       const evaluationData: Omit<Evaluation, 'id'> = {
@@ -132,20 +137,25 @@ const App: React.FC = () => {
       };
 
       try {
+        setStatusMessage('Saving evaluation results...');
         await saveEvaluation(evaluationData);
+        setStatusMessage('Evaluation complete and saved successfully!');
         setRefreshHistory(prev => prev + 1); // Trigger history refresh
       } catch (saveError) {
         console.error('Error saving evaluation:', saveError);
+        setStatusMessage('Evaluation complete, but there was an issue saving it. It has been stored locally.');
         toast.warn('Evaluation completed, but there was an issue saving it. It has been stored locally.');
       }
     } catch (error) {
       console.error('Error evaluating website:', error);
       setError('An error occurred while evaluating the website. Please try again.');
+      setStatusMessage('Evaluation failed. Refunding point...');
       // Refund the point if the evaluation failed
       await updateUserPoints(user.uid, (userPoints || 0) + 1);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
     } finally {
       setIsLoading(false);
+      setTimeout(() => setStatusMessage(''), 5000); // Clear status message after 5 seconds
     }
   };
 
@@ -187,7 +197,7 @@ const App: React.FC = () => {
               isLoggedIn={!!user}
               onSignInRequired={handleSignInRequired}
             />
-            {isLoading && <p>Evaluating website...</p>}
+            {statusMessage && <p className="status-message">{statusMessage}</p>}
             {error && <p className="error-message">{error}</p>}
             {evaluationResults && <EvaluationResults result={evaluationResults} />}
           </div>
