@@ -23,6 +23,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
 
   const fetchEvaluations = async () => {
     try {
+      setIsLoading(true);
       const userEvaluations = await getUserEvaluations(userId);
       setEvaluations(userEvaluations);
     } catch (error) {
