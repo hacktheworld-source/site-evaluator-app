@@ -15,6 +15,7 @@ import ProfilePage from './components/ProfilePage';
 import PointsManagementPage from './components/PointsManagementPage';
 import AuthModal from './components/AuthModal';
 import defaultUserIcon from './assets/default-user-icon.png'; // Change .svg to .png
+import { User } from 'firebase/auth';
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -41,7 +42,6 @@ const App: React.FC = () => {
         if (user && !isOffline) {
           const points = await getUserPoints(user.uid);
           setUserPoints(points);
-          console.log(`User points: ${points}`);
         }
       } catch (error) {
         console.error('Error initializing app:', error);
@@ -118,7 +118,7 @@ const App: React.FC = () => {
 
       const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}`);
 
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = async (event) => {
         const data = JSON.parse(event.data);
         if (data.status) {
           setStatusMessage(data.status);
@@ -128,6 +128,21 @@ const App: React.FC = () => {
           setIsLoading(false);
           setStatusMessage('Evaluation complete!');
           setTimeout(() => setStatusMessage(''), 2000); // Clear status message after 2 seconds
+
+          // Save the evaluation
+          try {
+            await saveEvaluation({
+              userId: user.uid,
+              websiteUrl: website,
+              ...data.result,
+              timestamp: new Date()
+            });
+            // Trigger a refresh of the history
+            setRefreshHistory(prev => prev + 1);
+          } catch (error) {
+            console.error('Error saving evaluation:', error);
+            toast.error('Failed to save evaluation history. Please try again.');
+          }
         }
       };
 
@@ -172,6 +187,17 @@ const App: React.FC = () => {
 
   const handleSignInRequired = () => {
     setShowAuthModal(true);
+  };
+
+  const getProfilePicture = (user: User | null) => {
+    if (!user) return defaultUserIcon;
+    
+    if (user.photoURL) {
+      const highResURL = user.photoURL.replace('s96-c', 's400-c');
+      return `${process.env.REACT_APP_API_URL}/api/proxy-image?url=${encodeURIComponent(highResURL)}`;
+    }
+    
+    return defaultUserIcon;
   };
 
   const renderPage = () => {
@@ -219,9 +245,14 @@ const App: React.FC = () => {
             </div>
             <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
               <img 
-                src={user.photoURL || defaultUserIcon} 
-                alt={user.displayName || 'User'} 
+                src={getProfilePicture(user)}
+                alt="User Avatar"
                 className="user-avatar"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // Prevent infinite loop
+                  target.src = defaultUserIcon;
+                }}
               />
             </button>
             {showUserMenu && (
