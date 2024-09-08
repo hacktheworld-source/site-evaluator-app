@@ -299,23 +299,23 @@ function getSystemMessage() {
 }
 
 async function performPhaseAnalysis(url, phase, metrics, history) {
-  console.log('Performing phase analysis:', { url, phase, metrics });
+  console.log('performing phase analysis:', { url, phase, metrics });
 
-  let prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences.`;
+  let prompt = `analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points`;
   
-  if (metrics) {
-    const roundedMetrics = roundMetrics(metrics);
-    prompt += ` Here are relevant metrics: ${JSON.stringify(roundedMetrics)}`;
+  if (phase === 'Overall' || !metrics) {
+    prompt += " provide an overall analysis based on the previous phases.";
   } else {
-    console.warn('No metrics provided for analysis');
+    const roundedMetrics = roundMetrics(metrics);
+    prompt += ` based on the provided metrics: ${JSON.stringify(roundedMetrics)}`;
   }
 
-  prompt += " Limit your analysis to 6-9 sentences, focusing on the most critical points.";
+  prompt += " limit your analysis to 6-9 sentences, focusing on the most critical points.";
 
-  // Decompress the chat history if it exists
+  // decompress the chat history if it exists
   const decompressedHistory = decompressHistory(history);
 
-  // Construct messages array with history
+  // construct messages array with history
   const messages = [
     { role: "system", content: getSystemMessage() },
     ...decompressedHistory,
@@ -326,14 +326,14 @@ async function performPhaseAnalysis(url, phase, metrics, history) {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      max_tokens: 250,
+      max_tokens: 1000, // Increase this value
       temperature: 0.7,
     });
 
     return response.choices[0].message.content;
   } catch (error) {
-    console.error(`AI analysis for ${phase} phase failed:`, error);
-    throw new Error(`AI analysis for ${phase} phase failed: ${error.message}`);
+    console.error(`ai analysis for ${phase} phase failed:`, error);
+    throw new Error(`ai analysis for ${phase} phase failed: ${error.message}`);
   }
 }
 
@@ -377,48 +377,52 @@ async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
 
-function summarizePhase(evaluationResult, phase) {
-  // Create a brief summary of the given phase
-  // This should be a short string, not the full analysis
-  return `${phase} summary: [Brief summary here]`;
-}
+// Add this new endpoint
+app.post('/api/score', async (req, res) => {
+  const { url, phase, metrics } = req.body;
+  
+  console.log('score request body:', req.body);
+
+  try {
+    const scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "you are an ai assistant that provides numerical scores based on website metrics." },
+        { role: "user", content: scorePrompt }
+      ],
+      max_tokens: 10,
+      temperature: 0.3,
+    });
+
+    const scoreText = response.choices[0].message.content.trim();
+    const score = parseInt(scoreText, 10);
+
+    if (isNaN(score)) {
+      throw new Error('failed to generate a valid score');
+    }
+
+    res.json({ score });
+  } catch (error) {
+    console.error('error calculating score:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.post('/api/analyze', async (req, res) => {
   const { url, phase, metrics, history } = req.body;
   
-  console.log('Request body:', req.body); // Add this line for debugging
+  console.log('Request body:', req.body);
 
   try {
     const analysis = await performPhaseAnalysis(url, phase, metrics, history);
-    const overallScore = phase === 'Overall' ? await generateOverallScore(metrics) : null;
-    res.json({ analysis, overallScore });
+    res.json({ analysis });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
-
-async function generateOverallScore(metrics) {
-  const prompt = `Based on these website metrics: ${JSON.stringify(metrics)}, generate an overall score from 0 to 100 for the website. Only return the numeric score.`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a web performance scoring system. Provide only a numeric score between 0 and 100." },
-        { role: "user", content: prompt }
-      ],
-      max_tokens: 5,
-      temperature: 0.3,
-    });
-
-    const score = parseInt(response.choices[0].message.content.trim());
-    return isNaN(score) ? 0 : score;
-  } catch (error) {
-    console.error('Overall score generation failed:', error);
-    return 0;
-  }
-}
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
@@ -460,7 +464,7 @@ app.post('/api/chat', async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      max_tokens: 150,
+      max_tokens: 1000, // Increase this value
       temperature: 0.7,
     });
 

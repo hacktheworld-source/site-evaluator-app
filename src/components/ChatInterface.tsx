@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import TypewriterText from './TypewriterText';
 
 const MAX_HISTORY_LENGTH = 10; // Adjust this value as needed
 
@@ -10,6 +9,7 @@ interface Message {
   content: string;
   metrics?: { [key: string]: any };
   screenshot?: string;
+  phase?: string; // Add this line
 }
 
 interface ChatInterfaceProps {
@@ -29,6 +29,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [userInput, setUserInput] = useState('');
   const [currentPhase, setCurrentPhase] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
   const phases = ['UI', 'Functionality', 'Performance', 'Overall'];
@@ -43,36 +44,66 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const updateOverallScore = (newPhaseScores: { [key: string]: number }) => {
+    const scores = Object.values(newPhaseScores);
+    if (scores.length > 0) {
+      const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+      setOverallScore(Math.round(average));
+    }
+  };
+
+  const getPhaseScore = async (phase: string, metrics: any): Promise<number> => {
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/score`, {
+        url: websiteUrl,
+        phase: phase,
+        metrics: metrics
+      });
+      return response.data.score || 0; // return 0 if score is null or undefined
+    } catch (error) {
+      console.error(`error getting ${phase} score:`, error);
+      return 0;
+    }
+  };
+
   const startUIAnalysis = async () => {
     const uiMetrics = getPhaseMetrics('UI', evaluationResults);
     
     try {
-      console.log('Sending UI analysis request with metrics:', uiMetrics);
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+      console.log('sending ui analysis request with metrics:', { url: websiteUrl, phase: 'UI', metrics: uiMetrics });
+      const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
         url: websiteUrl,
         phase: 'UI',
         metrics: uiMetrics,
-        history: JSON.stringify(messages)
+        history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
       });
 
-      console.log('Received UI analysis response:', response.data);
+      const score = await getPhaseScore('UI', uiMetrics);
+
+      console.log('received ui analysis response:', analysisResponse.data);
 
       const initialMessage: Message = {
         role: 'assistant',
-        content: response.data.analysis,
+        content: analysisResponse.data.analysis,
         metrics: uiMetrics,
-        screenshot: evaluationResults.screenshot
+        screenshot: evaluationResults.screenshot,
+        phase: 'UI' // Add this line
       };
       setMessages(prevMessages => [...prevMessages, initialMessage]);
       setCurrentPhase('UI');
+
+      // update phase scores and overall score
+      const newPhaseScores = { ...phaseScores, UI: score };
+      setPhaseScores(newPhaseScores);
+      updateOverallScore(newPhaseScores);
     } catch (error) {
-      console.error('Error starting UI analysis:', error);
+      console.error('error starting ui analysis:', error);
       if (axios.isAxiosError(error) && error.response) {
-        console.error('Server response:', error.response.data);
+        console.error('server response:', error.response.data);
       }
       setMessages([{
         role: 'assistant',
-        content: 'An error occurred while starting the UI analysis. Please try again.'
+        content: 'an error occurred while starting the ui analysis. please try again.'
       }]);
     }
   };
@@ -98,33 +129,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           cumulativeLayoutShift: allMetrics.cumulativeLayoutShift
         };
       case 'Overall':
-        const { htmlContent, ...relevantMetrics } = allMetrics;
-        return relevantMetrics; // This now includes the screenshot
+        // Exclude htmlContent, but include all other metrics
+        const { htmlContent, ...overallMetrics } = allMetrics;
+        return overallMetrics;
       default:
         return {};
     }
   };
 
-  const [isTyping, setIsTyping] = useState(false);
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
-
   const handleSendMessage = async () => {
-    if (userInput.trim() && !isTyping) {
+    if (userInput.trim()) {
       const newUserMessage: Message = { 
         role: 'user', 
         content: userInput.trim()
       };
       setMessages(prevMessages => [...prevMessages, newUserMessage]);
       setUserInput('');
-      setIsTyping(true);
-      setIsTypingComplete(false);
 
       try {
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
           url: websiteUrl,
           phase: currentPhase,
           message: newUserMessage.content,
-          history: JSON.stringify(messages)
+          history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
         });
 
         const newAssistantMessage: Message = {
@@ -134,13 +161,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         setMessages(prevMessages => [...prevMessages, newAssistantMessage]);
       } catch (error) {
-        console.error('Error fetching AI response:', error);
+        console.error('error fetching ai response:', error);
         setMessages(prevMessages => [...prevMessages, {
           role: 'assistant',
-          content: `Error: ${error instanceof Error ? error.message : 'An error occurred while processing your message. Please try again.'}`
+          content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
         }]);
-        setIsTyping(false);
-        setIsTypingComplete(true);
       }
     }
   };
@@ -153,34 +178,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       try {
         const phaseMetrics = getPhaseMetrics(nextPhase, evaluationResults);
-        console.log('Metrics being sent:', phaseMetrics);
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+        console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: phaseMetrics });
+        const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
           phase: nextPhase,
-          metrics: phaseMetrics,
-          history: JSON.stringify(messages)
+          metrics: nextPhase === 'Overall' ? {} : phaseMetrics,
+          history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
         });
+
+        let score = 0;
+        if (nextPhase !== 'Overall') {
+          score = await getPhaseScore(nextPhase, phaseMetrics);
+        }
 
         const newAssistantMessage: Message = {
           role: 'assistant',
-          content: response.data.analysis,
-          metrics: phaseMetrics
+          content: analysisResponse.data.analysis,
+          metrics: phaseMetrics,
+          screenshot: nextPhase === 'Overall' ? evaluationResults.screenshot : undefined,
+          phase: nextPhase // Add this line
         };
 
         setMessages(prevMessages => [...prevMessages, newAssistantMessage]);
 
-        if (nextPhase === 'Overall' && response.data.overallScore !== null) {
-          setOverallScore(response.data.overallScore);
+        if (nextPhase !== 'Overall') {
+          const newPhaseScores = { ...phaseScores, [nextPhase]: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
         }
       } catch (error) {
-        console.error(`Error starting ${nextPhase} analysis:`, error);
+        console.error(`error starting ${nextPhase} analysis:`, error);
         setMessages(prevMessages => [...prevMessages, {
           role: 'assistant',
-          content: `An error occurred while starting the ${nextPhase} analysis. Please try again.`
+          content: `an error occurred while starting the ${nextPhase} analysis. please try again.`
         }]);
       }
     } else {
-      setCurrentPhase(null); // Evaluation complete
+      setCurrentPhase(null); // evaluation complete
     }
   };
 
@@ -210,13 +244,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       );
     }
-    return 'N/A';
+    return 'n/a';
   };
 
-  const renderMetrics = (metrics: { [key: string]: any }) => (
-    <div className={`metrics-wrapper ${isTypingComplete ? 'fade-in' : ''}`}>
+  const renderMetrics = useCallback((metrics: { [key: string]: any }) => (
+    <div className="metrics-wrapper fade-in">
       {Object.entries(metrics).map(([key, value]) => (
-        key !== 'screenshot' && (
+        key !== 'screenshot' && key !== 'htmlContent' && (
           <div key={key} className="metric-tile">
             <div className="metric-title">{key}</div>
             <div className="metric-value">{renderMetricValue(value)}</div>
@@ -224,41 +258,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )
       ))}
     </div>
-  );
+  ), []);
 
-  const renderScreenshot = (screenshot: string) => (
+  const renderScreenshot = useCallback((screenshot: string) => (
     <img 
       src={`data:image/png;base64,${screenshot}`} 
-      alt="Website Screenshot" 
-      className={`website-screenshot ${isTypingComplete ? 'fade-in' : ''}`} 
+      alt="website screenshot" 
+      className="website-screenshot fade-in" 
     />
-  );
+  ), []);
 
-  const renderMessage = (message: Message) => (
+  const renderMessage = useCallback((message: Message) => (
     <div className={`message ${message.role}`}>
+      {message.role === 'assistant' && message.metrics && message.phase && message.phase !== 'Overall' && (
+        <div className="message-score">
+          score: {phaseScores[message.phase] || 'n/a'}
+        </div>
+      )}
       <div className="message-content">
-        {message.role === 'assistant' ? (
-          <TypewriterText 
-            text={message.content} 
-            onComplete={() => {
-              setIsTyping(false);
-              setIsTypingComplete(true);
-            }}
-          />
-        ) : (
-          <ReactMarkdown>{message.content}</ReactMarkdown>
-        )}
+        <ReactMarkdown>{message.content}</ReactMarkdown>
       </div>
-      {message.metrics && isTypingComplete && renderMetrics(message.metrics)}
-      {message.screenshot && isTypingComplete && renderScreenshot(message.screenshot)}
+      {message.metrics && renderMetrics(message.metrics)}
+      {message.screenshot && renderScreenshot(message.screenshot)}
     </div>
-  );
+  ), [renderMetrics, renderScreenshot, phaseScores]);
 
   return (
     <div className="chat-interface">
       {overallScore !== null && (
         <div className="overall-score">
-          Overall Score: {overallScore}
+          overall score: {overallScore}
         </div>
       )}
       <div className="chat-phase-indicator">
@@ -286,18 +315,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder={currentPhase ? "Ask a question..." : "Evaluation complete"}
-          disabled={isLoading || !currentPhase || isTyping}
+          placeholder={currentPhase ? "ask a question..." : "evaluation complete"}
+          disabled={isLoading || !currentPhase}
         />
-        <button onClick={handleSendMessage} disabled={isLoading || !currentPhase || !userInput.trim() || isTyping}>
-          Send
+        <button onClick={handleSendMessage} disabled={isLoading || !currentPhase || !userInput.trim()}>
+          send
         </button>
-        <button onClick={handleContinue} disabled={isLoading || !currentPhase || isTyping}>
-          {currentPhase === phases[phases.length - 1] ? 'Finish' : 'Continue'}
+        <button onClick={handleContinue} disabled={isLoading || !currentPhase}>
+          {currentPhase === phases[phases.length - 1] ? 'finish' : 'continue'}
         </button>
       </div>
     </div>
   );
 };
 
-export default ChatInterface;
+export default React.memo(ChatInterface);
