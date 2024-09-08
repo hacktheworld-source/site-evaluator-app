@@ -16,6 +16,7 @@ import PointsManagementPage from './components/PointsManagementPage';
 import AuthModal from './components/AuthModal';
 import defaultUserIcon from './assets/default-user-icon.png'; // Change .svg to .png
 import { User } from 'firebase/auth';
+import ChatInterface from './components/ChatInterface';
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState<{ show: boolean; action: () => void } | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [websiteUrl, setWebsiteUrl] = useState<string>('');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -107,6 +109,7 @@ const App: React.FC = () => {
       return;
     }
 
+    setWebsiteUrl(website);
     setIsLoading(true);
     setError(null);
     setStatusMessage('Initializing evaluation process...');
@@ -123,11 +126,12 @@ const App: React.FC = () => {
         if (data.status) {
           setStatusMessage(data.status);
         } else if (data.result) {
+          // The result now contains only metrics, no AI analysis
           setEvaluationResults(data.result);
           eventSource.close();
           setIsLoading(false);
           setStatusMessage('Evaluation complete!');
-          setTimeout(() => setStatusMessage(''), 2000); // Clear status message after 2 seconds
+          setTimeout(() => setStatusMessage(''), 2000);
 
           // Save the evaluation
           try {
@@ -137,7 +141,6 @@ const App: React.FC = () => {
               ...data.result,
               timestamp: new Date()
             });
-            // Trigger a refresh of the history
             setRefreshHistory(prev => prev + 1);
           } catch (error) {
             console.error('Error saving evaluation:', error);
@@ -215,7 +218,14 @@ const App: React.FC = () => {
             />
             {statusMessage && <p className="status-message">{statusMessage}</p>}
             {error && <p className="error-message">{error}</p>}
-            {evaluationResults && <EvaluationResults result={evaluationResults} />}
+            {websiteUrl && (
+              <ChatInterface
+                websiteUrl={websiteUrl}
+                onStartEvaluation={handleEvaluation}
+                evaluationResults={evaluationResults}
+                isLoading={isLoading}
+              />
+            )}
           </div>
         );
       case 'profile':
