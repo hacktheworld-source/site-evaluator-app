@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 
-const MAX_HISTORY_LENGTH = 10; // Adjust this value as needed
+const MAX_HISTORY_LENGTH = 50; // Increased from 10 to 50
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   metrics?: { [key: string]: any };
   screenshot?: string;
-  phase?: string; // Add this line
+  phase?: string;
 }
 
 interface ChatInterfaceProps {
@@ -75,7 +75,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         url: websiteUrl,
         phase: 'UI',
         metrics: uiMetrics,
-        history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
+        history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
       });
 
       const score = await getPhaseScore('UI', uiMetrics);
@@ -87,9 +87,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         content: analysisResponse.data.analysis,
         metrics: uiMetrics,
         screenshot: evaluationResults.screenshot,
-        phase: 'UI' // Add this line
+        phase: 'UI'
       };
-      setMessages(prevMessages => [...prevMessages, initialMessage]);
+      addMessage(initialMessage);
       setCurrentPhase('UI');
 
       // update phase scores and overall score
@@ -101,10 +101,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       if (axios.isAxiosError(error) && error.response) {
         console.error('server response:', error.response.data);
       }
-      setMessages([{
+      addMessage({
         role: 'assistant',
         content: 'an error occurred while starting the ui analysis. please try again.'
-      }]);
+      });
     }
   };
 
@@ -143,15 +143,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         role: 'user', 
         content: userInput.trim()
       };
-      setMessages(prevMessages => [...prevMessages, newUserMessage]);
+      addMessage(newUserMessage);
       setUserInput('');
 
       try {
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
           url: websiteUrl,
-          phase: currentPhase,
+          phase: currentPhase || 'Overall', // Use 'Overall' if currentPhase is null
           message: newUserMessage.content,
-          history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
+          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
         });
 
         const newAssistantMessage: Message = {
@@ -159,13 +159,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           content: response.data.reply
         };
 
-        setMessages(prevMessages => [...prevMessages, newAssistantMessage]);
+        addMessage(newAssistantMessage);
       } catch (error) {
         console.error('error fetching ai response:', error);
-        setMessages(prevMessages => [...prevMessages, {
+        addMessage({
           role: 'assistant',
           content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
-        }]);
+        });
       }
     }
   };
@@ -183,7 +183,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           url: websiteUrl,
           phase: nextPhase,
           metrics: nextPhase === 'Overall' ? {} : phaseMetrics,
-          history: JSON.stringify(messages.map(({ role, content }) => ({ role, content })))
+          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
         });
 
         let score = 0;
@@ -196,10 +196,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           content: analysisResponse.data.analysis,
           metrics: phaseMetrics,
           screenshot: nextPhase === 'Overall' ? evaluationResults.screenshot : undefined,
-          phase: nextPhase // Add this line
+          phase: nextPhase
         };
 
-        setMessages(prevMessages => [...prevMessages, newAssistantMessage]);
+        addMessage(newAssistantMessage);
 
         if (nextPhase !== 'Overall') {
           const newPhaseScores = { ...phaseScores, [nextPhase]: score };
@@ -208,10 +208,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
       } catch (error) {
         console.error(`error starting ${nextPhase} analysis:`, error);
-        setMessages(prevMessages => [...prevMessages, {
+        addMessage({
           role: 'assistant',
           content: `an error occurred while starting the ${nextPhase} analysis. please try again.`
-        }]);
+        });
       }
     } else {
       setCurrentPhase(null); // evaluation complete
@@ -283,6 +283,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     </div>
   ), [renderMetrics, renderScreenshot, phaseScores]);
 
+  const addMessage = useCallback((newMessage: Message) => {
+    setMessages(prevMessages => {
+      const updatedMessages = [...prevMessages, newMessage];
+      if (updatedMessages.length > MAX_HISTORY_LENGTH) {
+        return updatedMessages.slice(-MAX_HISTORY_LENGTH);
+      }
+      return updatedMessages;
+    });
+  }, []);
+
   return (
     <div className="chat-interface">
       {overallScore !== null && (
@@ -315,15 +325,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder={currentPhase ? "ask a question..." : "evaluation complete"}
-          disabled={isLoading || !currentPhase}
+          placeholder="ask a question..."
+          disabled={isLoading}
         />
-        <button onClick={handleSendMessage} disabled={isLoading || !currentPhase || !userInput.trim()}>
+        <button onClick={handleSendMessage} disabled={isLoading || !userInput.trim()}>
           send
         </button>
-        <button onClick={handleContinue} disabled={isLoading || !currentPhase}>
-          {currentPhase === phases[phases.length - 1] ? 'finish' : 'continue'}
-        </button>
+        {currentPhase && currentPhase !== 'Overall' && (
+          <button onClick={handleContinue} disabled={isLoading}>
+            continue
+          </button>
+        )}
       </div>
     </div>
   );
