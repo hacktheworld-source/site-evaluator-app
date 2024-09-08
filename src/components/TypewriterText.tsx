@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface TypewriterTextProps {
   text: string;
@@ -7,29 +7,36 @@ interface TypewriterTextProps {
 
 const TypewriterText: React.FC<TypewriterTextProps> = ({ text, onComplete }) => {
   const [displayedText, setDisplayedText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
 
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(prevText => prevText + text[currentIndex]);
-        setCurrentIndex(prevIndex => prevIndex + 1);
-      }, getDelay(text[currentIndex]));
-
-      return () => clearTimeout(timeout);
-    } else if (onComplete) {
-      onComplete();
-    }
-  }, [currentIndex, text, onComplete]);
-
-  const getDelay = (char: string) => {
+  const getDelay = useCallback((char: string) => {
     if (['\n', '.', ',', ':', ';', '!', '?'].includes(char)) {
       return 100; // Longer delay for special characters
     }
     return 20; // Base delay for regular characters
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isComplete) return;
+
+    let currentIndex = 0;
+    const intervalId = setInterval(() => {
+      if (currentIndex < text.length) {
+        setDisplayedText(prevText => prevText + text[currentIndex]);
+        currentIndex++;
+      } else {
+        clearInterval(intervalId);
+        setIsComplete(true);
+        if (onComplete) {
+          onComplete();
+        }
+      }
+    }, getDelay(text[currentIndex]));
+
+    return () => clearInterval(intervalId);
+  }, [text, onComplete, getDelay, isComplete]);
 
   return <div>{displayedText}</div>;
 };
 
-export default TypewriterText;
+export default React.memo(TypewriterText);

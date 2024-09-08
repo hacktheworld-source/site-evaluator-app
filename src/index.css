@@ -800,6 +800,38 @@ input[type="text"]:focus, input[type="number"]:focus {
   list-style-type: decimal;
 }
 
+.message-score {
+  font-size: 0.9em;
+  color: #888;
+  margin-bottom: 5px;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 2px 5px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+.metrics-wrapper, .website-screenshot {
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+}
+
+.metrics-wrapper.fade-in, .website-screenshot.fade-in {
+  opacity: 1;
+}
+
+.hidden {
+  display: none;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -841,4 +873,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 10px;
   border-radius: 4px;
   overflow-x: auto;
+}
+
+.hidden {
+  display: none;
 }
