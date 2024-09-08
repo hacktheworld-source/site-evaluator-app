@@ -70,7 +70,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
               onClick={() => onDetailPopupOpen(evaluation)}
             >
               <p>Website: {evaluation.websiteUrl}</p>
-              <p>Overall Score: {evaluation.aiAnalysis.overallScore}</p>
+              <p>Overall Score: {evaluation.aiAnalysis?.overallScore ?? 'N/A'}</p>
               <p>Date: {evaluation.timestamp.toLocaleString()}</p>
               <div className="history-item-actions">
                 {evaluation.id && (

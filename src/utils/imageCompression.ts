@@ -32,6 +32,12 @@ export async function compressImage(base64Image: string, maxSizeInBytes: number)
       scale -= 0.1;
       quality = 0.7;
     }
+
+    // Add a hard limit to image dimensions
+    if (canvas.width > 1000 || canvas.height > 1000) {
+      canvas.width = Math.min(canvas.width, 1000);
+      canvas.height = Math.min(canvas.height, 1000);
+    }
   }
 
   return { compressedImage: compressedBase64, quality };

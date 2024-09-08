@@ -5,12 +5,15 @@ const puppeteer = require('puppeteer');
 const cors = require('cors');
 const axios = require('axios');
 const { OpenAI } = require('openai');
+const sharp = require('sharp');
+const zlib = require('zlib');
 
 const app = express();
 const port = 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -28,39 +31,53 @@ async function warmUpOpenAI() {
       ],
       max_tokens: 5
     });
-    console.log('OpenAI warmed up successfully');
+    console.error('OpenAI warmed up successfully');
   } catch (error) {
     console.error('Error warming up OpenAI:', error);
   }
 }
 
+const phases = ['UI', 'Functionality', 'Performance', 'Overall'];
+
+const evaluationResults = new Map(); // Store evaluation results for each website
+
 app.get('/api/evaluate', async (req, res) => {
-  const { url } = req.query;
+  const { url, phase, userMessage } = req.query;
   
   try {
-    // Set up Server-Sent Events
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive'
     });
 
-    // Function to send status updates
     const sendStatus = (message) => {
       res.write(`data: ${JSON.stringify({ status: message })}\n\n`);
     };
 
-    sendStatus('Initializing evaluation process...');
-    
-    // Perform website evaluation here
-    const evaluationResult = await evaluateWebsite(url, sendStatus);
-    
-    // Send the final result
-    res.write(`data: ${JSON.stringify({ result: evaluationResult })}\n\n`);
+    if (!phase || phase === 'start') {
+      sendStatus('Initializing evaluation process...');
+      const evaluationResult = await evaluateWebsite(url, sendStatus);
+      // Remove any AI analysis from the result
+      const { aiAnalysis, ...metrics } = evaluationResult;
+      res.write(`data: ${JSON.stringify({ result: metrics, phase: 'start' })}\n\n`);
+    } else if (phases.includes(phase)) {
+      const storedResult = evaluationResults.get(url);
+      if (!storedResult) {
+        throw new Error('No evaluation result found for this URL. Please start a new evaluation.');
+      }
+      const analysisResult = await performPhaseAnalysis(url, phase, storedResult);
+      console.log('Analysis result:', analysisResult); // Add this line for debugging
+      res.write(`data: ${JSON.stringify({ result: analysisResult, phase })}\n\n`);
+    } else {
+      res.write(`data: ${JSON.stringify({ error: 'Invalid phase' })}\n\n`);
+    }
+
     res.end();
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'An error occurred during evaluation' });
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
   }
 });
 
@@ -225,17 +242,20 @@ async function evaluateWebsite(url, sendStatus) {
     sendStatus('Taking screenshot...');
     await sleep(1500);
     const screenshot = await page.screenshot({ encoding: 'base64' });
+    
+    // Compress the screenshot once
+    const compressedScreenshot = await compressScreenshot(screenshot);
 
     sendStatus('Performing AI analysis...');
     await sleep(2000);
-    const aiAnalysis = await performAIAnalysis(combinedMetrics, htmlContent, url);
+    const aiAnalysis = await performPhaseAnalysis({ ...combinedMetrics, screenshot: compressedScreenshot }, url, 'UI');
 
     sendStatus('Finalizing results...');
     await sleep(1000);
     return {
       ...combinedMetrics,
       htmlContent,
-      screenshot,
+      screenshot: compressedScreenshot,
       aiAnalysis,
     };
   } finally {
@@ -247,92 +267,157 @@ async function evaluateWebsite(url, sendStatus) {
   }
 }
 
-async function performAIAnalysis(metrics, htmlContent, url) {
-  const maxRetries = 3;
-  const retryDelay = 1000; // 1 second
+// Add this function to compress the chat history
+function compressHistory(history) {
+  const jsonString = JSON.stringify(history);
+  return zlib.deflateSync(jsonString).toString('base64');
+}
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+// Add this function to decompress the chat history
+function decompressHistory(history) {
+  if (!history) {
+    return [];
+  }
+  try {
+    // First, try to parse it as JSON (uncompressed)
+    return JSON.parse(history);
+  } catch (error) {
+    // If parsing fails, try to decompress
     try {
-      const prompt = `Analyze the following website metrics for ${url}:
-
-${JSON.stringify(metrics, null, 2)}
-
-Please provide:
-1. An overall score (0-100)
-2. UI analysis
-3. Functionality analysis
-4. 3-5 recommendations for improvement
-
-Format your response as follows:
-Overall Score: [score]
-UI Analysis: [your analysis]
-Functionality Analysis: [your analysis]
-Recommendations:
-- [recommendation 1]
-- [recommendation 2]
-- [recommendation 3]
-`;
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a web development expert analyzing website performance and user experience." },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-      });
-
-      const analysis = response.choices[0].message.content;
-      return parseAIResponse(analysis);
-    } catch (error) {
-      console.error(`AI analysis attempt ${attempt} failed:`, error);
-      if (attempt === maxRetries) {
-        console.error('All retry attempts failed');
-        return {
-          overallScore: 0,
-          uiAnalysis: "AI analysis failed after multiple attempts",
-          functionalityAnalysis: "AI analysis failed after multiple attempts",
-          recommendations: ["Unable to generate recommendations due to persistent AI error"]
-        };
-      }
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      const buffer = Buffer.from(history, 'base64');
+      return JSON.parse(zlib.inflateSync(buffer).toString());
+    } catch (decompressError) {
+      console.error('Error decompressing history:', decompressError);
+      return [];
     }
   }
 }
 
-function parseAIResponse(analysis) {
-  const lines = analysis.split('\n');
-  let overallScore = 0;
-  let uiAnalysis = '';
-  let functionalityAnalysis = '';
-  let recommendations = [];
-  let currentSection = '';
+// Add this function to generate the system message
+function getSystemMessage() {
+  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude. You sometimes use one-word responses like \"fine\" or \"okay\". You do not use emojis.";
+}
 
-  for (const line of lines) {
-    if (line.startsWith('Overall Score:')) {
-      overallScore = parseInt(line.split(':')[1].trim());
-    } else if (line.startsWith('UI Analysis:')) {
-      currentSection = 'ui';
-    } else if (line.startsWith('Functionality Analysis:')) {
-      currentSection = 'functionality';
-    } else if (line.startsWith('Recommendations:')) {
-      currentSection = 'recommendations';
-    } else if (line.trim().startsWith('-') && currentSection === 'recommendations') {
-      recommendations.push(line.trim().substring(1).trim());
-    } else if (currentSection === 'ui') {
-      uiAnalysis += line + ' ';
-    } else if (currentSection === 'functionality') {
-      functionalityAnalysis += line + ' ';
+async function performPhaseAnalysis(url, phase, metrics, history) {
+  console.log('Performing phase analysis:', { url, phase, metrics });
+
+  let prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences.`;
+  
+  if (metrics) {
+    const roundedMetrics = roundMetrics(metrics);
+    prompt += ` Here are relevant metrics: ${JSON.stringify(roundedMetrics)}`;
+  } else {
+    console.warn('No metrics provided for analysis');
+  }
+
+  prompt += " Limit your analysis to 6-9 sentences, focusing on the most critical points.";
+
+  // Decompress the chat history if it exists
+  const decompressedHistory = decompressHistory(history);
+
+  // Construct messages array with history
+  const messages = [
+    { role: "system", content: getSystemMessage() },
+    ...decompressedHistory,
+    { role: "user", content: prompt }
+  ];
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: messages,
+      max_tokens: 250,
+      temperature: 0.7,
+    });
+
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error(`AI analysis for ${phase} phase failed:`, error);
+    throw new Error(`AI analysis for ${phase} phase failed: ${error.message}`);
+  }
+}
+
+// Add this function to round numerical values in metrics
+function roundMetrics(metrics) {
+  const rounded = {};
+  for (const [key, value] of Object.entries(metrics)) {
+    if (typeof value === 'number') {
+      rounded[key] = Number(value.toFixed(2));
+    } else if (typeof value === 'object' && value !== null) {
+      rounded[key] = roundMetrics(value);
+    } else {
+      rounded[key] = value;
+    }
+  }
+  return rounded;
+}
+
+async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
+  let quality = 80;
+  let width = 1920;
+  let buffer = Buffer.from(screenshot, 'base64');
+
+  while (buffer.length > maxSizeInBytes && quality > 10) {
+    try {
+      buffer = await sharp(buffer)
+        .resize({ width, fit: 'inside' })
+        .jpeg({ quality })
+        .toBuffer();
+
+      if (buffer.length > maxSizeInBytes) {
+        quality -= 10;
+        width = Math.floor(width * 0.9);
+      }
+    } catch (error) {
+      console.error('Error compressing screenshot:', error);
+      return null;
     }
   }
 
-  return {
-    overallScore,
-    uiAnalysis: uiAnalysis.trim(),
-    functionalityAnalysis: functionalityAnalysis.trim(),
-    recommendations
-  };
+  return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
+}
+
+function summarizePhase(evaluationResult, phase) {
+  // Create a brief summary of the given phase
+  // This should be a short string, not the full analysis
+  return `${phase} summary: [Brief summary here]`;
+}
+
+app.post('/api/analyze', async (req, res) => {
+  const { url, phase, metrics, history } = req.body;
+  
+  console.log('Request body:', req.body); // Add this line for debugging
+
+  try {
+    const analysis = await performPhaseAnalysis(url, phase, metrics, history);
+    const overallScore = phase === 'Overall' ? await generateOverallScore(metrics) : null;
+    res.json({ analysis, overallScore });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+async function generateOverallScore(metrics) {
+  const prompt = `Based on these website metrics: ${JSON.stringify(metrics)}, generate an overall score from 0 to 100 for the website. Only return the numeric score.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a web performance scoring system. Provide only a numeric score between 0 and 100." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 5,
+      temperature: 0.3,
+    });
+
+    const score = parseInt(response.choices[0].message.content.trim());
+    return isNaN(score) ? 0 : score;
+  } catch (error) {
+    console.error('Overall score generation failed:', error);
+    return 0;
+  }
 }
 
 app.listen(port, () => {
@@ -356,5 +441,32 @@ app.get('/api/proxy-image', async (req, res) => {
   } catch (error) {
     console.error('Error proxying image:', error);
     res.status(500).send('Error fetching image');
+  }
+});
+
+app.post('/api/chat', async (req, res) => {
+  const { url, phase, message, history } = req.body;
+  
+  try {
+    // Decompress the chat history
+    const decompressedHistory = decompressHistory(history);
+
+    const messages = [
+      { role: "system", content: getSystemMessage() },
+      ...decompressedHistory,
+      { role: "user", content: `The current phase is ${phase}. User question: ${message}` }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: messages,
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+
+    res.json({ reply: response.choices[0].message.content });
+  } catch (error) {
+    console.error('Error generating chat reply:', error);
+    res.status(500).json({ error: 'Failed to generate a response' });
   }
 });
