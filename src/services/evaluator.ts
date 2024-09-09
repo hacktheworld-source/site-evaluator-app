@@ -42,6 +42,36 @@ export interface EvaluationResult {
     functionalityAnalysis: string;
     recommendations: string[];
   };
+  accessibility: {
+    ariaAttributesCount: number;
+    imagesWithAltText: number;
+    totalImages: number;
+    headingStructure: Array<{ level: number; text: string }>;
+    keyboardNavigable: boolean;
+  };
+  seo: {
+    title: string;
+    metaDescription: string;
+    canonicalUrl: string;
+    h1: string;
+    metaViewport: string;
+    structuredData: string[];
+    robotsMeta: string | null;
+  };
+  bestPractices: {
+    semanticUsage: { [key: string]: number };
+    optimizedImages: number;
+    totalImages: number;
+  };
+  security: {
+    isHttps: boolean;
+    hasContentSecurityPolicy: boolean;
+    hasStrictTransportSecurity: boolean;
+    hasXFrameOptions: boolean;
+  };
+  ttfb: number;
+  tbt: number;
+  estimatedFid: number; // Changed from fid to estimatedFid
 }
 
 const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute

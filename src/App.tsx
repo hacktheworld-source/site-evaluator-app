@@ -2,19 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import WebsiteInput from './components/WebsiteInput';
 import EvaluationResults from './components/EvaluationResults';
 import Auth from './components/Auth';
-import UserDashboard from './components/UserDashboard';
 import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './services/firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { saveEvaluation, getUserPoints, decrementUserPoints, updateUserPoints } from './services/database';
+import { signOut } from 'firebase/auth';
+import { getUserPoints, decrementUserPoints, updateUserPoints } from './services/database';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Evaluation } from './services/database'; // Add this import
 import ProfilePage from './components/ProfilePage';
 import PointsManagementPage from './components/PointsManagementPage';
 import AuthModal from './components/AuthModal';
-import defaultUserIcon from './assets/default-user-icon.png'; // Change .svg to .png
+import defaultUserIcon from './assets/default-user-icon.png';
 import { User } from 'firebase/auth';
 import ChatInterface from './components/ChatInterface';
 
@@ -25,15 +23,9 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const historyPanelRef = useRef<HTMLDivElement>(null);
-  const [refreshHistory, setRefreshHistory] = useState(0);
-  const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
-  const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState<{ show: boolean; action: () => void } | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
@@ -72,21 +64,13 @@ const App: React.FC = () => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
       }
-      if (historyPanelRef.current && 
-          !historyPanelRef.current.contains(event.target as Node) && 
-          !(event.target as Element).closest('.history-toggle') &&
-          !(event.target as Element).closest('.detail-popup-overlay') &&
-          !(event.target as Element).closest('.confirm-dialog-overlay') &&
-          isHistoryOpen) {
-        setIsHistoryOpen(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isHistoryOpen]);
+  }, []);
 
   const handleError = (message: string) => {
     toast.error(message);
@@ -132,20 +116,6 @@ const App: React.FC = () => {
           setIsLoading(false);
           setStatusMessage('Evaluation complete!');
           setTimeout(() => setStatusMessage(''), 2000);
-
-          // Save the evaluation
-          try {
-            await saveEvaluation({
-              userId: user.uid,
-              websiteUrl: website,
-              ...data.result,
-              timestamp: new Date()
-            });
-            setRefreshHistory(prev => prev + 1);
-          } catch (error) {
-            console.error('Error saving evaluation:', error);
-            toast.error('Failed to save evaluation history. Please try again.');
-          }
         }
       };
 
@@ -276,94 +246,11 @@ const App: React.FC = () => {
           <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
         )}
       </header>
-      {currentPage === 'home' && user && (
-        <button className="history-toggle" onClick={() => setIsHistoryOpen(!isHistoryOpen)}>
-          {isHistoryOpen ? '📁' : '📂'}
-        </button>
-      )}
-      <div className={`content-wrapper ${(isHistoryOpen || isDetailPopupOpen) ? 'blur' : ''}`}>
+      <div className={`content-wrapper`}>
         <main className="main-content">
           {renderPage()}
         </main>
       </div>
-      {user && (
-        <div ref={historyPanelRef} className={`history-panel ${isHistoryOpen ? 'open' : ''}`}>
-          <UserDashboard 
-            userId={user.uid} 
-            refreshTrigger={refreshHistory} 
-            onDetailPopupOpen={(evaluation) => {
-              setSelectedEvaluation(evaluation);
-              setIsDetailPopupOpen(true);
-            }}
-            onConfirmDialogOpen={(action) => {
-              setShowConfirmDialog({ 
-                show: true, 
-                action: () => {
-                  action();
-                  setShowConfirmDialog(null);
-                }
-              });
-            }}
-          />
-        </div>
-      )}
-      {selectedEvaluation && (
-        <div className="detail-popup-overlay">
-          <div className="detail-popup">
-            <button className="detail-popup-close" onClick={() => {
-              setSelectedEvaluation(null);
-              setIsDetailPopupOpen(false);
-            }}>&times;</button>
-            <div className="detail-popup-content">
-              <h3>Detailed Evaluation for {selectedEvaluation.websiteUrl}</h3>
-              <p>Overall Score: {selectedEvaluation.aiAnalysis?.overallScore ?? 'N/A'}</p>
-              
-              <h4>Performance Metrics:</h4>
-              <ul>
-                <li>Load Time: {selectedEvaluation.metrics?.loadTime?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>DOM Content Loaded: {selectedEvaluation.metrics?.domContentLoaded?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>First Paint: {selectedEvaluation.metrics?.firstPaint?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>First Contentful Paint: {selectedEvaluation.metrics?.firstContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>Time to Interactive: {selectedEvaluation.metrics?.timeToInteractive?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>Largest Contentful Paint: {selectedEvaluation.metrics?.largestContentfulPaint?.toFixed(2) ?? 'N/A'} ms</li>
-                <li>Cumulative Layout Shift: {selectedEvaluation.metrics?.cumulativeLayoutShift?.toFixed(4) ?? 'N/A'}</li>
-              </ul>
-
-              <h4>UI Analysis:</h4>
-              <p>{selectedEvaluation.aiAnalysis?.uiAnalysis ?? 'N/A'}</p>
-
-              <h4>Functionality Analysis:</h4>
-              <p>{selectedEvaluation.aiAnalysis?.functionalityAnalysis ?? 'N/A'}</p>
-
-              <h4>Recommendations:</h4>
-              <ul>
-                {selectedEvaluation.aiAnalysis?.recommendations?.map((rec, index) => (
-                  <li key={index}>{rec}</li>
-                )) ?? <li>No recommendations available</li>}
-              </ul>
-
-              <h4>Screenshot:</h4>
-              {selectedEvaluation.screenshot && (
-                <img src={`data:image/png;base64,${selectedEvaluation.screenshot}`} alt="Website Screenshot" style={{maxWidth: '100%'}} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      {showConfirmDialog && (
-        <div className="confirm-dialog-overlay">
-          <div className="confirm-dialog">
-            <p>Are you sure you want to proceed?</p>
-            <div className="confirm-dialog-actions">
-              <button onClick={() => {
-                showConfirmDialog.action();
-                setShowConfirmDialog(null);
-              }}>Yes</button>
-              <button onClick={() => setShowConfirmDialog(null)}>No</button>
-            </div>
-          </div>
-        </div>
-      )}
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
       <ToastContainer position="top-right" autoClose={5000} />
     </div>
