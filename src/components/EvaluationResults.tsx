@@ -6,6 +6,8 @@ interface EvaluationResultsProps {
 }
 
 const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
+  console.log('Evaluation result:', result);
+  
   const formatMetric = (value: number | string | undefined, decimals: number = 2): string => {
     if (typeof value === 'number') {
       return value.toFixed(decimals);
@@ -17,6 +19,7 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
     <div className="evaluation-results">
       <h2>Overall Score: {result.aiAnalysis?.overallScore ?? 'N/A'}</h2>
       
+      {/* Performance Metrics */}
       <h3>Performance Metrics</h3>
       <ul>
         <li>Load Time: {formatMetric(result.loadTime)} ms</li>
@@ -26,37 +29,38 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
         <li>Time to Interactive: {formatMetric(result.timeToInteractive)} ms</li>
         <li>Largest Contentful Paint: {formatMetric(result.largestContentfulPaint)} ms</li>
         <li>Cumulative Layout Shift: {formatMetric(result.cumulativeLayoutShift, 4)}</li>
+        <li>Time to First Byte (TTFB): {formatMetric(result.ttfb)} ms</li>
+        <li>Total Blocking Time (TBT): {formatMetric(result.tbt)} ms</li>
+        <li>Estimated First Input Delay (FID): {formatMetric(result.estimatedFid)} ms</li>
         <li>DOM Elements: {result.domElements ?? 'N/A'}</li>
         <li>Page Size: {result.pageSize ? (result.pageSize / 1024).toFixed(2) : 'N/A'} KB</li>
         <li>Total Requests: {result.requests ?? 'N/A'}</li>
       </ul>
 
-      <h3>UI Metrics</h3>
-      <h4>Color Contrast</h4>
-      <p>Low Contrast Elements: {result.colorContrast?.lowContrastElements ?? 'N/A'}</p>
-      <h4>Font Sizes</h4>
+      {/* SEO Metrics */}
+      <h3>SEO Metrics</h3>
       <ul>
-        {Object.entries(result.fontSizes || {}).map(([size, count]) => (
-          <li key={size}>{size}: {count} elements</li>
-        ))}
+        <li>Title: {result.seo?.title ?? 'N/A'}</li>
+        <li>Meta Description: {result.seo?.metaDescription ?? 'N/A'}</li>
+        <li>Canonical URL: {result.seo?.canonicalUrl ?? 'N/A'}</li>
+        <li>H1 Tag: {result.seo?.h1 ?? 'N/A'}</li>
+        <li>Meta Viewport: {result.seo?.metaViewport ?? 'N/A'}</li>
       </ul>
-      <h4>Responsiveness</h4>
-      <p>Is Responsive: {result.responsiveness?.isResponsive ? 'Yes' : 'No'}</p>
-      <p>Viewport Width: {result.responsiveness?.viewportWidth ?? 'N/A'}px</p>
-      <p>Page Width: {result.responsiveness?.pageWidth ?? 'N/A'}px</p>
 
-      <h3>Functionality Metrics</h3>
-      <h4>Links</h4>
-      <p>Total Links: {result.brokenLinks?.totalLinks ?? 'N/A'}</p>
-      <p>Broken Links: {result.brokenLinks?.brokenLinks ?? 'N/A'}</p>
-      <h4>Forms</h4>
-      <p>Total Forms: {result.formFunctionality?.totalForms ?? 'N/A'}</p>
-      <p>Forms with Submit Button: {result.formFunctionality?.formsWithSubmitButton ?? 'N/A'}</p>
+      {/* Best Practices */}
+      <h3>Best Practices</h3>
+      <ul>
+        <li>Semantic Elements Usage:
+          <ul>
+            {Object.entries(result.bestPractices?.semanticUsage || {}).map(([element, count]) => (
+              <li key={element}>{element}: {count}</li>
+            ))}
+          </ul>
+        </li>
+        <li>Optimized Images: {result.bestPractices?.optimizedImages ?? 'N/A'} / {result.bestPractices?.totalImages ?? 'N/A'}</li>
+      </ul>
 
-      <h3>Screenshot</h3>
-      {result.screenshot && (
-        <img src={`data:image/png;base64,${result.screenshot}`} alt="Website Screenshot" style={{maxWidth: '100%'}} />
-      )}
+      {/* ... (rest of the component remains the same) */}
     </div>
   );
 };

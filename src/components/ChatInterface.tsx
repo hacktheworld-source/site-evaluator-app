@@ -32,7 +32,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
-  const phases = ['UI', 'Functionality', 'Performance', 'Overall'];
+  const phases = ['UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
   useEffect(() => {
     if (evaluationResults) {
@@ -114,23 +114,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return {
           colorContrast: allMetrics.colorContrast,
           fontSizes: allMetrics.fontSizes,
-          responsiveness: allMetrics.responsiveness
+          responsiveness: allMetrics.responsiveness,
+          accessibility: allMetrics.accessibility
         };
       case 'Functionality':
         return {
           brokenLinks: allMetrics.brokenLinks,
-          formFunctionality: allMetrics.formFunctionality
+          formFunctionality: allMetrics.formFunctionality,
+          bestPractices: allMetrics.bestPractices
         };
       case 'Performance':
         return {
           loadTime: allMetrics.loadTime,
+          domContentLoaded: allMetrics.domContentLoaded,
+          firstPaint: allMetrics.firstPaint,
           firstContentfulPaint: allMetrics.firstContentfulPaint,
+          timeToInteractive: allMetrics.timeToInteractive,
           largestContentfulPaint: allMetrics.largestContentfulPaint,
-          cumulativeLayoutShift: allMetrics.cumulativeLayoutShift
+          cumulativeLayoutShift: allMetrics.cumulativeLayoutShift,
+          ttfb: allMetrics.ttfb,
+          tbt: allMetrics.tbt,
+          estimatedFid: allMetrics.estimatedFid, // Changed from fid to estimatedFid
+          domElements: allMetrics.domElements,
+          pageSize: allMetrics.pageSize,
+          requests: allMetrics.requests,
+          security: allMetrics.security
+        };
+      case 'SEO':
+        return {
+          seo: allMetrics.seo
         };
       case 'Overall':
-        // Exclude htmlContent, but include all other metrics
-        const { htmlContent, ...overallMetrics } = allMetrics;
+        // For Overall phase, return all metrics
+        const { htmlContent, screenshot, ...overallMetrics } = allMetrics;
         return overallMetrics;
       default:
         return {};
@@ -178,7 +194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       try {
         const phaseMetrics = getPhaseMetrics(nextPhase, evaluationResults);
-        console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: phaseMetrics });
+        console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: nextPhase === 'Overall' ? {} : phaseMetrics });
         const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
           phase: nextPhase,
@@ -194,7 +210,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const newAssistantMessage: Message = {
           role: 'assistant',
           content: analysisResponse.data.analysis,
-          metrics: phaseMetrics,
+          metrics: nextPhase === 'Overall' ? getPhaseMetrics('Overall', evaluationResults) : phaseMetrics,
           screenshot: nextPhase === 'Overall' ? evaluationResults.screenshot : undefined,
           phase: nextPhase
         };
@@ -218,11 +234,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  const renderMetrics = useCallback((metrics: { [key: string]: any }) => (
+    <div className="metrics-wrapper fade-in">
+      {Object.entries(metrics || {}).map(([key, value]) => {
+        if (key !== 'screenshot' && key !== 'htmlContent') {
+          if (typeof value === 'object' && value !== null) {
+            return (
+              <div key={key} className="metric-tile">
+                <div className="metric-title">{key}</div>
+                {Object.entries(value).map(([subKey, subValue]) => (
+                  <div key={subKey} className="metric-value">
+                    <strong>{subKey}:</strong> {renderMetricValue(subValue)}
+                  </div>
+                ))}
+              </div>
+            );
+          } else {
+            return (
+              <div key={key} className="metric-tile">
+                <div className="metric-title">{key}</div>
+                <div className="metric-value">{renderMetricValue(value)}</div>
+              </div>
+            );
+          }
+        }
+        return null;
+      })}
+    </div>
+  ), []);
+
   const renderMetricValue = (value: any): React.ReactNode => {
-    if (typeof value === 'number') {
+    if (value === null || value === undefined) {
+      return 'N/A';
+    } else if (typeof value === 'number') {
       return value.toFixed(2);
     } else if (typeof value === 'string') {
-      return value;
+      return value || 'N/A';
     } else if (typeof value === 'boolean') {
       return value.toString();
     } else if (Array.isArray(value)) {
@@ -233,7 +280,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ))}
         </ul>
       );
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (typeof value === 'object') {
       return (
         <div>
           {Object.entries(value).map(([subKey, subValue]) => (
@@ -244,21 +291,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       );
     }
-    return 'n/a';
+    return 'N/A';
   };
-
-  const renderMetrics = useCallback((metrics: { [key: string]: any }) => (
-    <div className="metrics-wrapper fade-in">
-      {Object.entries(metrics).map(([key, value]) => (
-        key !== 'screenshot' && key !== 'htmlContent' && (
-          <div key={key} className="metric-tile">
-            <div className="metric-title">{key}</div>
-            <div className="metric-value">{renderMetricValue(value)}</div>
-          </div>
-        )
-      ))}
-    </div>
-  ), []);
 
   const renderScreenshot = useCallback((screenshot: string) => (
     <img 

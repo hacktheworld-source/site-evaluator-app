@@ -7,6 +7,7 @@ const axios = require('axios');
 const { OpenAI } = require('openai');
 const sharp = require('sharp');
 const zlib = require('zlib');
+const https = require('https');
 
 const app = express();
 const port = 3001;
@@ -37,7 +38,7 @@ async function warmUpOpenAI() {
   }
 }
 
-const phases = ['UI', 'Functionality', 'Performance', 'Overall'];
+const phases = ['UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
 const evaluationResults = new Map(); // Store evaluation results for each website
 
@@ -166,6 +167,9 @@ async function evaluateWebsite(url, sendStatus) {
         responsiveness: checkResponsiveness(),
         brokenLinks: checkBrokenLinks(),
         formFunctionality: checkFormFunctionality(),
+        accessibility: analyzeAccessibility(),
+        seo: analyzeSEO(),
+        bestPractices: analyzeBestPractices(),
       };
 
       function analyzeColorContrast() {
@@ -231,9 +235,155 @@ async function evaluateWebsite(url, sendStatus) {
           ).length
         };
       }
+
+      function analyzeAccessibility() {
+        const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+        const headingStructure = headings.map(h => ({ level: parseInt(h.tagName[1]), text: h.textContent }));
+        
+        const interactiveElements = document.querySelectorAll('a, button, input, select, textarea');
+        const keyboardNavigable = Array.from(interactiveElements).every(el => el.tabIndex >= 0);
+
+        // Count ARIA attributes
+        const allElements = document.getElementsByTagName('*');
+        let ariaAttributesCount = 0;
+        for (let i = 0; i < allElements.length; i++) {
+          const attributes = allElements[i].attributes;
+          for (let j = 0; j < attributes.length; j++) {
+            if (attributes[j].name.startsWith('aria-')) {
+              ariaAttributesCount++;
+            }
+          }
+        }
+
+        return {
+          ariaAttributesCount: ariaAttributesCount,
+          imagesWithAltText: document.querySelectorAll('img[alt]').length,
+          totalImages: document.querySelectorAll('img').length,
+          headingStructure,
+          keyboardNavigable,
+        };
+      }
+
+      function analyzeSEO() {
+        return {
+          title: document.title,
+          metaDescription: document.querySelector('meta[name="description"]')?.getAttribute('content') || '',
+          canonicalUrl: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
+          h1: document.querySelector('h1')?.textContent || '',
+          metaViewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '',
+        };
+      }
+
+      function analyzeBestPractices() {
+        const semanticElements = ['header', 'nav', 'main', 'article', 'section', 'aside', 'footer'];
+        const semanticUsage = semanticElements.reduce((acc, el) => {
+          acc[el] = document.getElementsByTagName(el).length;
+          return acc;
+        }, {});
+
+        const images = Array.from(document.images);
+        const optimizedImages = images.filter(img => {
+          const rect = img.getBoundingClientRect();
+          return img.naturalWidth <= rect.width * 2 && img.naturalHeight <= rect.height * 2;
+        });
+
+        return {
+          semanticUsage,
+          optimizedImages: optimizedImages.length,
+          totalImages: images.length,
+        };
+      }
     });
 
-    const combinedMetrics = { ...metrics, ...contentMetrics };
+    // Analyze performance metrics
+    const performanceMetrics = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        let tbt = 0;
+        let estimatedFid = 0;
+        let fcp = null;
+        let lcp = null;
+        let tti = null;
+
+        const lcpObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          lcp = entries[entries.length - 1].startTime;
+        });
+
+        const fcpObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          fcp = entries[0].startTime;
+        });
+
+        lcpObserver.observe({type: 'largest-contentful-paint', buffered: true});
+        fcpObserver.observe({type: 'paint', buffered: true});
+
+        // Calculate TBT and estimate FID
+        const tbtObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          entries.forEach((entry) => {
+            if (fcp && (!tti || entry.startTime < tti)) {
+              const blockingTime = entry.duration - 50;
+              if (blockingTime > 0) {
+                tbt += blockingTime;
+                // Estimate FID as the maximum task duration
+                estimatedFid = Math.max(estimatedFid, entry.duration);
+              }
+            }
+          });
+        });
+
+        tbtObserver.observe({type: 'longtask', buffered: true});
+
+        // Simulate user interaction
+        setTimeout(() => {
+          const button = document.createElement('button');
+          button.innerHTML = 'Test Button';
+          document.body.appendChild(button);
+          button.click();
+          document.body.removeChild(button);
+        }, 100);
+
+        // Wait for 5 seconds to collect data
+        setTimeout(() => {
+          lcpObserver.disconnect();
+          fcpObserver.disconnect();
+          tbtObserver.disconnect();
+
+          const navigationEntry = performance.getEntriesByType('navigation')[0];
+          const paintEntries = performance.getEntriesByType('paint');
+          const firstPaint = paintEntries.find(entry => entry.name === 'first-paint');
+          tti = navigationEntry.domInteractive;
+
+          // Estimate FID based on TBT
+          const estimatedFidFromTbt = tbt * 0.2; // Rough estimation: FID is often about 20% of TBT
+          estimatedFid = Math.max(estimatedFid, estimatedFidFromTbt);
+
+          resolve({
+            loadTime: navigationEntry.loadEventEnd - navigationEntry.startTime,
+            domContentLoaded: navigationEntry.domContentLoadedEventEnd - navigationEntry.startTime,
+            firstPaint: firstPaint ? firstPaint.startTime : null,
+            firstContentfulPaint: fcp,
+            largestContentfulPaint: lcp,
+            timeToInteractive: tti,
+            ttfb: navigationEntry.responseStart - navigationEntry.requestStart,
+            tbt,
+            estimatedFid: Math.round(estimatedFid),
+          });
+        }, 5000);
+      });
+    });
+
+    // Analyze security (this needs to be done server-side)
+    sendStatus('Checking security...');
+    await sleep(1000);
+    const securityMetrics = await analyzeSecurityMetrics(url);
+
+    const combinedMetrics = { 
+      ...metrics, 
+      ...contentMetrics,
+      ...performanceMetrics,
+      security: securityMetrics
+    };
 
     sendStatus('Capturing page content...');
     await sleep(1000);
@@ -295,7 +445,7 @@ function decompressHistory(history) {
 
 // Add this function to generate the system message
 function getSystemMessage() {
-  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes use one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
+  return "Your name is Olive. You are a sarcastic and judgemental (but accurate) female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
 }
 
 async function performPhaseAnalysis(url, phase, metrics, history) {
@@ -303,11 +453,13 @@ async function performPhaseAnalysis(url, phase, metrics, history) {
 
   let prompt = `analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points`;
   
-  if (phase === 'Overall' || !metrics) {
-    prompt += " provide an overall analysis based on the previous phases.";
+  if (phase === 'Overall') {
+    prompt += " provide an overall analysis based on all the metrics, including UI, functionality, performance, and SEO aspects.";
   } else {
     const roundedMetrics = roundMetrics(metrics);
     prompt += ` based on the provided metrics: ${JSON.stringify(roundedMetrics)}`;
+    
+    prompt += ` identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.`;
   }
 
   prompt += " limit your analysis to 6-9 sentences, focusing on the most critical points.";
@@ -458,7 +610,7 @@ app.post('/api/chat', async (req, res) => {
     const messages = [
       { role: "system", content: getSystemMessage() },
       ...decompressedHistory,
-      { role: "user", content: `The current phase is ${phase}. User question: ${message}` }
+      { role: "user", content: `(The current phase is ${phase}.) User message: ${message}` }
     ];
 
     const response = await openai.chat.completions.create({
@@ -474,3 +626,29 @@ app.post('/api/chat', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate a response' });
   }
 });
+
+async function analyzeSecurityMetrics(url) {
+  return new Promise((resolve) => {
+    https.get(url, (res) => {
+      const isHttps = res.socket.encrypted;
+      const csp = res.headers['content-security-policy'];
+      const hsts = res.headers['strict-transport-security'];
+      const xFrameOptions = res.headers['x-frame-options'];
+      
+      resolve({
+        isHttps,
+        hasContentSecurityPolicy: !!csp,
+        hasStrictTransportSecurity: !!hsts,
+        hasXFrameOptions: !!xFrameOptions,
+      });
+    }).on('error', (e) => {
+      console.error(`Error analyzing security metrics: ${e.message}`);
+      resolve({
+        isHttps: false,
+        hasContentSecurityPolicy: false,
+        hasStrictTransportSecurity: false,
+        hasXFrameOptions: false,
+      });
+    });
+  });
+}
