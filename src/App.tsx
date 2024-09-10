@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
+  const [chatKey, setChatKey] = useState<number>(0);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -98,6 +99,7 @@ const App: React.FC = () => {
     setError(null);
     setStatusMessage('Initializing evaluation process...');
     setEvaluationResults(null);
+    setChatKey(prevKey => prevKey + 1); // Reset chat by changing the key
 
     try {
       await decrementUserPoints(user.uid);
@@ -190,6 +192,7 @@ const App: React.FC = () => {
             {error && <p className="error-message">{error}</p>}
             {websiteUrl && (
               <ChatInterface
+                key={chatKey} // Add this line
                 websiteUrl={websiteUrl}
                 onStartEvaluation={handleEvaluation}
                 evaluationResults={evaluationResults}
