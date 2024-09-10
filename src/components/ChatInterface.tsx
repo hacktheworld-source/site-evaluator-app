@@ -44,6 +44,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Add this useEffect to reset the state when the component receives a new key
+  useEffect(() => {
+    setMessages([]);
+    setUserInput('');
+    setCurrentPhase(null);
+    setPhaseScores({});
+    setOverallScore(null);
+  }, [websiteUrl]);
+
   const updateOverallScore = (newPhaseScores: { [key: string]: number }) => {
     const scores = Object.values(newPhaseScores);
     if (scores.length > 0) {
