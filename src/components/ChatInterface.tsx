@@ -32,11 +32,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
-  const phases = ['UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
+  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
   useEffect(() => {
     if (evaluationResults) {
-      startUIAnalysis();
+      startVisionAnalysis();
     }
   }, [evaluationResults]);
 
@@ -75,51 +75,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const startUIAnalysis = async () => {
-    const uiMetrics = getPhaseMetrics('UI', evaluationResults);
-    
+  const startVisionAnalysis = async () => {
     try {
-      console.log('sending ui analysis request with metrics:', { url: websiteUrl, phase: 'UI', metrics: uiMetrics });
+      console.log('sending vision analysis request');
       const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
         url: websiteUrl,
-        phase: 'UI',
-        metrics: uiMetrics,
-        history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
+        phase: 'Vision',
+        metrics: {},
+        history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
+        screenshot: evaluationResults.screenshot
       });
-
-      const score = await getPhaseScore('UI', uiMetrics);
-
-      console.log('received ui analysis response:', analysisResponse.data);
 
       const initialMessage: Message = {
         role: 'assistant',
         content: analysisResponse.data.analysis,
-        metrics: uiMetrics,
         screenshot: evaluationResults.screenshot,
-        phase: 'UI'
+        phase: 'Vision'
       };
       addMessage(initialMessage);
-      setCurrentPhase('UI');
-
-      // update phase scores and overall score
-      const newPhaseScores = { ...phaseScores, UI: score };
-      setPhaseScores(newPhaseScores);
-      updateOverallScore(newPhaseScores);
+      setCurrentPhase('Vision');
     } catch (error) {
-      console.error('error starting ui analysis:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('server response:', error.response.data);
-      }
+      console.error('error starting vision analysis:', error);
       addMessage({
         role: 'assistant',
-        content: 'an error occurred while starting the ui analysis. please try again.'
+        content: 'an error occurred while starting the vision analysis. please try again.'
       });
     }
   };
 
   const getPhaseMetrics = (phase: string, allMetrics: any) => {
     switch (phase) {
+      case 'Vision':
+        return {}; // No metrics for Vision phase, just the screenshot
       case 'UI':
+        // Remove screenshot from UI metrics
         return {
           colorContrast: allMetrics.colorContrast,
           fontSizes: allMetrics.fontSizes,
@@ -208,7 +197,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           url: websiteUrl,
           phase: nextPhase,
           metrics: nextPhase === 'Overall' ? {} : phaseMetrics,
-          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
+          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
+          screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
         });
 
         let score = 0;
