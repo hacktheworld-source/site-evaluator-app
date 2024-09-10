@@ -173,29 +173,47 @@ async function evaluateWebsite(url, sendStatus) {
       };
 
       function analyzeColorContrast() {
-        // Simplified color contrast check
         const elements = document.querySelectorAll('*');
         let lowContrastCount = 0;
+        let totalTextElements = 0;
         elements.forEach(el => {
           const style = window.getComputedStyle(el);
           const backgroundColor = style.backgroundColor;
           const color = style.color;
-          if (backgroundColor && color) {
-            // Simple contrast ratio calculation (not accurate, just for demonstration)
-            const contrast = Math.abs(getLuminance(backgroundColor) - getLuminance(color));
-            if (contrast < 0.5) lowContrastCount++;
+          const fontSize = parseFloat(style.fontSize);
+          if (backgroundColor && color && el.textContent.trim()) {
+            totalTextElements++;
+            const bgRGB = backgroundColor.match(/\d+/g).map(Number);
+            const fgRGB = color.match(/\d+/g).map(Number);
+            const contrast = getContrastRatio(bgRGB, fgRGB);
+            // Use different thresholds based on text size
+            const threshold = fontSize >= 18 || (fontSize >= 14 && style.fontWeight === 'bold') ? 3 : 4.5;
+            if (contrast < threshold) lowContrastCount++;
           }
         });
-        return { lowContrastElements: lowContrastCount };
+        return { 
+          lowContrastElements: lowContrastCount,
+          totalTextElements: totalTextElements,
+          contrastRatio: totalTextElements > 0 ? (1 - lowContrastCount / totalTextElements) : 1
+        };
       }
 
-      function getLuminance(color) {
-        // Simplified luminance calculation
-        const rgb = color.match(/\d+/g);
-        if (rgb) {
-          return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
-        }
-        return 0;
+      function getLuminance(r, g, b) {
+        const a = [r, g, b].map(v => {
+          v /= 255;
+          return v <= 0.03928
+            ? v / 12.92
+            : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+      }
+
+      function getContrastRatio(rgb1, rgb2) {
+        const lum1 = getLuminance(rgb1[0], rgb1[1], rgb1[2]);
+        const lum2 = getLuminance(rgb2[0], rgb2[1], rgb2[2]);
+        const brightest = Math.max(lum1, lum2);
+        const darkest = Math.min(lum1, lum2);
+        return (brightest + 0.05) / (darkest + 0.05);
       }
 
       function analyzeFontSizes() {
@@ -271,6 +289,9 @@ async function evaluateWebsite(url, sendStatus) {
           canonicalUrl: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
           h1: document.querySelector('h1')?.textContent || '',
           metaViewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '',
+          openGraphTags: document.querySelectorAll('meta[property^="og:"]').length,
+          structuredData: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(script => script.textContent),
+          robotsTxt: document.querySelector('meta[name="robots"]')?.getAttribute('content') || null,
         };
       }
 
@@ -448,37 +469,67 @@ function getSystemMessage() {
   return "Your name is Olive. You are a sarcastic and judgemental (but accurate) female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
 }
 
-async function performPhaseAnalysis(url, phase, metrics, history) {
+async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
   console.log('performing phase analysis:', { url, phase, metrics });
 
-  let prompt = `analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points`;
+  let prompt;
   
-  if (phase === 'Overall') {
-    prompt += " provide an overall analysis based on all the metrics, including UI, functionality, performance, and SEO aspects.";
+  if (phase === 'Vision') {
+    prompt = `Analyze the screenshot of the website ${url} in detail. Please provide a comprehensive description and commentary, including:
+    1. Overall layout and design aesthetics
+    2. Color scheme and its effectiveness
+    3. Typography choices and readability
+    4. Use of images, icons, or other visual elements
+    5. Navigation structure and ease of use
+    6. Mobile-friendliness (if apparent)
+    7. Branding elements and consistency
+    8. Visual hierarchy and content organization
+    9. Any standout features or potential issues
+    Limit your analysis to 10-12 sentences, focusing on the most critical visual aspects.`;
+  } else if (phase === 'Overall') {
+    prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. Provide an overall analysis based on all the metrics, including Vision, UI, functionality, performance, and SEO aspects.`;
   } else {
     const roundedMetrics = roundMetrics(metrics);
-    prompt += ` based on the provided metrics: ${JSON.stringify(roundedMetrics)}`;
-    
-    prompt += ` identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.`;
+    prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. Focus on the most critical points based on the provided metrics: ${JSON.stringify(roundedMetrics)}. Identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.`;
   }
 
-  prompt += " limit your analysis to 6-9 sentences, focusing on the most critical points.";
+  if (phase === 'UI') {
+    prompt += ` Only consider contrast an issue if the contrastRatio is below 0.7. Comment on the user interface elements and their functionality.`;
+  }
 
   // decompress the chat history if it exists
   const decompressedHistory = decompressHistory(history);
 
-  // construct messages array with history
+  // construct messages array with history and image
   const messages = [
     { role: "system", content: getSystemMessage() },
     ...decompressedHistory,
-    { role: "user", content: prompt }
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: prompt
+        }
+      ]
+    }
   ];
+
+  // add the screenshot as a separate image input only for Vision phase
+  if (phase === 'Vision' && screenshot) {
+    messages[messages.length - 1].content.push({
+      type: "image_url",
+      image_url: {
+        url: `data:image/png;base64,${screenshot}`
+      }
+    });
+  }
 
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      max_tokens: 1000, // Increase this value
+      max_tokens: 1000,
       temperature: 0.7,
     });
 
@@ -563,12 +614,12 @@ app.post('/api/score', async (req, res) => {
 });
 
 app.post('/api/analyze', async (req, res) => {
-  const { url, phase, metrics, history } = req.body;
+  const { url, phase, metrics, history, screenshot } = req.body;
   
   console.log('Request body:', req.body);
 
   try {
-    const analysis = await performPhaseAnalysis(url, phase, metrics, history);
+    const analysis = await performPhaseAnalysis(url, phase, metrics, history, screenshot);
     res.json({ analysis });
   } catch (error) {
     console.error('Error:', error);
@@ -629,25 +680,48 @@ app.post('/api/chat', async (req, res) => {
 
 async function analyzeSecurityMetrics(url) {
   return new Promise((resolve) => {
-    https.get(url, (res) => {
-      const isHttps = res.socket.encrypted;
-      const csp = res.headers['content-security-policy'];
-      const hsts = res.headers['strict-transport-security'];
-      const xFrameOptions = res.headers['x-frame-options'];
+    const request = https.get(url, (res) => {
+      const securityHeaders = [
+        'strict-transport-security',
+        'x-frame-options',
+        'x-content-type-options',
+        'content-security-policy',
+        'referrer-policy',
+        'permissions-policy'
+      ];
+
+      const securityMetrics = {
+        isHttps: res.socket.encrypted,
+        securityHeaders: securityHeaders.reduce((acc, header) => {
+          acc[header] = !!res.headers[header];
+          return acc;
+        }, {})
+      };
       
-      resolve({
-        isHttps,
-        hasContentSecurityPolicy: !!csp,
-        hasStrictTransportSecurity: !!hsts,
-        hasXFrameOptions: !!xFrameOptions,
-      });
-    }).on('error', (e) => {
-      console.error(`Error analyzing security metrics: ${e.message}`);
+      resolve(securityMetrics);
+    });
+
+    request.on('error', (e) => {
+      console.error(`error analyzing security metrics: ${e.message}`);
+      if (e.code === 'ECONNRESET') {
+        console.log('connection was reset. retrying...');
+        // you could implement a retry mechanism here
+      }
       resolve({
         isHttps: false,
-        hasContentSecurityPolicy: false,
-        hasStrictTransportSecurity: false,
-        hasXFrameOptions: false,
+        securityHeaders: {},
+        error: e.message
+      });
+    });
+
+    // set a timeout for the request
+    request.setTimeout(10000, () => {
+      request.abort();
+      console.error('security metrics request timed out');
+      resolve({
+        isHttps: false,
+        securityHeaders: {},
+        error: 'request timed out'
       });
     });
   });
