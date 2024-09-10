@@ -66,7 +66,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/score`, {
         url: websiteUrl,
         phase: phase,
-        metrics: metrics
+        metrics: metrics,
+        screenshot: phase === 'Vision' ? evaluationResults.screenshot : undefined
       });
       return response.data.score || 0; // return 0 if score is null or undefined
     } catch (error) {
@@ -86,14 +87,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         screenshot: evaluationResults.screenshot
       });
 
+      const score = await getPhaseScore('Vision', { screenshot: evaluationResults.screenshot });
+
       const initialMessage: Message = {
         role: 'assistant',
         content: analysisResponse.data.analysis,
         screenshot: evaluationResults.screenshot,
-        phase: 'Vision'
+        phase: 'Vision',
+        metrics: {}
       };
       addMessage(initialMessage);
       setCurrentPhase('Vision');
+
+      // Update phase scores and overall score
+      const newPhaseScores = { ...phaseScores, Vision: score };
+      setPhaseScores(newPhaseScores);
+      updateOverallScore(newPhaseScores);
     } catch (error) {
       console.error('error starting vision analysis:', error);
       addMessage({
@@ -303,7 +312,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const renderMessage = useCallback((message: Message) => (
     <div className={`message ${message.role}`}>
-      {message.role === 'assistant' && message.metrics && message.phase && message.phase !== 'Overall' && (
+      {message.role === 'assistant' && message.metrics && message.phase && (message.phase === 'Vision' || message.phase !== 'Overall') && (
         <div className="message-score">
           score: {phaseScores[message.phase] || 'n/a'}
         </div>
