@@ -466,7 +466,7 @@ function decompressHistory(history) {
 
 // Add this function to generate the system message
 function getSystemMessage() {
-  return "Your name is Olive. You are a sarcastic and judgemental (but accurate) female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
+  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
 }
 
 async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
@@ -475,17 +475,7 @@ async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
   let prompt;
   
   if (phase === 'Vision') {
-    prompt = `Analyze the screenshot of the website ${url} in detail. Please provide a comprehensive description and commentary, including:
-    1. Overall layout and design aesthetics
-    2. Color scheme and its effectiveness
-    3. Typography choices and readability
-    4. Use of images, icons, or other visual elements
-    5. Navigation structure and ease of use
-    6. Mobile-friendliness (if apparent)
-    7. Branding elements and consistency
-    8. Visual hierarchy and content organization
-    9. Any standout features or potential issues
-    Limit your analysis to 10-12 sentences, focusing on the most critical visual aspects.`;
+    prompt = `Analyze the screenshot of the website ${url} in detail. Please provide a comprehensive description and commentary, focusing on the most critical visual aspects. Limit your analysis to 6-9 sentences.`;
   } else if (phase === 'Overall') {
     prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. Provide an overall analysis based on all the metrics, including Vision, UI, functionality, performance, and SEO aspects.`;
   } else {
@@ -582,19 +572,38 @@ async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
 
 // Add this new endpoint
 app.post('/api/score', async (req, res) => {
-  const { url, phase, metrics } = req.body;
+  const { url, phase, metrics, screenshot } = req.body;
   
   console.log('score request body:', req.body);
 
   try {
-    const scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
+    let scorePrompt;
+    if (phase === 'Vision') {
+      scorePrompt = `Based on the screenshot of the website ${url}, provide a single score out of 100 for its visual design and layout. Consider factors like aesthetics, usability, and overall user experience. Only return the numeric score, no explanation.`;
+    } else {
+      scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
+    }
+
+    const messages = [
+      { role: "system", content: "you are an ai assistant that provides numerical scores based on website metrics and visual design." },
+      { role: "user", content: scorePrompt }
+    ];
+
+    if (phase === 'Vision' && screenshot) {
+      messages[1].content = [
+        { type: "text", text: scorePrompt },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:image/png;base64,${screenshot}`
+          }
+        }
+      ];
+    }
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "you are an ai assistant that provides numerical scores based on website metrics." },
-        { role: "user", content: scorePrompt }
-      ],
+      messages: messages,
       max_tokens: 10,
       temperature: 0.3,
     });
