@@ -15,6 +15,7 @@ import AuthModal from './components/AuthModal';
 import defaultUserIcon from './assets/default-user-icon.png';
 import { User } from 'firebase/auth';
 import ChatInterface from './components/ChatInterface';
+import AnimatedEye from './components/AnimatedEye';
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -30,6 +31,8 @@ const App: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
   const [chatKey, setChatKey] = useState<number>(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -94,12 +97,13 @@ const App: React.FC = () => {
       return;
     }
 
+    setIsGenerating(true);
     setWebsiteUrl(website);
     setIsLoading(true);
     setError(null);
     setStatusMessage('Initializing evaluation process...');
     setEvaluationResults(null);
-    setChatKey(prevKey => prevKey + 1); // Reset chat by changing the key
+    setChatKey(prevKey => prevKey + 1);
 
     try {
       await decrementUserPoints(user.uid);
@@ -112,10 +116,10 @@ const App: React.FC = () => {
         if (data.status) {
           setStatusMessage(data.status);
         } else if (data.result) {
-          // The result now contains only metrics, no AI analysis
           setEvaluationResults(data.result);
           eventSource.close();
           setIsLoading(false);
+          setIsGenerating(false);
           setStatusMessage('Evaluation complete!');
           setTimeout(() => setStatusMessage(''), 2000);
         }
@@ -125,6 +129,7 @@ const App: React.FC = () => {
         console.error('EventSource failed:', error);
         eventSource.close();
         setIsLoading(false);
+        setIsGenerating(false);
         setError('An error occurred while evaluating the website. Please try again.');
         setStatusMessage('');
       };
@@ -132,6 +137,7 @@ const App: React.FC = () => {
       console.error('Error evaluating website:', error);
       setError('An error occurred while evaluating the website. Please try again.');
       setIsLoading(false);
+      setIsGenerating(false);
       setStatusMessage('');
       // Refund the point if the evaluation failed
       await updateUserPoints(user.uid, (userPoints || 0) + 1);
@@ -181,6 +187,7 @@ const App: React.FC = () => {
         return (
           <div className="main-content">
             <h1>Olive Site Evaluator</h1>
+            <AnimatedEye isGenerating={isGenerating} isWaitingForResponse={isWaitingForResponse} />
             <p className="app-description">Evaluate any website with just one click. Enter a URL below to get started.</p>
             <WebsiteInput 
               onSubmit={handleEvaluation} 
@@ -217,7 +224,7 @@ const App: React.FC = () => {
     <div className="App">
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
-        <div className="app-icon" onClick={() => setCurrentPage('home')}>🫒</div>
+        <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
         {user ? (
           <div className="user-menu-container" ref={userMenuRef}>
             <div 

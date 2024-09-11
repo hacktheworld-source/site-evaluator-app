@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 
 interface WebsiteInputProps {
   onSubmit: (website: string) => void;
@@ -26,15 +28,14 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({ onSubmit, isLoading, isLogg
     }
   };
 
-  const formatUrl = (url: string): string => {
-    url = url.trim();
-    if (!url.match(/^[a-zA-Z]+:\/\//)) {
+  const formatUrl = (url: string) => {
+    if (!/^https?:\/\//i.test(url)) {
       return `https://${url}`;
     }
     return url;
   };
 
-  const isValidUrl = (url: string): boolean => {
+  const isValidUrl = (url: string) => {
     try {
       new URL(url);
       return true;
@@ -54,11 +55,14 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({ onSubmit, isLoading, isLogg
           disabled={isLoading}
           aria-describedby="website-input-error"
         />
-        {isLoading && <div className="loading-indicator"></div>}
+        <button type="submit" disabled={isLoading} className="evaluate-submit-button">
+          {isLoading ? (
+            <div className="loading-indicator"></div>
+          ) : (
+            <FontAwesomeIcon icon={faArrowRight} />
+          )}
+        </button>
       </div>
-      <button type="submit" disabled={isLoading}>
-        Evaluate
-      </button>
       {error && <p id="website-input-error" className="error-message">{error}</p>}
     </form>
   );
