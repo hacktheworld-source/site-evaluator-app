@@ -103,6 +103,3 @@ export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
     throw new Error('An error occurred while evaluating the website. Please try again.');
   }
 }
-
-// Remove the performAIAnalysis function from this file
-// as it should now be handled on the server side

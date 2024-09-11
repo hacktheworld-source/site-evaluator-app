@@ -362,23 +362,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
         <div ref={chatEndRef} />
       </div>
-      <div className="chat-input">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        handleSendMessage();
+      }} className="chat-input">
         <input
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder="ask a question..."
+          placeholder="Ask a question..."
           disabled={isLoading}
         />
-        <button onClick={handleSendMessage} disabled={isLoading || !userInput.trim()}>
-          send
+        <button type="submit" disabled={isLoading || !userInput.trim()} className="chat-submit-button">
+          <i className="fas fa-paper-plane"></i>
         </button>
         {currentPhase && currentPhase !== 'Overall' && (
-          <button onClick={handleContinue} disabled={isLoading}>
-            continue
+          <button type="button" onClick={handleContinue} disabled={isLoading} className="continue-button">
+            Continue
           </button>
         )}
-      </div>
+      </form>
     </div>
   );
 };
