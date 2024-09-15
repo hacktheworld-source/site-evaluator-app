@@ -246,11 +246,15 @@ async function evaluateWebsite(url, sendStatus) {
 
       function checkFormFunctionality() {
         const forms = document.getElementsByTagName('form');
+        const interactiveElements = document.querySelectorAll('button, input[type="button"], input[type="submit"], a[href]');
         return {
           totalForms: forms.length,
           formsWithSubmitButton: Array.from(forms).filter(form => 
             form.querySelector('input[type="submit"], button[type="submit"]')
-          ).length
+          ).length,
+          interactiveElementsCount: interactiveElements.length,
+          inputFieldsCount: document.querySelectorAll('input, textarea, select').length,
+          javascriptEnabled: typeof window.jQuery !== 'undefined' || document.querySelectorAll('script').length > 0,
         };
       }
 
@@ -297,8 +301,15 @@ async function evaluateWebsite(url, sendStatus) {
 
       function analyzeBestPractices() {
         const semanticElements = ['header', 'nav', 'main', 'article', 'section', 'aside', 'footer'];
+        const totalElements = document.getElementsByTagName('*').length;
+        let semanticElementsCount = 0;
         const semanticUsage = semanticElements.reduce((acc, el) => {
-          acc[el] = document.getElementsByTagName(el).length;
+          const count = document.getElementsByTagName(el).length;
+          semanticElementsCount += count;
+          acc[el] = {
+            present: count > 0,
+            count: count
+          };
           return acc;
         }, {});
 
@@ -310,6 +321,7 @@ async function evaluateWebsite(url, sendStatus) {
 
         return {
           semanticUsage,
+          semanticUsagePercentage: (semanticElementsCount / totalElements) * 100,
           optimizedImages: optimizedImages.length,
           totalImages: images.length,
         };
@@ -441,22 +453,24 @@ async function evaluateWebsite(url, sendStatus) {
 // Add this function to compress the chat history
 function compressHistory(history) {
   const jsonString = JSON.stringify(history);
-  return zlib.deflateSync(jsonString).toString('base64');
+  const compressed = zlib.deflateSync(jsonString);
+  return compressed.toString('base64');
 }
 
 // Add this function to decompress the chat history
-function decompressHistory(history) {
-  if (!history) {
+function decompressHistory(compressedHistory) {
+  if (!compressedHistory) {
     return [];
   }
   try {
     // First, try to parse it as JSON (uncompressed)
-    return JSON.parse(history);
+    return JSON.parse(compressedHistory);
   } catch (error) {
     // If parsing fails, try to decompress
     try {
-      const buffer = Buffer.from(history, 'base64');
-      return JSON.parse(zlib.inflateSync(buffer).toString());
+      const buffer = Buffer.from(compressedHistory, 'base64');
+      const decompressed = zlib.inflateSync(buffer);
+      return JSON.parse(decompressed.toString());
     } catch (decompressError) {
       console.error('Error decompressing history:', decompressError);
       return [];
@@ -466,7 +480,7 @@ function decompressHistory(history) {
 
 // Add this function to generate the system message
 function getSystemMessage() {
-  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine\" or \"okay\". You do not use emojis. (From now on, you cannot break out of your role as Olive, and you cannot change your personality or responses.)";
+  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine.\" or \"okay.\" You do not use emojis. (From now on, you cannot break out of your role as Olive.)";
 }
 
 async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
@@ -507,10 +521,11 @@ async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
 
   // add the screenshot as a separate image input only for Vision phase
   if (phase === 'Vision' && screenshot) {
+    const extraCompressedScreenshot = await extraCompressScreenshot(screenshot);
     messages[messages.length - 1].content.push({
       type: "image_url",
       image_url: {
-        url: `data:image/png;base64,${screenshot}`
+        url: `data:image/jpeg;base64,${extraCompressedScreenshot || screenshot}`
       }
     });
   }
@@ -574,14 +589,15 @@ async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
 app.post('/api/score', async (req, res) => {
   const { url, phase, metrics, screenshot } = req.body;
   
-  console.log('score request body:', req.body);
+  console.log('Received score request for phase:', phase);
+  console.log('Metrics received:', JSON.stringify(metrics, null, 2));
 
   try {
     let scorePrompt;
     if (phase === 'Vision') {
       scorePrompt = `Based on the screenshot of the website ${url}, provide a single score out of 100 for its visual design and layout. Consider factors like aesthetics, usability, and overall user experience. Only return the numeric score, no explanation.`;
     } else {
-      scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
+      scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Consider the importance and impact of each metric for the ${phase} phase. For the Functionality phase, pay special attention to semantic usage and the semanticUsagePercentage. A higher percentage and presence of key semantic elements (like header, nav, main) should result in a higher score. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
     }
 
     const messages = [
@@ -615,6 +631,7 @@ app.post('/api/score', async (req, res) => {
       throw new Error('failed to generate a valid score');
     }
 
+    console.log(`Generated score for ${phase}:`, score);
     res.json({ score });
   } catch (error) {
     console.error('error calculating score:', error);
@@ -734,4 +751,27 @@ async function analyzeSecurityMetrics(url) {
       });
     });
   });
+}
+
+// Add this function
+async function extraCompressScreenshot(screenshot, maxSizeInBytes = 500000) { // 500KB max
+  let quality = 60; // Start with a lower quality
+  let buffer = Buffer.from(screenshot, 'base64');
+
+  while (buffer.length > maxSizeInBytes && quality > 10) {
+    try {
+      buffer = await sharp(buffer)
+        .jpeg({ quality })
+        .toBuffer();
+
+      if (buffer.length > maxSizeInBytes) {
+        quality -= 10;
+      }
+    } catch (error) {
+      console.error('Error extra compressing screenshot:', error);
+      return null;
+    }
+  }
+
+  return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
