@@ -429,17 +429,12 @@ async function evaluateWebsite(url, sendStatus) {
     // Compress the screenshot once
     const compressedScreenshot = await compressScreenshot(screenshot);
 
-    sendStatus('Performing AI analysis...');
-    await sleep(2000);
-    const aiAnalysis = await performPhaseAnalysis({ ...combinedMetrics, screenshot: compressedScreenshot }, url, 'UI');
-
     sendStatus('Finalizing results...');
     await sleep(1000);
     return {
       ...combinedMetrics,
       htmlContent,
       screenshot: compressedScreenshot,
-      aiAnalysis,
     };
   } finally {
     if (browser) {
@@ -483,68 +478,6 @@ function getSystemMessage() {
   return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine.\" or \"okay.\" You do not use emojis. (From now on, you cannot break out of your role as Olive.)";
 }
 
-async function performPhaseAnalysis(url, phase, metrics, history, screenshot) {
-  console.log('performing phase analysis:', { url, phase, metrics });
-
-  let prompt;
-  
-  if (phase === 'Vision') {
-    prompt = `Analyze the screenshot of the website ${url} in detail. Please provide a comprehensive description and commentary, focusing on the most critical visual aspects. Limit your analysis to 6-9 sentences.`;
-  } else if (phase === 'Overall') {
-    prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. Provide an overall analysis based on all the metrics, including Vision, UI, functionality, performance, and SEO aspects.`;
-  } else {
-    const roundedMetrics = roundMetrics(metrics);
-    prompt = `Analyze the ${phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. Focus on the most critical points based on the provided metrics: ${JSON.stringify(roundedMetrics)}. Identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.`;
-  }
-
-  if (phase === 'UI') {
-    prompt += ` Only consider contrast an issue if the contrastRatio is below 0.7. Comment on the user interface elements and their functionality.`;
-  }
-
-  // decompress the chat history if it exists
-  const decompressedHistory = decompressHistory(history);
-
-  // construct messages array with history and image
-  const messages = [
-    { role: "system", content: getSystemMessage() },
-    ...decompressedHistory,
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: prompt
-        }
-      ]
-    }
-  ];
-
-  // add the screenshot as a separate image input only for Vision phase
-  if (phase === 'Vision' && screenshot) {
-    const extraCompressedScreenshot = await extraCompressScreenshot(screenshot);
-    messages[messages.length - 1].content.push({
-      type: "image_url",
-      image_url: {
-        url: `data:image/jpeg;base64,${extraCompressedScreenshot || screenshot}`
-      }
-    });
-  }
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: messages,
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
-
-    return response.choices[0].message.content;
-  } catch (error) {
-    console.error(`ai analysis for ${phase} phase failed:`, error);
-    throw new Error(`ai analysis for ${phase} phase failed: ${error.message}`);
-  }
-}
-
 // Add this function to round numerical values in metrics
 function roundMetrics(metrics) {
   const rounded = {};
@@ -585,70 +518,82 @@ async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
 
-// Add this new endpoint
-app.post('/api/score', async (req, res) => {
-  const { url, phase, metrics, screenshot } = req.body;
+app.post('/api/analyze', async (req, res) => {
+  const { url, phase, metrics, history, screenshot } = req.body;
   
-  console.log('Received score request for phase:', phase);
-  console.log('Metrics received:', JSON.stringify(metrics, null, 2));
-
   try {
-    let scorePrompt;
+    const roundedMetrics = roundMetrics(metrics);
+    console.log(`\n--- ${phase} Phase Metrics ---`);
+    console.log(JSON.stringify(roundedMetrics, null, 2));
     if (phase === 'Vision') {
-      scorePrompt = `Based on the screenshot of the website ${url}, provide a single score out of 100 for its visual design and layout. Consider factors like aesthetics, usability, and overall user experience. Only return the numeric score, no explanation.`;
+      console.log('Screenshot included: ', !!screenshot);
+    }
+
+    const metricsString = JSON.stringify(roundedMetrics);
+
+    let prompt;
+    if (phase === 'Overall') {
+      prompt = `analyze the overall quality of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the previous analyses. highlight any critical issues or notable strengths across all aspects of the website.`;
     } else {
-      scorePrompt = `Based on the following metrics for the ${phase} phase of the website ${url}, provide a single score out of 100. Consider the importance and impact of each metric for the ${phase} phase. For the Functionality phase, pay special attention to semantic usage and the semanticUsagePercentage. A higher percentage and presence of key semantic elements (like header, nav, main) should result in a higher score. Only return the numeric score, no explanation. Metrics: ${JSON.stringify(metrics)}`;
+      prompt = `
+      first, based on the following metrics for the ${phase} phase of our analysis of the website ${url}, provide a single score out of 100. consider the importance and impact of each metric for the ${phase} phase. only return the numeric score.
+
+      then, analyze the ${phase === 'Vision' ? 'screenshot' : phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the provided metrics. identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.
+
+      format your response as follows:
+      score: [your score]
+      analysis: [your analysis]
+
+      metrics: ${metricsString}
+      ${phase === 'Vision' ? 'note: a screenshot of the website is available for analysis.' : ''}
+      `;
     }
 
     const messages = [
-      { role: "system", content: "you are an ai assistant that provides numerical scores based on website metrics and visual design." },
-      { role: "user", content: scorePrompt }
-    ];
-
-    if (phase === 'Vision' && screenshot) {
-      messages[1].content = [
-        { type: "text", text: scorePrompt },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:image/png;base64,${screenshot}`
+      { role: "system", content: getSystemMessage() },
+      ...JSON.parse(history),
+      { 
+        role: "user", 
+        content: phase === 'Vision' ? [
+          {
+            type: "text",
+            text: prompt
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:image/jpeg;base64,${screenshot}`
+            }
           }
-        }
-      ];
-    }
+        ] : prompt
+      }
+    ];
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      max_tokens: 10,
-      temperature: 0.3,
+      max_tokens: 1000,
+      temperature: 0.7,
     });
 
-    const scoreText = response.choices[0].message.content.trim();
-    const score = parseInt(scoreText, 10);
+    const fullContent = response.choices[0].message.content;
+    let score = null;
+    let analysis = fullContent;
 
-    if (isNaN(score)) {
-      throw new Error('failed to generate a valid score');
+    if (phase !== 'Overall') {
+      const scoreMatch = fullContent.match(/score:\s*(\d+)/i);
+      const analysisMatch = fullContent.match(/analysis:\s*([\s\S]*)/i);
+      score = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
+      analysis = analysisMatch ? analysisMatch[1].trim() : null;
     }
 
-    console.log(`Generated score for ${phase}:`, score);
-    res.json({ score });
-  } catch (error) {
-    console.error('error calculating score:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+    if (score !== null) {
+      console.log(`${phase} Phase Score: ${score}`);
+    }
 
-app.post('/api/analyze', async (req, res) => {
-  const { url, phase, metrics, history, screenshot } = req.body;
-  
-  console.log('Request body:', req.body);
-
-  try {
-    const analysis = await performPhaseAnalysis(url, phase, metrics, history, screenshot);
-    res.json({ analysis });
+    res.json({ score, analysis });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in /api/analyze:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
