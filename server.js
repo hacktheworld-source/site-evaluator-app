@@ -562,7 +562,7 @@ app.post('/api/analyze', async (req, res) => {
           {
             type: "image_url",
             image_url: {
-              url: `data:image/jpeg;base64,${screenshot}`
+              url: `data:image/jpeg;base64,${await extraCompressScreenshot(screenshot)}`
             }
           }
         ] : prompt
