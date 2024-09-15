@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { deflate, inflate } from 'pako';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -37,7 +36,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
   useEffect(() => {
-    if (evaluationResults) {
+    if (evaluationResults && !messages.length) {
       startVisionAnalysis();
     }
   }, [evaluationResults]);
@@ -81,38 +80,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const startVisionAnalysis = async () => {
-    try {
-      console.log('sending vision analysis request');
-      const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
-        url: websiteUrl,
-        phase: 'Vision',
-        metrics: {},
-        history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
-        screenshot: evaluationResults.screenshot
-      });
+    if (messages.length === 0) {
+      try {
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+          url: websiteUrl,
+          phase: 'Vision',
+          metrics: {}, // Send empty metrics for Vision phase
+          history: JSON.stringify([]),
+          screenshot: evaluationResults.screenshot
+        });
 
-      const score = await getPhaseScore('Vision', { screenshot: evaluationResults.screenshot });
+        const { score, analysis } = response.data;
 
-      const initialMessage: Message = {
-        role: 'assistant',
-        content: analysisResponse.data.analysis,
-        screenshot: evaluationResults.screenshot,
-        phase: 'Vision',
-        metrics: {}
-      };
-      addMessage(initialMessage);
-      setCurrentPhase('Vision');
+        const initialMessage: Message = {
+          role: 'assistant',
+          content: analysis,
+          screenshot: evaluationResults.screenshot,
+          phase: 'Vision',
+          metrics: {}
+        };
+        addMessage(initialMessage);
+        setCurrentPhase('Vision');
 
-      // Update phase scores and overall score
-      const newPhaseScores = { ...phaseScores, Vision: score };
-      setPhaseScores(newPhaseScores);
-      updateOverallScore(newPhaseScores);
-    } catch (error) {
-      console.error('error starting vision analysis:', error);
-      addMessage({
-        role: 'assistant',
-        content: 'an error occurred while starting the vision analysis. please try again.'
-      });
+        const newPhaseScores = { ...phaseScores, Vision: score };
+        setPhaseScores(newPhaseScores);
+        updateOverallScore(newPhaseScores);
+      } catch (error) {
+        console.error('error starting vision analysis:', error);
+        addMessage({
+          role: 'assistant',
+          content: 'an error occurred while starting the vision analysis. please try again.'
+        });
+      }
     }
   };
 
@@ -187,12 +186,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return optimized;
   };
 
-  const compressHistory = (history: Message[]): string => {
-    const jsonString = JSON.stringify(history);
-    const compressed = deflate(jsonString);
-    return btoa(String.fromCharCode.apply(null, Array.from(compressed)));
-  };
-
   const getSelectiveHistory = (currentPhase: string | null): Message[] => {
     const relevantMessages = messages.filter(msg => 
       msg.role === 'system' || 
@@ -213,12 +206,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       try {
         const selectiveHistory = getSelectiveHistory(currentPhase);
-        const compressedHistory = compressHistory(selectiveHistory);
+        const historyString = JSON.stringify(selectiveHistory); // Use history directly without compression
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
           url: websiteUrl,
           phase: currentPhase || 'Overall',
           message: newUserMessage.content,
-          history: compressedHistory
+          history: historyString // Send the history as a JSON string
         });
 
         const newAssistantMessage: Message = {
@@ -244,32 +237,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setCurrentPhase(nextPhase);
 
       try {
-        const phaseMetrics = getPhaseMetrics(nextPhase, evaluationResults);
+        const phaseMetrics = nextPhase === 'Overall' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
         console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: phaseMetrics });
-        const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
           phase: nextPhase,
-          metrics: nextPhase === 'Overall' ? {} : phaseMetrics,
+          metrics: phaseMetrics,
           history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
           screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
         });
 
-        let score = 0;
-        if (nextPhase !== 'Overall') {
-          score = await getPhaseScore(nextPhase, phaseMetrics);
-        }
+        const { score, analysis } = response.data;
 
         const newAssistantMessage: Message = {
           role: 'assistant',
-          content: analysisResponse.data.analysis,
-          metrics: nextPhase === 'Overall' ? getPhaseMetrics('Overall', evaluationResults) : phaseMetrics,
+          content: analysis,
+          metrics: nextPhase === 'Overall' ? evaluationResults : phaseMetrics,
           screenshot: nextPhase === 'Overall' ? evaluationResults.screenshot : undefined,
           phase: nextPhase
         };
 
         addMessage(newAssistantMessage);
 
-        if (nextPhase !== 'Overall') {
+        if (nextPhase !== 'Overall' && score !== null) {
           const newPhaseScores = { ...phaseScores, [nextPhase]: score };
           setPhaseScores(newPhaseScores);
           updateOverallScore(newPhaseScores);
@@ -352,7 +342,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const renderMessage = useCallback((message: Message) => (
     <div className={`message ${message.role}`}>
-      {message.role === 'assistant' && message.metrics && message.phase && (message.phase === 'Vision' || message.phase !== 'Overall') && (
+      {message.role === 'assistant' && message.metrics && message.phase && message.phase !== 'Overall' && (
         <div className="message-score">
           {message.phase}: {phaseScores[message.phase] || 'n/a'}
         </div>
