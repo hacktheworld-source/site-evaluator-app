@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import { deflate, inflate } from 'pako';
 
-const MAX_HISTORY_LENGTH = 50; // Increased from 10 to 50
+const MAX_HISTORY_LENGTH = 50;
+const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -63,13 +65,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const getPhaseScore = async (phase: string, metrics: any): Promise<number> => {
     try {
+      console.log(`Sending metrics for ${phase} phase scoring:`, metrics);
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/score`, {
         url: websiteUrl,
         phase: phase,
         metrics: metrics,
         screenshot: phase === 'Vision' ? evaluationResults.screenshot : undefined
       });
-      return response.data.score || 0; // return 0 if score is null or undefined
+      console.log(`Received score for ${phase} phase:`, response.data.score);
+      return response.data.score || 0;
     } catch (error) {
       console.error(`error getting ${phase} score:`, error);
       return 0;
@@ -113,25 +117,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const getPhaseMetrics = (phase: string, allMetrics: any) => {
+    let phaseMetrics;
     switch (phase) {
       case 'Vision':
-        return {}; // No metrics for Vision phase, just the screenshot
+        phaseMetrics = {}; // No metrics for Vision phase, just the screenshot
+        break;
       case 'UI':
         // Remove screenshot from UI metrics
-        return {
+        phaseMetrics = {
           colorContrast: allMetrics.colorContrast,
           fontSizes: allMetrics.fontSizes,
           responsiveness: allMetrics.responsiveness,
           accessibility: allMetrics.accessibility
         };
+        break;
       case 'Functionality':
-        return {
+        phaseMetrics = {
           brokenLinks: allMetrics.brokenLinks,
           formFunctionality: allMetrics.formFunctionality,
           bestPractices: allMetrics.bestPractices
         };
+        break;
       case 'Performance':
-        return {
+        phaseMetrics = {
           loadTime: allMetrics.loadTime,
           domContentLoaded: allMetrics.domContentLoaded,
           firstPaint: allMetrics.firstPaint,
@@ -147,17 +155,51 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           requests: allMetrics.requests,
           security: allMetrics.security
         };
+        break;
       case 'SEO':
-        return {
+        phaseMetrics = {
           seo: allMetrics.seo
         };
+        break;
       case 'Overall':
         // For Overall phase, return all metrics
         const { htmlContent, screenshot, ...overallMetrics } = allMetrics;
-        return overallMetrics;
+        phaseMetrics = overallMetrics;
+        break;
       default:
-        return {};
+        phaseMetrics = {};
     }
+    return optimizeMetrics(phaseMetrics);
+  };
+
+  const optimizeMetrics = (metrics: any): any => {
+    const optimized: any = {};
+    for (const [key, value] of Object.entries(metrics)) {
+      const shortKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (typeof value === 'number') {
+        optimized[shortKey] = Number(value.toFixed(2));
+      } else if (typeof value === 'object' && value !== null) {
+        optimized[shortKey] = optimizeMetrics(value);
+      } else {
+        optimized[shortKey] = value;
+      }
+    }
+    return optimized;
+  };
+
+  const compressHistory = (history: Message[]): string => {
+    const jsonString = JSON.stringify(history);
+    const compressed = deflate(jsonString);
+    return btoa(String.fromCharCode.apply(null, Array.from(compressed)));
+  };
+
+  const getSelectiveHistory = (currentPhase: string | null): Message[] => {
+    const relevantMessages = messages.filter(msg => 
+      msg.role === 'system' || 
+      (msg.phase === currentPhase) || 
+      (msg.role === 'user' && messages.indexOf(msg) >= messages.length - MAX_USER_MESSAGES)
+    );
+    return relevantMessages.slice(-MAX_HISTORY_LENGTH);
   };
 
   const handleSendMessage = async () => {
@@ -170,11 +212,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setUserInput('');
 
       try {
+        const selectiveHistory = getSelectiveHistory(currentPhase);
+        const compressedHistory = compressHistory(selectiveHistory);
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
           url: websiteUrl,
-          phase: currentPhase || 'Overall', // Use 'Overall' if currentPhase is null
+          phase: currentPhase || 'Overall',
           message: newUserMessage.content,
-          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content })))
+          history: compressedHistory
         });
 
         const newAssistantMessage: Message = {
@@ -201,7 +245,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       try {
         const phaseMetrics = getPhaseMetrics(nextPhase, evaluationResults);
-        console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: nextPhase === 'Overall' ? {} : phaseMetrics });
+        console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: phaseMetrics });
         const analysisResponse = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
           phase: nextPhase,
@@ -246,54 +290,50 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="metrics-wrapper fade-in">
       {Object.entries(metrics || {}).map(([key, value]) => {
         if (key !== 'screenshot' && key !== 'htmlContent') {
-          if (typeof value === 'object' && value !== null) {
-            return (
-              <div key={key} className="metric-tile">
-                <div className="metric-title">{key}</div>
-                {Object.entries(value).map(([subKey, subValue]) => (
-                  <div key={subKey} className="metric-value">
-                    <strong>{subKey}:</strong> {renderMetricValue(subValue)}
-                  </div>
-                ))}
-              </div>
-            );
-          } else {
-            return (
-              <div key={key} className="metric-tile">
-                <div className="metric-title">{key}</div>
-                <div className="metric-value">{renderMetricValue(value)}</div>
-              </div>
-            );
-          }
+          return (
+            <div key={key} className="metric-tile">
+              <div className="metric-title">{key}</div>
+              {renderMetricValue(value, 0)}
+            </div>
+          );
         }
         return null;
       })}
     </div>
   ), []);
-
-  const renderMetricValue = (value: any): React.ReactNode => {
+  
+  const renderMetricValue = (value: any, depth: number = 0): React.ReactNode => {
     if (value === null || value === undefined) {
       return 'N/A';
     } else if (typeof value === 'number') {
-      return value.toFixed(2);
+      if (Number.isInteger(value)) {
+        return value.toString();
+      } else if (value < 1 && value > 0) {
+        return `${(value * 100).toFixed(2)}%`;
+      } else {
+        return value.toFixed(2);
+      }
     } else if (typeof value === 'string') {
       return value || 'N/A';
     } else if (typeof value === 'boolean') {
-      return value.toString();
+      return value ? 'Yes' : 'No';
     } else if (Array.isArray(value)) {
       return (
-        <ul>
+        <div className={`metric-array depth-${depth}`}>
           {value.map((item, index) => (
-            <li key={index}>{renderMetricValue(item)}</li>
+            <div key={index} className={`metric-array-item depth-${depth}`}>
+              {renderMetricValue(item, depth + 1)}
+            </div>
           ))}
-        </ul>
+        </div>
       );
     } else if (typeof value === 'object') {
       return (
-        <div>
+        <div className={`metric-object depth-${depth}`}>
           {Object.entries(value).map(([subKey, subValue]) => (
-            <div key={subKey}>
-              <strong>{subKey}:</strong> {renderMetricValue(subValue)}
+            <div key={subKey} className={`metric-subitem depth-${depth}`}>
+              <span className={`metric-subtitle depth-${depth}`}>{subKey}: </span>
+              <span className={`metric-subvalue depth-${depth}`}>{renderMetricValue(subValue, depth + 1)}</span>
             </div>
           ))}
         </div>
@@ -314,7 +354,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className={`message ${message.role}`}>
       {message.role === 'assistant' && message.metrics && message.phase && (message.phase === 'Vision' || message.phase !== 'Overall') && (
         <div className="message-score">
-          score: {phaseScores[message.phase] || 'n/a'}
+          {message.phase}: {phaseScores[message.phase] || 'n/a'}
         </div>
       )}
       <div className="message-content">

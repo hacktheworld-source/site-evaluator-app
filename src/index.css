@@ -636,19 +636,47 @@ input[type="text"]:focus, input[type="number"]:focus {
   background-color: rgba(76, 175, 80, 0.1);
   border-radius: 5px;
   padding: 8px 12px;
-  font-size: 0.9em;
+  margin-bottom: 5px;
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-start;
+  max-width: calc(50% - 5px);
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .metric-title {
+  font-size: 1.2em;
   font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.metric-subtitle {
+  font-weight: bold;
+}
+
+.metric-subvalue {
+  display: inline;
+}
+
+.metric-object, .metric-array {
+  margin-top: 4px;
+}
+
+.metric-subitem, .metric-array-item {
   margin-bottom: 2px;
 }
 
-.metric-value {
-  word-break: break-word;
+.depth-0 {
+  font-size: 1em;
+}
+
+.depth-1 {
+  font-size: 0.97em;
+}
+
+.depth-2, .depth-3, .depth-4 {
+  font-size: 0.95em;
 }
 
 .website-screenshot {
@@ -665,6 +693,10 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 10px;
   background-color: rgba(76, 175, 80, 0.1);
   border-radius: 5px 5px 0 0;
+}
+
+.overall-score::after {
+  content: '%';
 }
 
 .message-content {
@@ -705,6 +737,11 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 2px 5px;
   border-radius: 3px;
   display: inline-block;
+  text-transform: capitalize;
+}
+
+.message-score::after {
+  content: '%';
 }
 
 @keyframes fadeIn {

@@ -33,6 +33,9 @@ export interface EvaluationResult {
   formFunctionality: {
     totalForms: number;
     formsWithSubmitButton: number;
+    interactiveElementsCount: number;
+    inputFieldsCount: number;
+    javascriptEnabled: boolean;
   };
   htmlContent: string;
   screenshot: string;
