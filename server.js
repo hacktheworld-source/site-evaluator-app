@@ -20,24 +20,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Warm-up function
-async function warmUpOpenAI() {
-  try {
-    console.log('Warming up OpenAI...');
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a helpful assistant." },
-        { role: "user", content: "Hello, this is a warm-up request." }
-      ],
-      max_tokens: 5
-    });
-    console.error('OpenAI warmed up successfully');
-  } catch (error) {
-    console.error('Error warming up OpenAI:', error);
-  }
-}
-
 const phases = ['UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
 const evaluationResults = new Map(); // Store evaluation results for each website
@@ -600,7 +582,6 @@ app.post('/api/analyze', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
-  warmUpOpenAI(); // Call the warm-up function when the server starts
 });
 
 app.get('/api/proxy-image', async (req, res) => {
