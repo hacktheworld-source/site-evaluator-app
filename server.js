@@ -514,7 +514,9 @@ app.post('/api/analyze', async (req, res) => {
     const metricsString = JSON.stringify(roundedMetrics);
 
     let prompt;
-    if (phase === 'Overall') {
+    if (phase === 'Recommendations') {
+      prompt = `based on the previous analyses of the website ${url}, provide a bulleted list of 5-7 valuable recommendations for improving the site. focus on the most critical areas that need improvement across all aspects of the website (ui, functionality, performance, seo, etc.). format your response as a markdown list.`;
+    } else if (phase === 'Overall') {
       prompt = `analyze the overall quality of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the previous analyses. highlight any critical issues or notable strengths across all aspects of the website.`;
     } else {
       prompt = `
@@ -562,7 +564,7 @@ app.post('/api/analyze', async (req, res) => {
     let score = null;
     let analysis = fullContent;
 
-    if (phase !== 'Overall') {
+    if (phase !== 'Overall' && phase !== 'Recommendations') {
       const scoreMatch = fullContent.match(/score:\s*(\d+)/i);
       const analysisMatch = fullContent.match(/analysis:\s*([\s\S]*)/i);
       score = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
