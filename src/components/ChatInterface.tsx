@@ -33,7 +33,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
-  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
+  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Recommendations', 'Overall'];
 
   useEffect(() => {
     if (evaluationResults && !messages.length) {
@@ -160,10 +160,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           seo: allMetrics.seo
         };
         break;
+      case 'Recommendations':
       case 'Overall':
-        // For Overall phase, return all metrics
-        const { htmlContent, screenshot, ...overallMetrics } = allMetrics;
-        phaseMetrics = overallMetrics;
+        phaseMetrics = {};
         break;
       default:
         phaseMetrics = {};
@@ -237,7 +236,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setCurrentPhase(nextPhase);
 
       try {
-        const phaseMetrics = nextPhase === 'Overall' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
+        const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
         console.log('metrics being sent:', { url: websiteUrl, phase: nextPhase, metrics: phaseMetrics });
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
@@ -252,14 +251,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const newAssistantMessage: Message = {
           role: 'assistant',
           content: analysis,
-          metrics: nextPhase === 'Overall' ? evaluationResults : phaseMetrics,
-          screenshot: nextPhase === 'Overall' ? evaluationResults.screenshot : undefined,
+          metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
+          screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
           phase: nextPhase
         };
 
         addMessage(newAssistantMessage);
 
-        if (nextPhase !== 'Overall' && score !== null) {
+        if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
           const newPhaseScores = { ...phaseScores, [nextPhase]: score };
           setPhaseScores(newPhaseScores);
           updateOverallScore(newPhaseScores);
@@ -342,7 +341,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const renderMessage = useCallback((message: Message) => (
     <div className={`message ${message.role}`}>
-      {message.role === 'assistant' && message.metrics && message.phase && message.phase !== 'Overall' && (
+      {message.role === 'assistant' && message.metrics && message.phase && 
+       message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
         <div className="message-score">
           {message.phase}: {phaseScores[message.phase] || 'n/a'}
         </div>
@@ -350,10 +350,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="message-content">
         <ReactMarkdown>{message.content}</ReactMarkdown>
       </div>
-      {message.metrics && renderMetrics(message.metrics)}
-      {message.screenshot && renderScreenshot(message.screenshot)}
+      {message.phase === 'Overall' && renderMetrics(evaluationResults)}
+      {(message.phase === 'Overall' || message.phase === 'Vision') && renderScreenshot(evaluationResults.screenshot)}
+      {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && renderMetrics(message.metrics)}
     </div>
-  ), [renderMetrics, renderScreenshot, phaseScores]);
+  ), [renderMetrics, renderScreenshot, phaseScores, evaluationResults]);
 
   const addMessage = useCallback((newMessage: Message) => {
     setMessages(prevMessages => {
