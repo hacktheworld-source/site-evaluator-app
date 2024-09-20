@@ -33,7 +33,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
-  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Recommendations', 'Overall'];
+  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
   useEffect(() => {
     if (evaluationResults && !messages.length) {
@@ -407,7 +407,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <button type="submit" disabled={isLoading || !userInput.trim()} className="chat-submit-button">
           <i className="fas fa-paper-plane"></i>
         </button>
-        {currentPhase && currentPhase !== 'Overall' && (
+        {currentPhase && currentPhase !== 'Recommendations' && (
           <button type="button" onClick={handleContinue} disabled={isLoading} className="continue-button">
             Continue
           </button>
