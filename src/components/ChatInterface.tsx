@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import TypewriterText from './TypewriterText';
+import DOMPurify from 'dompurify';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -11,6 +13,8 @@ interface Message {
   metrics?: { [key: string]: any };
   screenshot?: string;
   phase?: string;
+  isLoading?: boolean;
+  competitorScreenshots?: { [url: string]: string };
 }
 
 interface ChatInterfaceProps {
@@ -19,6 +23,10 @@ interface ChatInterfaceProps {
   evaluationResults: any;
   isLoading: boolean;
 }
+
+const ScreenshotPlaceholder: React.FC = () => (
+  <div className="screenshot-placeholder pulse"></div>
+);
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   websiteUrl, 
@@ -32,6 +40,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
 
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
@@ -234,6 +243,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (currentIndex < phases.length - 1) {
       const nextPhase = phases[currentIndex + 1];
       setCurrentPhase(nextPhase);
+      setIsThinking(true);
 
       try {
         const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
@@ -246,17 +256,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
         });
 
+        console.log('Response from server:', response.data);
+        console.log('Analysis:', response.data.analysis);
+
         const { score, analysis } = response.data;
 
-        const newAssistantMessage: Message = {
+        const newMessage: Message = {
           role: 'assistant',
           content: analysis,
           metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
           screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
-          phase: nextPhase
+          phase: nextPhase,
+          isLoading: false,
+          competitorScreenshots: {} // Empty object for now
         };
 
-        addMessage(newAssistantMessage);
+        setIsThinking(false);
+        addMessage(newMessage);
+
+        // Capture screenshots after adding the message, only for Recommendations phase
+        if (nextPhase === 'Recommendations') {
+          captureScreenshotsInBackground(newMessage);
+        }
 
         if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
           const newPhaseScores = { ...phaseScores, [nextPhase]: score };
@@ -264,14 +285,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           updateOverallScore(newPhaseScores);
         }
       } catch (error) {
+        setIsThinking(false);
         console.error(`error starting ${nextPhase} analysis:`, error);
         addMessage({
           role: 'assistant',
-          content: `an error occurred while starting the ${nextPhase} analysis. please try again.`
+          content: `an error occurred while starting the ${nextPhase} analysis. please try again.`,
+          isLoading: false
         });
       }
     } else {
       setCurrentPhase(null); // evaluation complete
+    }
+  };
+
+  const captureScreenshotsInBackground = async (message: Message) => {
+    try {
+      console.log('Capturing screenshots for content:', message.content);
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/capture-screenshots`, {
+        content: message.content
+      });
+
+      console.log('Screenshot capture response:', response.data);
+      const { competitorScreenshots } = response.data;
+
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg === message 
+            ? { ...msg, competitorScreenshots } 
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error('error capturing screenshots:', error);
     }
   };
 
@@ -339,22 +384,63 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     />
   ), []);
 
-  const renderMessage = useCallback((message: Message) => (
-    <div className={`message ${message.role}`}>
-      {message.role === 'assistant' && message.metrics && message.phase && 
-       message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
-        <div className="message-score">
-          {message.phase}: {phaseScores[message.phase] || 'n/a'}
+  const renderMessage = useCallback((message: Message) => {
+    console.log('rendering message:', message);
+    return (
+      <div className={`message ${message.role}`}>
+        {message.role === 'assistant' && message.metrics && message.phase && 
+         message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
+          <div className="message-score">
+            {message.phase}: {phaseScores[message.phase] || 'n/a'}
+          </div>
+        )}
+        <div className="message-content">
+          {message.isLoading ? (
+            <TypewriterText text="Thinking..." onComplete={() => {}} isLoading={true} />
+          ) : (
+            <ReactMarkdown components={{
+              li: ({ node, ...props }) => {
+                const content = (node as any).children[0].value;
+                const urlMatch = content.match(/(https?:\/\/[^\s:]+)/);
+              
+                return (
+                  <li {...props}>
+                    {content}
+                    {urlMatch && message.phase === 'Recommendations' && (
+                      <div className="competitor-screenshot-wrapper">
+                        {message.competitorScreenshots && message.competitorScreenshots[urlMatch[1]] ? (
+                          <img 
+                            src={`data:image/png;base64,${message.competitorScreenshots[urlMatch[1]]}`} 
+                            alt={`Screenshot of ${urlMatch[1]}`} 
+                            className="competitor-screenshot"
+                          />
+                        ) : (
+                          <ScreenshotPlaceholder />
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              },
+            }}>
+              {DOMPurify.sanitize(message.content)}
+            </ReactMarkdown>
+          )}
         </div>
-      )}
-      <div className="message-content">
-        <ReactMarkdown>{message.content}</ReactMarkdown>
+        {message.phase === 'Overall' && renderMetrics(evaluationResults)}
+        {(message.phase === 'Overall' || message.phase === 'Vision') && renderScreenshot(evaluationResults.screenshot)}
+        {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && renderMetrics(message.metrics)}
       </div>
-      {message.phase === 'Overall' && renderMetrics(evaluationResults)}
-      {(message.phase === 'Overall' || message.phase === 'Vision') && renderScreenshot(evaluationResults.screenshot)}
-      {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && renderMetrics(message.metrics)}
+    );
+  }, [renderMetrics, renderScreenshot, phaseScores, evaluationResults, messages]);
+
+  const renderThinkingPlaceholder = () => (
+    <div className="message assistant thinking">
+      <div className="message-content">
+        <TypewriterText text="Thinking..." onComplete={() => {}} isLoading={true} />
+      </div>
     </div>
-  ), [renderMetrics, renderScreenshot, phaseScores, evaluationResults]);
+  );
 
   const addMessage = useCallback((newMessage: Message) => {
     setMessages(prevMessages => {
@@ -390,6 +476,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               {renderMessage(message)}
             </React.Fragment>
           ))}
+          {isThinking && renderThinkingPlaceholder()}
         </div>
         <div ref={chatEndRef} />
       </div>

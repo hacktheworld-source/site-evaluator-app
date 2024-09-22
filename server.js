@@ -500,6 +500,50 @@ async function compressScreenshot(screenshot, maxSizeInBytes = 800000) {
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
 
+// Add this function to analyze the site's purpose
+async function analyzeSitePurpose(url, screenshot) {
+  const prompt = `Analyze the purpose and function of the website ${url} based on its content and appearance. Provide a concise summary in 2-3 sentences.`;
+  
+  let messages = [
+    { role: "system", content: "You are a helpful, expert web developer." },
+    { role: "user", content: prompt }
+  ];
+
+  // Only include the screenshot if it's available and valid
+  if (screenshot) {
+    try {
+      // Ensure the screenshot is a valid base64 string
+      const validBase64 = screenshot.replace(/^data:image\/[a-z]+;base64,/, "");
+      Buffer.from(validBase64, 'base64'); // This will throw an error if invalid
+
+      messages.push({
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${validBase64}` } }
+        ]
+      });
+    } catch (error) {
+      console.error('Invalid base64 image:', error);
+      // Continue without the image if it's invalid
+    }
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: messages,
+      max_tokens: 150,
+    });
+
+    const sitePurpose = response.choices[0].message.content.trim();
+    console.log('AI-generated site purpose:', sitePurpose); // Add this line to log the site purpose
+    return sitePurpose;
+  } catch (error) {
+    console.error('Error in analyzeSitePurpose:', error);
+    return "Unable to analyze site purpose due to an error.";
+  }
+}
+
 app.post('/api/analyze', async (req, res) => {
   const { url, phase, metrics, history, screenshot } = req.body;
   
@@ -515,7 +559,29 @@ app.post('/api/analyze', async (req, res) => {
 
     let prompt;
     if (phase === 'Recommendations') {
-      prompt = `based on the previous analyses of the website ${url}, provide a bulleted list of 5-7 valuable recommendations for improving the site. focus on the most critical areas that need improvement across all aspects of the website (ui, functionality, performance, seo, etc.). format your response as a markdown list.`;
+      try {
+        const sitePurpose = await analyzeSitePurpose(url, screenshot);
+        prompt = `Based on the previous analyses of the website ${url} and its purpose (${sitePurpose}), provide the following:
+
+        1. A bulleted list of 5-7 valuable recommendations for improving the site. Focus on the most critical areas across all aspects (UI, functionality, performance, SEO, etc.).
+        
+        2. Suggest three competitor websites that serve a similar purpose. For each competitor, provide the full URL (including https://) and briefly explain why it's relevant and what aspects of it could inspire improvements for ${url}.
+
+        Format your response as follows:
+        
+        Recommendations:
+        - [Recommendation 1]
+        - [Recommendation 2]
+        ...
+
+        Competitors for Inspiration:
+        1. [Full competitor URL 1]: [Brief explanation]
+        2. [Full competitor URL 2]: [Brief explanation]
+        3. [Full competitor URL 3]: [Brief explanation]`;
+      } catch (error) {
+        console.error('Error in analyzeSitePurpose:', error);
+        throw new Error('Failed to analyze site purpose');
+      }
     } else if (phase === 'Overall') {
       prompt = `analyze the overall quality of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the previous analyses. highlight any critical issues or notable strengths across all aspects of the website.`;
     } else {
@@ -575,10 +641,30 @@ app.post('/api/analyze', async (req, res) => {
       console.log(`${phase} Phase Score: ${score}`);
     }
 
-    res.json({ score, analysis });
+    // For Recommendations phase, don't capture screenshots here
+    if (phase !== 'Recommendations') {
+      res.json({ score, analysis });
+    } else {
+      res.json({ analysis });
+    }
   } catch (error) {
     console.error('Error in /api/analyze:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || 'An error occurred during analysis' });
+  }
+});
+
+// Add a new endpoint for capturing competitor screenshots
+app.post('/api/capture-screenshots', async (req, res) => {
+  const { content } = req.body;
+  
+  try {
+    console.log('Received request to capture screenshots for content:', content);
+    const competitorScreenshots = await captureCompetitorScreenshots(content);
+    console.log('Captured screenshots:', Object.keys(competitorScreenshots));
+    res.json({ competitorScreenshots });
+  } catch (error) {
+    console.error('Error capturing screenshots:', error);
+    res.status(500).json({ error: 'Failed to capture screenshots' });
   }
 });
 
@@ -681,6 +767,148 @@ async function analyzeSecurityMetrics(url) {
   });
 }
 
+// Add this function to capture competitor screenshots
+async function captureCompetitorScreenshots(analysis) {
+  const competitorUrls = extractCompetitorUrls(analysis);
+  console.log('Extracted competitor URLs:', competitorUrls);
+  const screenshots = {};
+
+  for (const url of competitorUrls) {
+    try {
+      console.log(`Attempting to capture screenshot for: ${url}`);
+      const browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
+      const screenshot = await page.screenshot({ encoding: 'base64' });
+      screenshots[url] = screenshot;
+      await browser.close();
+      console.log(`Successfully captured screenshot for: ${url}`);
+    } catch (error) {
+      console.error(`Error capturing screenshot for ${url}:`, error.message);
+      screenshots[url] = null;
+    }
+  }
+
+  return screenshots;
+}
+
+function extractCompetitorUrls(analysis) {
+  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+  const matches = analysis.match(urlRegex) || [];
+  
+  // Filter out invalid URLs and limit to 3
+  return matches
+    .filter(url => {
+      try {
+        new URL(url);
+        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+}
+
+function extractCompetitorUrls(analysis) {
+  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+  const matches = analysis.match(urlRegex) || [];
+  
+  // Filter out invalid URLs and limit to 3
+  return matches
+    .filter(url => {
+      try {
+        new URL(url);
+        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+}
+
+function extractCompetitorUrls(analysis) {
+  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+  const matches = analysis.match(urlRegex) || [];
+  
+  // Filter out invalid URLs and limit to 3
+  return matches
+    .filter(url => {
+      try {
+        new URL(url);
+        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+}
+
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function extractCompetitorUrls(analysis) {
+  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+  const matches = analysis.match(urlRegex) || [];
+  
+  // Filter out invalid URLs and limit to 3
+  return matches
+    .filter(url => {
+      try {
+        new URL(url);
+        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+}
+
+// Add this function to extract competitor URLs from the analysis
+function extractCompetitorUrls(analysis) {
+  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+  const matches = analysis.match(urlRegex) || [];
+  
+  // Filter out invalid URLs and limit to 3
+  return matches
+    .filter(url => {
+      try {
+        new URL(url);
+        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+}
+
 // Add this function
 async function extraCompressScreenshot(screenshot, maxSizeInBytes = 500000) { // 500KB max
   let quality = 60; // Start with a lower quality
@@ -703,3 +931,20 @@ async function extraCompressScreenshot(screenshot, maxSizeInBytes = 500000) { //
 
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
+
+app.get('/api/analyze/competitor-screenshots', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
+  // This should be called after captureCompetitorScreenshots is complete
+  const sendCompetitorScreenshots = (screenshots) => {
+    res.write(`data: ${JSON.stringify({ competitorScreenshots: screenshots })}\n\n`);
+    res.end();
+  };
+
+  // Call this function when screenshots are ready
+  // sendCompetitorScreenshots(screenshots);
+});
