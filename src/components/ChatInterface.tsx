@@ -14,7 +14,7 @@ interface Message {
   screenshot?: string;
   phase?: string;
   isLoading?: boolean;
-  competitorScreenshots?: { [url: string]: string };
+  competitorScreenshots?: { [url: string]: string | null };
 }
 
 interface ChatInterfaceProps {
@@ -268,7 +268,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
           phase: nextPhase,
           isLoading: false,
-          competitorScreenshots: {} // Empty object for now
+          competitorScreenshots: nextPhase === 'Recommendations' ? {} : undefined // Initialize empty object for Recommendations
         };
 
         setIsThinking(false);
@@ -300,23 +300,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const captureScreenshotsInBackground = async (message: Message) => {
     try {
-      console.log('Capturing screenshots for content:', message.content);
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/capture-screenshots`, {
         content: message.content
       });
 
-      console.log('Screenshot capture response:', response.data);
       const { competitorScreenshots } = response.data;
 
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg === message 
-            ? { ...msg, competitorScreenshots } 
-            : msg
-        )
-      );
+      if (competitorScreenshots && Object.keys(competitorScreenshots).length > 0) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg === message 
+              ? { 
+                  ...msg, 
+                  competitorScreenshots: competitorScreenshots
+                }
+              : msg
+          )
+        );
+      }
     } catch (error) {
-      console.error('error capturing screenshots:', error);
+      console.error('Error capturing screenshots:', error);
     }
   };
 
@@ -401,14 +404,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <ReactMarkdown components={{
               li: ({ node, ...props }) => {
                 const content = (node as any).children[0].value;
-                const urlMatch = content.match(/(https?:\/\/[^\s:]+)/);
+                const urlMatch = content.match(/(https?:\/\/[^\s]+)/);
               
                 return (
                   <li {...props}>
                     {content}
                     {urlMatch && message.phase === 'Recommendations' && (
                       <div className="competitor-screenshot-wrapper">
-                        {message.competitorScreenshots && message.competitorScreenshots[urlMatch[1]] ? (
+                        {message.competitorScreenshots && urlMatch[1] in message.competitorScreenshots ? (
                           <img 
                             src={`data:image/png;base64,${message.competitorScreenshots[urlMatch[1]]}`} 
                             alt={`Screenshot of ${urlMatch[1]}`} 
@@ -432,7 +435,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && renderMetrics(message.metrics)}
       </div>
     );
-  }, [renderMetrics, renderScreenshot, phaseScores, evaluationResults, messages]);
+  }, [renderMetrics, renderScreenshot, phaseScores, evaluationResults]);
 
   const renderThinkingPlaceholder = () => (
     <div className="message assistant thinking">
@@ -450,7 +453,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
       return updatedMessages;
     });
+
+    // If it's a recommendations message, capture screenshots
+    if (newMessage.phase === 'Recommendations') {
+      captureScreenshotsInBackground(newMessage);
+    }
   }, []);
+
+  const extractUrls = (content: string): string[] => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return content.match(urlRegex) || [];
+  };
+
+  useEffect(() => {
+    const recommendationsMessage = messages.find(msg => msg.phase === 'Recommendations');
+    if (recommendationsMessage) {
+      console.log('Recommendations message updated:', recommendationsMessage.competitorScreenshots);
+    }
+  }, [messages]);
 
   return (
     <div className="chat-interface">
@@ -472,7 +492,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="chat-messages">
         <div className="messages-container">
           {messages.map((message, index) => (
-            <React.Fragment key={index}>
+            <React.Fragment key={`${index}-${JSON.stringify(message.competitorScreenshots)}`}>
               {renderMessage(message)}
             </React.Fragment>
           ))}
