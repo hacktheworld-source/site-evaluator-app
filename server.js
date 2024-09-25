@@ -661,10 +661,12 @@ app.post('/api/capture-screenshots', async (req, res) => {
     console.log('Received request to capture screenshots for content:', content);
     const competitorScreenshots = await captureCompetitorScreenshots(content);
     console.log('Captured screenshots:', Object.keys(competitorScreenshots));
+    
+    // Send the response directly
     res.json({ competitorScreenshots });
   } catch (error) {
     console.error('Error capturing screenshots:', error);
-    res.status(500).json({ error: 'Failed to capture screenshots' });
+    res.status(500).json({ error: 'Failed to capture screenshots', details: error.message });
   }
 });
 
@@ -770,7 +772,7 @@ async function analyzeSecurityMetrics(url) {
 // Add this function to capture competitor screenshots
 async function captureCompetitorScreenshots(analysis) {
   const competitorUrls = extractCompetitorUrls(analysis);
-  console.log('Extracted competitor URLs:', competitorUrls);
+  console.log('Attempting to capture screenshots for URLs:', competitorUrls);
   const screenshots = {};
 
   for (const url of competitorUrls) {
@@ -800,42 +802,9 @@ function extractCompetitorUrls(analysis) {
   const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
   const matches = analysis.match(urlRegex) || [];
   
-  // Filter out invalid URLs and limit to 3
+  // Filter out invalid URLs, remove trailing colons, and limit to 3
   return matches
-    .filter(url => {
-      try {
-        new URL(url);
-        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 3);
-}
-
-function extractCompetitorUrls(analysis) {
-  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
-  const matches = analysis.match(urlRegex) || [];
-  
-  // Filter out invalid URLs and limit to 3
-  return matches
-    .filter(url => {
-      try {
-        new URL(url);
-        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 3);
-}
-
-function extractCompetitorUrls(analysis) {
-  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
-  const matches = analysis.match(urlRegex) || [];
-  
-  // Filter out invalid URLs and limit to 3
-  return matches
+    .map(url => url.replace(/:$/, '')) // Remove trailing colon
     .filter(url => {
       try {
         new URL(url);
@@ -854,59 +823,6 @@ function isValidUrl(string) {
   } catch (_) {
     return false;
   }
-}
-
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-function extractCompetitorUrls(analysis) {
-  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
-  const matches = analysis.match(urlRegex) || [];
-  
-  // Filter out invalid URLs and limit to 3
-  return matches
-    .filter(url => {
-      try {
-        new URL(url);
-        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 3);
-}
-
-// Add this function to extract competitor URLs from the analysis
-function extractCompetitorUrls(analysis) {
-  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
-  const matches = analysis.match(urlRegex) || [];
-  
-  // Filter out invalid URLs and limit to 3
-  return matches
-    .filter(url => {
-      try {
-        new URL(url);
-        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 3);
 }
 
 // Add this function
@@ -938,6 +854,7 @@ app.get('/api/analyze/competitor-screenshots', (req, res) => {
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
+
 
   // This should be called after captureCompetitorScreenshots is complete
   const sendCompetitorScreenshots = (screenshots) => {
