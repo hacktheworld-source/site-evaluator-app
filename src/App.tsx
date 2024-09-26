@@ -126,7 +126,7 @@ const App: React.FC = () => {
       };
 
       eventSource.onerror = (error) => {
-        console.error('EventSource failed:', error);
+        // console.error('EventSource failed:', error); // Remove this line
         eventSource.close();
         setIsLoading(false);
         setIsGenerating(false);
@@ -134,7 +134,7 @@ const App: React.FC = () => {
         setStatusMessage('');
       };
     } catch (error) {
-      console.error('Error evaluating website:', error);
+      // console.error('Error evaluating website:', error); // Remove this line
       setError('An error occurred while evaluating the website. Please try again.');
       setIsLoading(false);
       setIsGenerating(false);
