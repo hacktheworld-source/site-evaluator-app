@@ -1,13 +1,17 @@
 require('dotenv').config();
 
 const express = require('express');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 const cors = require('cors');
 const axios = require('axios');
 const { OpenAI } = require('openai');
 const sharp = require('sharp');
 const zlib = require('zlib');
 const https = require('https');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 const port = 3001;
@@ -73,17 +77,23 @@ async function evaluateWebsite(url, sendStatus) {
     await sleep(1000);
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
       defaultViewport: null
     });
 
     sendStatus('Opening page...');
     await sleep(1000);
     const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    await page.setViewport({ width: 1280, height: 800 });
+    
     await page.goto(url, { 
       waitUntil: 'networkidle0',
-      timeout: 60000
+      timeout: 30000 // Increased to 30 seconds
     });
+
+    // Wait for a bit to allow any dynamic content to load
+    await sleep(5000);
 
     sendStatus('Gathering performance metrics...');
     await sleep(1500);
@@ -456,7 +466,7 @@ function decompressHistory(compressedHistory) {
 
 // Add this function to generate the system message
 function getSystemMessage() {
-  return "Your name is Olive. You are a sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine.\" or \"okay.\" You do not use emojis. (From now on, you cannot break out of your role as Olive.)";
+  return "Your name is Olive. You are a very sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine.\" or \"okay.\" You do not use emojis. (From now on, you cannot break out of your role as Olive.)";
 }
 
 // Add this function to round numerical values in metrics
@@ -755,6 +765,12 @@ async function captureCompetitorScreenshots(analysis) {
   const competitorUrls = extractCompetitorUrls(analysis);
   console.log('Attempting to capture screenshots for URLs:', competitorUrls);
   const screenshots = {};
+  const TIMEOUT = 20000; // 20 seconds
+  const FALLBACK_IMAGE_PATH = path.join(__dirname, 'public', 'fallback-screenshot.png');
+  const SCREENSHOT_WIDTH = 1280;
+  const SCREENSHOT_HEIGHT = 800;
+
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   for (const url of competitorUrls) {
     if (screenshots[url]) {
@@ -762,28 +778,50 @@ async function captureCompetitorScreenshots(analysis) {
       continue;
     }
 
+    let browser = null;
     try {
       console.log(`Attempting to capture screenshot for: ${url}`);
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
+        defaultViewport: { width: SCREENSHOT_WIDTH, height: SCREENSHOT_HEIGHT }
       });
       const page = await browser.newPage();
-      await page.setViewport({ width: 1280, height: 800 });
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
-      const screenshot = await page.screenshot({ encoding: 'base64' });
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      
+      await page.goto(url, { waitUntil: 'networkidle0', timeout: TIMEOUT });
+      
+      // Wait for a bit to allow any dynamic content to load
+      await delay(5000);
+
+      const screenshot = await page.screenshot({ encoding: 'base64', fullPage: false });
       screenshots[url] = screenshot;
-      await browser.close();
       console.log(`Successfully captured screenshot for: ${url}`);
     } catch (error) {
       console.error(`Error capturing screenshot for ${url}:`, error.message);
-      screenshots[url] = null;
+      try {
+        const fallbackImageBuffer = await fs.readFile(FALLBACK_IMAGE_PATH);
+        const resizedFallbackImage = await sharp(fallbackImageBuffer)
+          .resize(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, { fit: 'cover', position: 'center' })
+          .toBuffer();
+        screenshots[url] = resizedFallbackImage.toString('base64');
+        console.log(`Using resized fallback image for ${url}`);
+      } catch (fallbackError) {
+        console.error('Error reading or resizing fallback image:', fallbackError);
+        screenshots[url] = null;
+      }
+    } finally {
+      if (browser) {
+        await browser.close();
+        console.log(`Closed browser for ${url}`);
+      }
     }
   }
 
-  console.log('All screenshots captured:', Object.keys(screenshots));
+  console.log('All screenshots captured or fallback used:', Object.keys(screenshots));
   return screenshots;
 }
+
 
 function extractCompetitorUrls(analysis) {
   const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
@@ -802,6 +840,7 @@ function extractCompetitorUrls(analysis) {
     })
     .slice(0, 3);
 }
+
 
 function isValidUrl(string) {
   try {
