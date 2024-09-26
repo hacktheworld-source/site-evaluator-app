@@ -50,7 +50,6 @@ app.get('/api/evaluate', async (req, res) => {
         throw new Error('No evaluation result found for this URL. Please start a new evaluation.');
       }
       const analysisResult = await performPhaseAnalysis(url, phase, storedResult);
-      console.log('Analysis result:', analysisResult); // Add this line for debugging
       res.write(`data: ${JSON.stringify({ result: analysisResult, phase })}\n\n`);
     } else {
       res.write(`data: ${JSON.stringify({ error: 'Invalid phase' })}\n\n`);
@@ -58,7 +57,7 @@ app.get('/api/evaluate', async (req, res) => {
 
     res.end();
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in /api/evaluate:', error.message);
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
@@ -549,15 +548,11 @@ app.post('/api/analyze', async (req, res) => {
   
   try {
     const roundedMetrics = roundMetrics(metrics);
-    console.log(`\n--- ${phase} Phase Metrics ---`);
-    console.log(JSON.stringify(roundedMetrics, null, 2));
-    if (phase === 'Vision') {
-      console.log('Screenshot included: ', !!screenshot);
-    }
-
     const metricsString = JSON.stringify(roundedMetrics);
-
     let prompt;
+    let analysis;
+    let score = null;
+
     if (phase === 'Recommendations') {
       try {
         const sitePurpose = await analyzeSitePurpose(url, screenshot);
@@ -626,47 +621,26 @@ app.post('/api/analyze', async (req, res) => {
       temperature: 0.7,
     });
 
-    const fullContent = response.choices[0].message.content;
-    let score = null;
-    let analysis = fullContent;
+    analysis = response.choices[0].message.content;
 
     if (phase !== 'Overall' && phase !== 'Recommendations') {
-      const scoreMatch = fullContent.match(/score:\s*(\d+)/i);
-      const analysisMatch = fullContent.match(/analysis:\s*([\s\S]*)/i);
+      const scoreMatch = analysis.match(/score:\s*(\d+)/i);
+      const analysisMatch = analysis.match(/analysis:\s*([\s\S]*)/i);
       score = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
-      analysis = analysisMatch ? analysisMatch[1].trim() : null;
+      analysis = analysisMatch ? analysisMatch[1].trim() : analysis;
     }
 
-    if (score !== null) {
-      console.log(`${phase} Phase Score: ${score}`);
-    }
-
-    // For Recommendations phase, don't capture screenshots here
-    if (phase !== 'Recommendations') {
-      res.json({ score, analysis });
+    if (phase === 'Recommendations') {
+      console.log('Capturing competitor screenshots...');
+      const screenshots = await captureCompetitorScreenshots(analysis);
+      console.log('Competitor screenshots captured:', Object.keys(screenshots));
+      res.json({ analysis, competitorScreenshots: screenshots });
     } else {
-      res.json({ analysis });
+      res.json({ score, analysis });
     }
   } catch (error) {
     console.error('Error in /api/analyze:', error.message);
     res.status(500).json({ error: error.message || 'An error occurred during analysis' });
-  }
-});
-
-// Add a new endpoint for capturing competitor screenshots
-app.post('/api/capture-screenshots', async (req, res) => {
-  const { content } = req.body;
-  
-  try {
-    console.log('Received request to capture screenshots for content:', content);
-    const competitorScreenshots = await captureCompetitorScreenshots(content);
-    console.log('Captured screenshots:', Object.keys(competitorScreenshots));
-    
-    // Send the response directly
-    res.json({ competitorScreenshots });
-  } catch (error) {
-    console.error('Error capturing screenshots:', error);
-    res.status(500).json({ error: 'Failed to capture screenshots', details: error.message });
   }
 });
 
@@ -776,6 +750,11 @@ async function captureCompetitorScreenshots(analysis) {
   const screenshots = {};
 
   for (const url of competitorUrls) {
+    if (screenshots[url]) {
+      console.log(`Screenshot for ${url} already captured, skipping...`);
+      continue;
+    }
+
     try {
       console.log(`Attempting to capture screenshot for: ${url}`);
       const browser = await puppeteer.launch({
@@ -795,6 +774,7 @@ async function captureCompetitorScreenshots(analysis) {
     }
   }
 
+  console.log('All screenshots captured:', Object.keys(screenshots));
   return screenshots;
 }
 
@@ -847,6 +827,7 @@ async function extraCompressScreenshot(screenshot, maxSizeInBytes = 500000) { //
 
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
+
 
 app.get('/api/analyze/competitor-screenshots', (req, res) => {
   res.writeHead(200, {

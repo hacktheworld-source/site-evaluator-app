@@ -94,15 +94,15 @@ export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
     
     // Compress the screenshot if it exists
     if (response.data.screenshot) {
-      console.log('Compressing screenshot in evaluateWebsite...');
+      // console.log('Compressing screenshot in evaluateWebsite...'); // Remove this line
       const { compressedImage, quality } = await compressImage(response.data.screenshot, MAX_SCREENSHOT_SIZE);
       response.data.screenshot = compressedImage;
-      console.log(`Screenshot compressed to quality: ${quality.toFixed(2)} in evaluateWebsite`);
+      // console.log(`Screenshot compressed to quality: ${quality.toFixed(2)} in evaluateWebsite`); // Remove this line
     }
 
     return response.data;
   } catch (error) {
-    console.error('Error during evaluation:', error);
+    // console.error('Error during evaluation:', error); // Remove this line
     throw new Error('An error occurred while evaluating the website. Please try again.');
   }
 }
