@@ -630,17 +630,24 @@ app.post('/api/analyze', async (req, res) => {
       analysis = analysisMatch ? analysisMatch[1].trim() : analysis;
     }
 
-    if (phase === 'Recommendations') {
-      console.log('Capturing competitor screenshots...');
-      const screenshots = await captureCompetitorScreenshots(analysis);
-      console.log('Competitor screenshots captured:', Object.keys(screenshots));
-      res.json({ analysis, competitorScreenshots: screenshots });
-    } else {
-      res.json({ score, analysis });
-    }
+    res.json({ score, analysis });
   } catch (error) {
     console.error('Error in /api/analyze:', error.message);
     res.status(500).json({ error: error.message || 'An error occurred during analysis' });
+  }
+});
+
+app.post('/api/capture-screenshots', async (req, res) => {
+  const { content } = req.body;
+  
+  try {
+    console.log('Capturing competitor screenshots...');
+    const screenshots = await captureCompetitorScreenshots(content);
+    console.log('Competitor screenshots captured:', Object.keys(screenshots));
+    res.json({ competitorScreenshots: screenshots });
+  } catch (error) {
+    console.error('Error capturing screenshots:', error);
+    res.status(500).json({ error: 'Failed to capture screenshots' });
   }
 });
 
