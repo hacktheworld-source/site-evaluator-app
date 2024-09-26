@@ -41,6 +41,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+  const [isMessageLoading, setIsMessageLoading] = useState(false);
 
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
@@ -209,6 +210,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
       addMessage(newUserMessage);
       setUserInput('');
+      setIsMessageLoading(true);
 
       try {
         const selectiveHistory = getSelectiveHistory(currentPhase);
@@ -226,12 +228,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         };
 
         addMessage(newAssistantMessage);
+        setIsMessageLoading(false);
       } catch (error) {
         console.error('error fetching ai response:', error);
         addMessage({
           role: 'assistant',
           content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
         });
+        setIsMessageLoading(false);
       }
     }
   };
@@ -242,6 +246,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const nextPhase = phases[currentIndex + 1];
       setCurrentPhase(nextPhase);
       setIsThinking(true);
+      setIsMessageLoading(true);
 
       try {
         const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
@@ -270,6 +275,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         console.log('New message:', newMessage);
 
         setIsThinking(false);
+        setIsMessageLoading(false);
         addMessage(newMessage);
 
         if (nextPhase === 'Recommendations') {
@@ -283,6 +289,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
       } catch (error) {
         setIsThinking(false);
+        setIsMessageLoading(false);
         console.error(`error starting ${nextPhase} analysis:`, error);
         addMessage({
           role: 'assistant',
@@ -498,13 +505,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           placeholder="Ask a question..."
-          disabled={isLoading}
+          disabled={isLoading || isMessageLoading}
         />
-        <button type="submit" disabled={isLoading || !userInput.trim()} className="chat-submit-button">
+        <button 
+          type="submit" 
+          disabled={isLoading || isMessageLoading || !userInput.trim()} 
+          className="chat-submit-button"
+        >
           <i className="fas fa-paper-plane"></i>
         </button>
         {currentPhase && currentPhase !== 'Recommendations' && (
-          <button type="button" onClick={handleContinue} disabled={isLoading} className="continue-button">
+          <button 
+            type="button" 
+            onClick={handleContinue} 
+            disabled={isLoading || isMessageLoading} 
+            className="continue-button"
+          >
             Continue
           </button>
         )}

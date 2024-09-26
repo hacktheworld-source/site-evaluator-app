@@ -74,7 +74,6 @@ async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
     sendStatus('Launching browser...');
-    await sleep(1000);
     browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
@@ -82,21 +81,19 @@ async function evaluateWebsite(url, sendStatus) {
     });
 
     sendStatus('Opening page...');
-    await sleep(1000);
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
     
     await page.goto(url, { 
       waitUntil: 'networkidle0',
-      timeout: 30000 // Increased to 30 seconds
+      timeout: 30000 // 30 seconds
     });
 
-    // Wait for a bit to allow any dynamic content to load
-    await sleep(5000);
+    // Reduced wait time
+    await sleep(2000);
 
     sendStatus('Gathering performance metrics...');
-    await sleep(1500);
     const metrics = await page.evaluate(() => {
       return new Promise((resolve) => {
         const startTime = performance.now();
@@ -150,7 +147,6 @@ async function evaluateWebsite(url, sendStatus) {
     });
 
     sendStatus('Analyzing page content...');
-    await sleep(1000);
     const contentMetrics = await page.evaluate(() => {
       return {
         colorContrast: analyzeColorContrast(),
@@ -399,7 +395,6 @@ async function evaluateWebsite(url, sendStatus) {
 
     // Analyze security (this needs to be done server-side)
     sendStatus('Checking security...');
-    await sleep(1000);
     const securityMetrics = await analyzeSecurityMetrics(url);
 
     const combinedMetrics = { 
@@ -410,18 +405,15 @@ async function evaluateWebsite(url, sendStatus) {
     };
 
     sendStatus('Capturing page content...');
-    await sleep(1000);
     const htmlContent = await page.content();
     
     sendStatus('Taking screenshot...');
-    await sleep(1500);
     const screenshot = await page.screenshot({ encoding: 'base64' });
     
     // Compress the screenshot once
     const compressedScreenshot = await compressScreenshot(screenshot);
 
     sendStatus('Finalizing results...');
-    await sleep(1000);
     return {
       ...combinedMetrics,
       htmlContent,
@@ -430,7 +422,6 @@ async function evaluateWebsite(url, sendStatus) {
   } finally {
     if (browser) {
       sendStatus('Closing browser...');
-      await sleep(1000);
       await browser.close();
     }
   }
@@ -772,49 +763,59 @@ async function captureCompetitorScreenshots(analysis) {
 
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-  for (const url of competitorUrls) {
-    if (screenshots[url]) {
-      console.log(`Screenshot for ${url} already captured, skipping...`);
-      continue;
-    }
+  let browser = null;
+  try {
+    console.log('Launching browser...');
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
+      defaultViewport: { width: SCREENSHOT_WIDTH, height: SCREENSHOT_HEIGHT }
+    });
 
-    let browser = null;
-    try {
-      console.log(`Attempting to capture screenshot for: ${url}`);
-      browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
-        defaultViewport: { width: SCREENSHOT_WIDTH, height: SCREENSHOT_HEIGHT }
-      });
-      const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: TIMEOUT });
-      
-      // Wait for a bit to allow any dynamic content to load
-      await delay(5000);
 
-      const screenshot = await page.screenshot({ encoding: 'base64', fullPage: false });
-      screenshots[url] = screenshot;
-      console.log(`Successfully captured screenshot for: ${url}`);
-    } catch (error) {
-      console.error(`Error capturing screenshot for ${url}:`, error.message);
+    for (const url of competitorUrls) {
+      if (screenshots[url]) {
+        console.log(`Screenshot for ${url} already captured, skipping...`);
+        continue;
+      }
+
       try {
-        const fallbackImageBuffer = await fs.readFile(FALLBACK_IMAGE_PATH);
-        const resizedFallbackImage = await sharp(fallbackImageBuffer)
-          .resize(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, { fit: 'cover', position: 'center' })
-          .toBuffer();
-        screenshots[url] = resizedFallbackImage.toString('base64');
-        console.log(`Using resized fallback image for ${url}`);
-      } catch (fallbackError) {
-        console.error('Error reading or resizing fallback image:', fallbackError);
-        screenshots[url] = null;
+        console.log(`Attempting to capture screenshot for: ${url}`);
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        
+        console.log(`Navigating to ${url}`);
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
+        
+        console.log(`Waiting for network idle`);
+        await page.waitForNetworkIdle({ idle: 500, timeout: TIMEOUT });
+        
+        console.log(`Capturing screenshot for ${url}`);
+        const screenshot = await page.screenshot({ encoding: 'base64', fullPage: false });
+        screenshots[url] = screenshot;
+        console.log(`Successfully captured screenshot for: ${url}`);
+        await page.close();
+      } catch (error) {
+        console.error(`Error capturing screenshot for ${url}:`, error.message);
+        try {
+          const fallbackImageBuffer = await fs.readFile(FALLBACK_IMAGE_PATH);
+          const resizedFallbackImage = await sharp(fallbackImageBuffer)
+            .resize(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, { fit: 'cover', position: 'center' })
+            .toBuffer();
+          screenshots[url] = resizedFallbackImage.toString('base64');
+          console.log(`Using resized fallback image for ${url}`);
+        } catch (fallbackError) {
+          console.error('Error reading or resizing fallback image:', fallbackError);
+          screenshots[url] = null;
+        }
       }
-    } finally {
-      if (browser) {
-        await browser.close();
-        console.log(`Closed browser for ${url}`);
-      }
+      
+      await delay(1000);
+    }
+  } finally {
+    if (browser) {
+      console.log('Closing browser');
+      await browser.close();
     }
   }
 
