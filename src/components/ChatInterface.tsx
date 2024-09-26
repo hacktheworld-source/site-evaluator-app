@@ -255,7 +255,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         console.log('Received response:', response.data);
 
-        const { score, analysis, competitorScreenshots } = response.data;
+        const { score, analysis } = response.data;
 
         const newMessage: Message = {
           role: 'assistant',
@@ -264,13 +264,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
           phase: nextPhase,
           isLoading: false,
-          competitorScreenshots: competitorScreenshots
+          competitorScreenshots: {}
         };
 
-        console.log('New message with screenshots:', newMessage);
+        console.log('New message:', newMessage);
 
         setIsThinking(false);
         addMessage(newMessage);
+
+        if (nextPhase === 'Recommendations') {
+          fetchScreenshots(newMessage);
+        }
 
         if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
           const newPhaseScores = { ...phaseScores, [nextPhase]: score };
@@ -288,6 +292,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     } else {
       setCurrentPhase(null); // evaluation complete
+    }
+  };
+
+  const fetchScreenshots = async (message: Message) => {
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/capture-screenshots`, {
+        content: message.content
+      });
+
+      console.log('Received screenshots:', response.data);
+
+      const { competitorScreenshots } = response.data;
+
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg === message 
+            ? { ...msg, competitorScreenshots: competitorScreenshots }
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error('Error fetching screenshots:', error);
     }
   };
 
@@ -389,7 +415,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             className="competitor-screenshot"
                           />
                         ) : (
-                          <div className="screenshot-placeholder pulse">Loading screenshot...</div>
+                          <div className="screenshot-placeholder pulse"></div>
                         )}
                       </div>
                     )}
