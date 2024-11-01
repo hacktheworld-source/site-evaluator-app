@@ -112,34 +112,46 @@ const App: React.FC = () => {
       const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}`);
 
       eventSource.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        if (data.status) {
-          setStatusMessage(data.status);
-        } else if (data.result) {
-          setEvaluationResults(data.result);
-          eventSource.close();
-          setIsLoading(false);
-          setIsGenerating(false);
-          setStatusMessage('Evaluation complete!');
-          setTimeout(() => setStatusMessage(''), 2000);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('Received event data:', data);
+          if (data.status) {
+            setStatusMessage(data.status);
+          } else if (data.result) {
+            setEvaluationResults(data.result);
+            eventSource.close();
+            setIsLoading(false);
+            setIsGenerating(false);
+            setStatusMessage('Evaluation complete!');
+            setTimeout(() => setStatusMessage(''), 2000);
+          } else if (data.error) {
+            throw new Error(data.error);
+          }
+        } catch (error) {
+          console.error('Error processing event data:', error);
+          throw error;
         }
       };
 
       eventSource.onerror = (error) => {
-        // console.error('EventSource failed:', error); // Remove this line
+        console.error('EventSource error:', error);
         eventSource.close();
         setIsLoading(false);
         setIsGenerating(false);
         setError('An error occurred while evaluating the website. Please try again.');
         setStatusMessage('');
+        
+        // Refund the point
+        updateUserPoints(user.uid, (userPoints || 0) + 1);
+        setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
       };
-    } catch (error) {
-      // console.error('Error evaluating website:', error); // Remove this line
-      setError('An error occurred while evaluating the website. Please try again.');
+    } catch (error: unknown) {
+      console.error('Error in handleEvaluation:', error);
+      setError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
       setIsLoading(false);
       setIsGenerating(false);
       setStatusMessage('');
-      // Refund the point if the evaluation failed
+      // Refund the point
       await updateUserPoints(user.uid, (userPoints || 0) + 1);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
     }

@@ -14,7 +14,12 @@ interface Message {
   screenshot?: string;
   phase?: string;
   isLoading?: boolean;
-  competitorScreenshots?: { [url: string]: string };
+  competitorScreenshots?: {
+    [url: string]: {
+      status: 'loading' | 'loaded' | 'error';
+      data?: string;
+    };
+  };
 }
 
 interface ChatInterfaceProps {
@@ -304,23 +309,80 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const fetchScreenshots = async (message: Message) => {
     try {
+      if (!message.content || typeof message.content !== 'string') {
+        console.error('Invalid message content:', message.content);
+        return;
+      }
+
+      // Initialize loading state for all URLs
+      const urlRegex = /\d\.\s+(https?:\/\/[^\s:]+)(?=:|\s|$)/g;
+      const urls: string[] = [];
+      let match;
+      while ((match = urlRegex.exec(message.content)) !== null) {
+        urls.push(match[1]);
+      }
+
+      // Set initial loading state for all screenshots at once
+      const initialScreenshots: Message['competitorScreenshots'] = {};
+      urls.forEach(url => {
+        initialScreenshots[url] = { status: 'loading' };
+      });
+
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.phase === 'Recommendations' && msg.content === message.content
+            ? { ...msg, competitorScreenshots: initialScreenshots }
+            : msg
+        )
+      );
+
+      // Fetch screenshots
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/capture-screenshots`, {
         content: message.content
       });
 
       console.log('Received screenshots:', response.data);
 
+      // Update all screenshots in a single state update
       const { competitorScreenshots } = response.data;
-
       setMessages(prevMessages => 
         prevMessages.map(msg => 
-          msg === message 
-            ? { ...msg, competitorScreenshots: competitorScreenshots }
+          msg.phase === 'Recommendations' && msg.content === message.content
+            ? {
+                ...msg,
+                competitorScreenshots: Object.fromEntries(
+                  Object.entries(competitorScreenshots).map(([url, screenshot]) => [
+                    url,
+                    {
+                      status: screenshot ? 'loaded' : 'error',
+                      data: screenshot as string
+                    }
+                  ])
+                )
+              }
             : msg
         )
       );
     } catch (error) {
       console.error('Error fetching screenshots:', error);
+      // Handle error state
+      if (message.competitorScreenshots) {
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.phase === 'Recommendations' && msg.content === message.content
+              ? {
+                  ...msg,
+                  competitorScreenshots: Object.fromEntries(
+                    Object.entries(message.competitorScreenshots || {}).map(([url]) => [
+                      url,
+                      { status: 'error' as const }
+                    ])
+                  )
+                }
+              : msg
+          )
+        );
+      }
     }
   };
 
@@ -405,22 +467,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               li: ({ node, ...props }) => {
                 const content = (node as any).children[0].value;
                 const urlMatch = content.match(/(https?:\/\/[^\s:]+)/);
-              
-                console.log('URL match:', urlMatch);
-                console.log('Competitor screenshots:', message.competitorScreenshots);
-                console.log('Matched screenshot:', message.competitorScreenshots && urlMatch ? message.competitorScreenshots[urlMatch[1]] : 'Not found');
-
+                
                 return (
                   <li {...props}>
                     {content}
                     {urlMatch && message.phase === 'Recommendations' && (
                       <div className="competitor-screenshot-wrapper">
-                        {message.competitorScreenshots && message.competitorScreenshots[urlMatch[1]] ? (
-                          <img 
-                            src={`data:image/png;base64,${message.competitorScreenshots[urlMatch[1]]}`} 
-                            alt={`Screenshot of ${urlMatch[1]}`} 
-                            className="competitor-screenshot"
-                          />
+                        {message.competitorScreenshots?.[urlMatch[1]] ? (
+                          message.competitorScreenshots[urlMatch[1]].status === 'loading' ? (
+                            <div className="screenshot-placeholder pulse"></div>
+                          ) : message.competitorScreenshots[urlMatch[1]].status === 'loaded' ? (
+                            <img 
+                              src={`data:image/png;base64,${message.competitorScreenshots[urlMatch[1]].data}`} 
+                              alt={`Screenshot of ${urlMatch[1]}`} 
+                              className="competitor-screenshot"
+                              onError={(e) => {
+                                console.error(`Error loading screenshot for ${urlMatch[1]}`);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="screenshot-error">Failed to load screenshot</div>
+                          )
                         ) : (
                           <div className="screenshot-placeholder pulse"></div>
                         )}

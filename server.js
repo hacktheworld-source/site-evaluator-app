@@ -20,6 +20,14 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+app.use((req, res, next) => {
+  res.set({
+    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    'Cross-Origin-Embedder-Policy': 'require-corp'
+  });
+  next();
+});
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -34,8 +42,12 @@ function sleep(ms) {
 }
 
 app.get('/api/evaluate', async (req, res) => {
-  const { url, phase, userMessage } = req.query;
+  const { url } = req.query;
   
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
   try {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -47,28 +59,24 @@ app.get('/api/evaluate', async (req, res) => {
       res.write(`data: ${JSON.stringify({ status: message })}\n\n`);
     };
 
-    if (!phase || phase === 'start') {
+    const sendError = (error) => {
+      console.error('Evaluation error:', error);
+      res.write(`data: ${JSON.stringify({ error: error.message || 'An error occurred during evaluation' })}\n\n`);
+      res.end();
+    };
+
+    try {
       sendStatus('Initializing evaluation process...');
       const evaluationResult = await evaluateWebsite(url, sendStatus);
-      // Remove any AI analysis from the result
       const { aiAnalysis, ...metrics } = evaluationResult;
       res.write(`data: ${JSON.stringify({ result: metrics, phase: 'start' })}\n\n`);
-    } else if (phases.includes(phase)) {
-      const storedResult = evaluationResults.get(url);
-      if (!storedResult) {
-        throw new Error('No evaluation result found for this URL. Please start a new evaluation.');
-      }
-      const analysisResult = await performPhaseAnalysis(url, phase, storedResult);
-      res.write(`data: ${JSON.stringify({ result: analysisResult, phase })}\n\n`);
-    } else {
-      res.write(`data: ${JSON.stringify({ error: 'Invalid phase' })}\n\n`);
+    } catch (error) {
+      sendError(error);
     }
 
-    res.end();
   } catch (error) {
-    console.error('Error in /api/evaluate:', error.message);
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    console.error('Error in /api/evaluate:', error);
+    res.status(500).json({ error: error.message || 'An error occurred during evaluation' });
   }
 });
 
@@ -76,7 +84,7 @@ async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
     sendStatus('Launching browser...');
-    await sleep(1000);
+    console.log('Launching browser for URL:', url);
     browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
@@ -402,7 +410,19 @@ async function evaluateWebsite(url, sendStatus) {
     const securityMetrics = await analyzeSecurityMetrics(url);
 
     sendStatus('Running Lighthouse analysis...');
-    const lighthouseResults = await runLighthouse(url);
+    let lighthouseResults;
+    try {
+      lighthouseResults = await runLighthouse(url);
+    } catch (error) {
+      console.error('Lighthouse analysis failed:', error);
+      lighthouseResults = {
+        performance: 0,
+        accessibility: 0,
+        bestPractices: 0,
+        seo: 0,
+        error: error.message
+      };
+    }
 
     const combinedMetrics = { 
       ...metrics, 
@@ -429,9 +449,11 @@ async function evaluateWebsite(url, sendStatus) {
     };
   } finally {
     if (browser) {
-      sendStatus('Closing browser...');
-      await sleep(1000);
-      await browser.close();
+      try {
+        await browser.close();
+      } catch (error) {
+        console.error('Error closing browser:', error);
+      }
     }
   }
 }
@@ -652,17 +674,52 @@ app.post('/api/analyze', async (req, res) => {
 app.post('/api/capture-screenshots', async (req, res) => {
   const { content } = req.body;
   
-  console.log('Received request to capture screenshots');
-  console.log('Content:', content);
+  console.log('Received screenshot request with content:', content);
+  
+  if (!content || typeof content !== 'string') {
+    console.log('Invalid content:', content);
+    return res.status(400).json({ error: 'Valid content string is required' });
+  }
 
   try {
-    console.log('Calling captureCompetitorScreenshots function');
-    const screenshots = await captureCompetitorScreenshots(content);
-    console.log('Screenshots captured:', Object.keys(screenshots));
+    // Extract URLs first
+    const competitorSection = content.match(/Competitors for Inspiration:[\s\S]*?(?=\n\n|$)/i);
+    if (!competitorSection) {
+      console.log('No competitor section found');
+      return res.status(400).json({ error: 'No competitor section found' });
+    }
+
+    const sectionText = competitorSection[0];
+    console.log('Found competitor section:', sectionText);
+
+    const urlRegex = /\d\.\s+(https?:\/\/[^\s:]+)(?=:|\s|$)/g;
+    const urls = Array.from(sectionText.matchAll(urlRegex), m => m[1])
+      .map(url => url.trim())
+      .filter(url => {
+        try {
+          new URL(url);
+          return !url.includes('robots.txt') && !url.includes('sitemap.xml');
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 3);
+
+    if (urls.length === 0) {
+      console.log('No valid URLs found');
+      return res.status(400).json({ error: 'No valid URLs found' });
+    }
+
+    console.log('Processing URLs:', urls);
+    const screenshots = await captureCompetitorScreenshots(urls);
+    
     res.json({ competitorScreenshots: screenshots });
   } catch (error) {
     console.error('Error in /api/capture-screenshots:', error);
-    res.status(500).json({ error: 'Failed to capture screenshots', details: error.message });
+    res.status(500).json({ 
+      error: 'Failed to capture screenshots', 
+      details: error.message 
+    });
   }
 });
 
@@ -678,13 +735,23 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 
   try {
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    const contentType = response.headers['content-type'];
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      timeout: 5000 // 5 second timeout
+    });
+
+    // Set appropriate headers
+    res.set('Content-Type', response.headers['content-type']);
+    res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+    res.set('Access-Control-Allow-Origin', '*');
     
-    res.set('Content-Type', contentType);
     res.send(response.data);
   } catch (error) {
     console.error('Error proxying image:', error);
+    // Send a default image or error response
     res.status(500).send('Error fetching image');
   }
 });
@@ -766,132 +833,180 @@ async function analyzeSecurityMetrics(url) {
 }
 
 async function runLighthouse(url) {
-  const chromeLauncher = await import('chrome-launcher');
-  const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
-  const options = {
-    logLevel: 'info',
-    output: 'json',
-    onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-    port: chrome.port,
-  };
-
+  let chrome = null;
   try {
+    // Use puppeteer's Chrome instead of chrome-launcher
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    // Get the Chrome DevTools Protocol (CDP) endpoint
+    const pages = await browser.pages();
+    const page = pages[0];
+    const client = await page.target().createCDPSession();
+    
+    // Import lighthouse
     const lighthouse = await import('lighthouse');
+    
+    const options = {
+      port: (new URL(browser.wsEndpoint())).port,
+      output: 'json',
+      logLevel: 'error',
+      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+      chromeFlags: ['--headless', '--no-sandbox', '--disable-setuid-sandbox'],
+      formFactor: 'desktop',
+      throttling: {
+        rttMs: 40,
+        throughputKbps: 10240,
+        cpuSlowdownMultiplier: 1,
+      },
+    };
+
+    // Run Lighthouse
     const runnerResult = await lighthouse.default(url, options);
     const reportCategories = JSON.parse(runnerResult.report).categories;
 
-    const results = {
+    await browser.close();
+
+    return {
       performance: reportCategories.performance.score * 100,
       accessibility: reportCategories.accessibility.score * 100,
       bestPractices: reportCategories['best-practices'].score * 100,
       seo: reportCategories.seo.score * 100,
+      audits: Object.fromEntries(
+        Object.entries(reportCategories).map(([key, category]) => [
+          key,
+          {
+            score: category.score * 100,
+            details: category.auditRefs.map(ref => ({
+              id: ref.id,
+              weight: ref.weight,
+              group: ref.group
+            }))
+          }
+        ])
+      )
     };
-
-    return results;
-  } finally {
-    await chrome.kill();
+  } catch (error) {
+    console.error('Lighthouse analysis failed:', error);
+    if (chrome) {
+      await chrome.kill();
+    }
+    throw error;
   }
 }
 
-// Add this function to capture competitor screenshots
-async function captureCompetitorScreenshots(analysis) {
-  const competitorUrls = extractCompetitorUrls(analysis);
-  console.log('Extracted competitor URLs:', competitorUrls);
+// Replace the captureCompetitorScreenshots function with this sequential version
+async function captureCompetitorScreenshots(urls) {
+  console.log('Starting screenshot capture for URLs:', urls);
   const screenshots = {};
-  const TIMEOUT = 20000; // 20 seconds
-  const FALLBACK_IMAGE_PATH = path.join(__dirname, 'public', 'fallback-screenshot.png');
+  const TIMEOUT = 20000;
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY = 1000;
   const SCREENSHOT_WIDTH = 1280;
   const SCREENSHOT_HEIGHT = 800;
 
   let browser = null;
   try {
-    console.log('Launching browser...');
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-features=site-per-process',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins',
+        '--disable-site-isolation-trials'
+      ],
       defaultViewport: { width: SCREENSHOT_WIDTH, height: SCREENSHOT_HEIGHT }
     });
 
-
-    for (const url of competitorUrls) {
-      console.log(`Processing URL: ${url}`);
-      if (screenshots[url]) {
-        console.log(`Screenshot for ${url} already captured, skipping...`);
-        continue;
-      }
-
+    // Process URLs sequentially
+    for (const url of urls) {
+      let page = null;
       try {
-        console.log(`Attempting to capture screenshot for: ${url}`);
-        const page = await browser.newPage();
-        console.log(`New page created for ${url}`);
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        console.log(`Processing URL: ${url}`);
+        page = await browser.newPage();
         
-        console.log(`Navigating to ${url}`);
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
+        await page.setDefaultNavigationTimeout(TIMEOUT);
+        await page.setRequestInterception(true);
         
-        console.log(`Waiting for network idle on ${url}`);
-        await page.waitForNetworkIdle({ idleTime: 1000, timeout: TIMEOUT });
-        
-        console.log(`Capturing screenshot for ${url}`);
-        const screenshot = await page.screenshot({ encoding: 'base64', fullPage: false });
-        screenshots[url] = screenshot;
+        // Optimize by blocking unnecessary resources
+        page.on('request', (req) => {
+          const resourceType = req.resourceType();
+          if (resourceType === 'font' || resourceType === 'media' || 
+              resourceType === 'websocket' || resourceType === 'manifest' || 
+              resourceType === 'other') {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+
+        await page.setExtraHTTPHeaders({
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        });
+
+        const response = await page.goto(url, { 
+          waitUntil: 'domcontentloaded',
+          timeout: TIMEOUT 
+        });
+
+        if (!response || !response.ok()) {
+          throw new Error(`Failed to load page: ${response ? response.status() : 'No response'}`);
+        }
+
+        const buffer = await page.screenshot({ 
+          type: 'png',
+          fullPage: false,
+          clip: {
+            x: 0,
+            y: 0,
+            width: SCREENSHOT_WIDTH,
+            height: SCREENSHOT_HEIGHT
+          }
+        });
+
+        const compressedBuffer = await sharp(buffer)
+          .png({
+            compressionLevel: 9,
+            palette: true
+          })
+          .toBuffer();
+
+        screenshots[url] = compressedBuffer.toString('base64');
         console.log(`Successfully captured screenshot for: ${url}`);
-        await page.close();
+
       } catch (error) {
-        console.error(`Error capturing screenshot for ${url}:`, error.message);
+        console.error(`Error capturing screenshot for ${url}:`, error);
+        // Use error image
+        const errorImagePath = path.join(__dirname, 'public', 'screenshot-error.png');
         try {
-          console.log(`Using fallback image for ${url}`);
-          const fallbackImageBuffer = await fs.readFile(FALLBACK_IMAGE_PATH);
-          const resizedFallbackImage = await sharp(fallbackImageBuffer)
-            .resize(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, { fit: 'cover', position: 'center' })
-            .toBuffer();
-          screenshots[url] = resizedFallbackImage.toString('base64');
-          console.log(`Fallback image used for ${url}`);
+          const errorImageBuffer = await fs.readFile(errorImagePath);
+          screenshots[url] = errorImageBuffer.toString('base64');
         } catch (fallbackError) {
-          console.error('Error reading or resizing fallback image:', fallbackError);
+          console.error('Error loading fallback image:', fallbackError);
           screenshots[url] = null;
+        }
+      } finally {
+        if (page) {
+          await page.close().catch(console.error);
         }
       }
     }
+
+  } catch (error) {
+    console.error('Fatal error in captureCompetitorScreenshots:', error);
   } finally {
     if (browser) {
-      console.log('Closing browser');
-      await browser.close();
+      await browser.close().catch(console.error);
     }
   }
 
-  console.log('All screenshots captured or fallback used:', Object.keys(screenshots));
   return screenshots;
-}
-
-
-
-function extractCompetitorUrls(analysis) {
-  const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
-  const matches = analysis.match(urlRegex) || [];
-  
-  // Filter out invalid URLs, remove trailing colons, and limit to 3
-  return matches
-    .map(url => url.replace(/:$/, '')) // Remove trailing colon
-    .filter(url => {
-      try {
-        new URL(url);
-        return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 3);
-}
-
-
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
-  }
 }
 
 // Add this function
@@ -917,7 +1032,6 @@ async function extraCompressScreenshot(screenshot, maxSizeInBytes = 500000) { //
   return buffer.length <= maxSizeInBytes ? buffer.toString('base64') : null;
 }
 
-
 app.get('/api/analyze/competitor-screenshots', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -936,3 +1050,38 @@ app.get('/api/analyze/competitor-screenshots', (req, res) => {
   // Call this function when screenshots are ready
   // sendCompetitorScreenshots(screenshots);
 });
+
+// Add this function to create a default error image if it doesn't exist
+async function ensureErrorImageExists() {
+  const errorImagePath = path.join(__dirname, 'public', 'screenshot-error.png');
+  try {
+    await fs.access(errorImagePath);
+  } catch {
+    // Create a simple error image using sharp
+    await sharp({
+      create: {
+        width: 1280,
+        height: 800,
+        channels: 4,
+        background: { r: 50, g: 50, b: 50, alpha: 1 }
+      }
+    })
+    .composite([{
+      input: Buffer.from(
+        `<svg width="1280" height="800">
+          <rect width="100%" height="100%" fill="#323232"/>
+          <text x="50%" y="50%" font-family="Arial" font-size="24" fill="white" text-anchor="middle">
+            Error loading screenshot
+          </text>
+        </svg>`
+      ),
+      top: 0,
+      left: 0
+    }])
+    .png()
+    .toFile(errorImagePath);
+  }
+}
+
+// Call this when the server starts
+ensureErrorImageExists().catch(console.error);
