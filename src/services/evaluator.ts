@@ -75,6 +75,12 @@ export interface EvaluationResult {
   ttfb: number;
   tbt: number;
   estimatedFid: number; // Changed from fid to estimatedFid
+  lighthouse: {
+    performance: number;
+    accessibility: number;
+    bestPractices: number;
+    seo: number;
+  };
 }
 
 const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute

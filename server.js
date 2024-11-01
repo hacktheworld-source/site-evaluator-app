@@ -28,6 +28,11 @@ const phases = ['UI', 'Functionality', 'Performance', 'SEO', 'Overall'];
 
 const evaluationResults = new Map(); // Store evaluation results for each website
 
+// Add this function at the top of your file, after the imports
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 app.get('/api/evaluate', async (req, res) => {
   const { url, phase, userMessage } = req.query;
   
@@ -67,13 +72,11 @@ app.get('/api/evaluate', async (req, res) => {
   }
 });
 
-// Add this sleep function
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
     sendStatus('Launching browser...');
+    await sleep(1000);
     browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
@@ -81,6 +84,7 @@ async function evaluateWebsite(url, sendStatus) {
     });
 
     sendStatus('Opening page...');
+    await sleep(1000);
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
@@ -397,11 +401,15 @@ async function evaluateWebsite(url, sendStatus) {
     sendStatus('Checking security...');
     const securityMetrics = await analyzeSecurityMetrics(url);
 
+    sendStatus('Running Lighthouse analysis...');
+    const lighthouseResults = await runLighthouse(url);
+
     const combinedMetrics = { 
       ...metrics, 
       ...contentMetrics,
       ...performanceMetrics,
-      security: securityMetrics
+      security: securityMetrics,
+      lighthouse: lighthouseResults
     };
 
     sendStatus('Capturing page content...');
@@ -422,6 +430,7 @@ async function evaluateWebsite(url, sendStatus) {
   } finally {
     if (browser) {
       sendStatus('Closing browser...');
+      await sleep(1000);
       await browser.close();
     }
   }
@@ -586,6 +595,8 @@ app.post('/api/analyze', async (req, res) => {
 
       then, analyze the ${phase === 'Vision' ? 'screenshot' : phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the provided metrics. identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.
 
+      pay special attention to the lighthouse scores, which provide standardized metrics for performance, accessibility, best practices, and seo.
+
       format your response as follows:
       score: [your score]
       analysis: [your analysis]
@@ -641,14 +652,17 @@ app.post('/api/analyze', async (req, res) => {
 app.post('/api/capture-screenshots', async (req, res) => {
   const { content } = req.body;
   
+  console.log('Received request to capture screenshots');
+  console.log('Content:', content);
+
   try {
-    console.log('Capturing competitor screenshots...');
+    console.log('Calling captureCompetitorScreenshots function');
     const screenshots = await captureCompetitorScreenshots(content);
-    console.log('Competitor screenshots captured:', Object.keys(screenshots));
+    console.log('Screenshots captured:', Object.keys(screenshots));
     res.json({ competitorScreenshots: screenshots });
   } catch (error) {
-    console.error('Error capturing screenshots:', error);
-    res.status(500).json({ error: 'Failed to capture screenshots' });
+    console.error('Error in /api/capture-screenshots:', error);
+    res.status(500).json({ error: 'Failed to capture screenshots', details: error.message });
   }
 });
 
@@ -751,17 +765,43 @@ async function analyzeSecurityMetrics(url) {
   });
 }
 
+async function runLighthouse(url) {
+  const chromeLauncher = await import('chrome-launcher');
+  const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
+  const options = {
+    logLevel: 'info',
+    output: 'json',
+    onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+    port: chrome.port,
+  };
+
+  try {
+    const lighthouse = await import('lighthouse');
+    const runnerResult = await lighthouse.default(url, options);
+    const reportCategories = JSON.parse(runnerResult.report).categories;
+
+    const results = {
+      performance: reportCategories.performance.score * 100,
+      accessibility: reportCategories.accessibility.score * 100,
+      bestPractices: reportCategories['best-practices'].score * 100,
+      seo: reportCategories.seo.score * 100,
+    };
+
+    return results;
+  } finally {
+    await chrome.kill();
+  }
+}
+
 // Add this function to capture competitor screenshots
 async function captureCompetitorScreenshots(analysis) {
   const competitorUrls = extractCompetitorUrls(analysis);
-  console.log('Attempting to capture screenshots for URLs:', competitorUrls);
+  console.log('Extracted competitor URLs:', competitorUrls);
   const screenshots = {};
   const TIMEOUT = 20000; // 20 seconds
   const FALLBACK_IMAGE_PATH = path.join(__dirname, 'public', 'fallback-screenshot.png');
   const SCREENSHOT_WIDTH = 1280;
   const SCREENSHOT_HEIGHT = 800;
-
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   let browser = null;
   try {
@@ -774,6 +814,7 @@ async function captureCompetitorScreenshots(analysis) {
 
 
     for (const url of competitorUrls) {
+      console.log(`Processing URL: ${url}`);
       if (screenshots[url]) {
         console.log(`Screenshot for ${url} already captured, skipping...`);
         continue;
@@ -782,13 +823,14 @@ async function captureCompetitorScreenshots(analysis) {
       try {
         console.log(`Attempting to capture screenshot for: ${url}`);
         const page = await browser.newPage();
+        console.log(`New page created for ${url}`);
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
         
         console.log(`Navigating to ${url}`);
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
         
-        console.log(`Waiting for network idle`);
-        await page.waitForNetworkIdle({ idle: 500, timeout: TIMEOUT });
+        console.log(`Waiting for network idle on ${url}`);
+        await page.waitForNetworkIdle({ idleTime: 1000, timeout: TIMEOUT });
         
         console.log(`Capturing screenshot for ${url}`);
         const screenshot = await page.screenshot({ encoding: 'base64', fullPage: false });
@@ -798,19 +840,18 @@ async function captureCompetitorScreenshots(analysis) {
       } catch (error) {
         console.error(`Error capturing screenshot for ${url}:`, error.message);
         try {
+          console.log(`Using fallback image for ${url}`);
           const fallbackImageBuffer = await fs.readFile(FALLBACK_IMAGE_PATH);
           const resizedFallbackImage = await sharp(fallbackImageBuffer)
             .resize(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT, { fit: 'cover', position: 'center' })
             .toBuffer();
           screenshots[url] = resizedFallbackImage.toString('base64');
-          console.log(`Using resized fallback image for ${url}`);
+          console.log(`Fallback image used for ${url}`);
         } catch (fallbackError) {
           console.error('Error reading or resizing fallback image:', fallbackError);
           screenshots[url] = null;
         }
       }
-      
-      await delay(1000);
     }
   } finally {
     if (browser) {
@@ -822,6 +863,7 @@ async function captureCompetitorScreenshots(analysis) {
   console.log('All screenshots captured or fallback used:', Object.keys(screenshots));
   return screenshots;
 }
+
 
 
 function extractCompetitorUrls(analysis) {
@@ -889,6 +931,7 @@ app.get('/api/analyze/competitor-screenshots', (req, res) => {
     res.write(`data: ${JSON.stringify({ competitorScreenshots: screenshots })}\n\n`);
     res.end();
   };
+
 
   // Call this function when screenshots are ready
   // sendCompetitorScreenshots(screenshots);

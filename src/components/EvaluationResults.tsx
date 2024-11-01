@@ -60,6 +60,14 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
         <li>Optimized Images: {result.bestPractices?.optimizedImages ?? 'N/A'} / {result.bestPractices?.totalImages ?? 'N/A'}</li>
       </ul>
 
+      <h3>Lighthouse Scores</h3>
+      <ul>
+        <li>Performance: {formatMetric(result.lighthouse?.performance)}</li>
+        <li>Accessibility: {formatMetric(result.lighthouse?.accessibility)}</li>
+        <li>Best Practices: {formatMetric(result.lighthouse?.bestPractices)}</li>
+        <li>SEO: {formatMetric(result.lighthouse?.seo)}</li>
+      </ul>
+
       {/* ... (rest of the component remains the same) */}
     </div>
   );
