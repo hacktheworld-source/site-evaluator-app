@@ -315,12 +315,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
 
       // Initialize loading state for all URLs
-      const urlRegex = /\d\.\s+(https?:\/\/[^\s:]+)(?=:|\s|$)/g;
+      const urlRegex = /(?:\d\.|-)?\s*(https?:\/\/[^\s,)"']+)/gi;
       const urls: string[] = [];
       let match;
+      
+      // Log the content for debugging
+      console.log('Searching for URLs in content:', message.content);
+      
       while ((match = urlRegex.exec(message.content)) !== null) {
-        urls.push(match[1]);
+        const url = match[1].trim();
+        try {
+          new URL(url); // Validate URL
+          urls.push(url);
+        } catch (error) {
+          console.log(`Skipping invalid URL: ${url}`);
+        }
       }
+
+      console.log('Found URLs:', urls);
 
       // Set initial loading state for all screenshots at once
       const initialScreenshots: Message['competitorScreenshots'] = {};
@@ -345,24 +357,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       // Update all screenshots in a single state update
       const { competitorScreenshots } = response.data;
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.phase === 'Recommendations' && msg.content === message.content
-            ? {
-                ...msg,
-                competitorScreenshots: Object.fromEntries(
-                  Object.entries(competitorScreenshots).map(([url, screenshot]) => [
-                    url,
-                    {
-                      status: screenshot ? 'loaded' : 'error',
-                      data: screenshot as string
-                    }
-                  ])
-                )
-              }
-            : msg
-        )
-      );
+      console.log('Current messages:', messages);
+      console.log('Looking for message with content:', message.content);
+      console.log('And phase:', message.phase);
+
+      setMessages(prevMessages => {
+        console.log('Updating messages...');
+        const updatedMessages = prevMessages.map(msg => {
+          const isMatch = msg.phase === 'Recommendations' && msg.content === message.content;
+          console.log('Checking message:', {
+            phase: msg.phase,
+            contentMatch: msg.content === message.content,
+            isMatch
+          });
+          
+          if (isMatch) {
+            console.log('Found matching message, updating screenshots');
+            const updatedScreenshots: Message['competitorScreenshots'] = {};
+            
+            // Properly type the status when creating the updated screenshots
+            Object.entries(competitorScreenshots).forEach(([url, screenshot]) => {
+              updatedScreenshots[url] = {
+                status: screenshot ? 'loaded' as const : 'error' as const,
+                data: screenshot as string
+              };
+            });
+
+            console.log('Updated screenshots:', updatedScreenshots);
+            return {
+              ...msg,
+              competitorScreenshots: updatedScreenshots
+            } as Message; // Assert the entire object as Message type
+          }
+          return msg;
+        });
+        
+        console.log('Updated messages:', updatedMessages);
+        return updatedMessages;
+      });
     } catch (error) {
       console.error('Error fetching screenshots:', error);
       // Handle error state
@@ -465,36 +497,61 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ) : (
             <ReactMarkdown components={{
               li: ({ node, ...props }) => {
-                const content = (node as any).children[0].value;
-                const urlMatch = content.match(/(https?:\/\/[^\s:]+)/);
+                if (!node || !node.children) {
+                  return <li {...props}>Invalid content</li>;
+                }
+
+                // Get the content by recursively processing all child nodes
+                const getNodeContent = (node: any): string => {
+                  if (node.type === 'text') {
+                    return node.value || '';
+                  }
+                  if (node.children) {
+                    return node.children.map(getNodeContent).join('');
+                  }
+                  return '';
+                };
+
+                const content = node.children.map(getNodeContent).join('');
+                const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
                 
+                if (urlMatch) {
+                  // Clean the URL by removing trailing punctuation
+                  const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
+                  
+                  return (
+                    <li {...props}>
+                      {content}
+                      {message.phase === 'Recommendations' && (
+                        <div className="competitor-screenshot-wrapper">
+                          {message.competitorScreenshots?.[cleanUrl] ? (
+                            message.competitorScreenshots[cleanUrl].status === 'loading' ? (
+                              <div className="screenshot-placeholder pulse"></div>
+                            ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
+                              <img 
+                                src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
+                                alt={`Screenshot of ${cleanUrl}`} 
+                                className="competitor-screenshot"
+                                onError={(e) => {
+                                  console.error(`Error loading screenshot for ${cleanUrl}`);
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="screenshot-error">Failed to load screenshot</div>
+                            )
+                          ) : (
+                            <div className="screenshot-placeholder pulse"></div>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                }
                 return (
                   <li {...props}>
                     {content}
-                    {urlMatch && message.phase === 'Recommendations' && (
-                      <div className="competitor-screenshot-wrapper">
-                        {message.competitorScreenshots?.[urlMatch[1]] ? (
-                          message.competitorScreenshots[urlMatch[1]].status === 'loading' ? (
-                            <div className="screenshot-placeholder pulse"></div>
-                          ) : message.competitorScreenshots[urlMatch[1]].status === 'loaded' ? (
-                            <img 
-                              src={`data:image/png;base64,${message.competitorScreenshots[urlMatch[1]].data}`} 
-                              alt={`Screenshot of ${urlMatch[1]}`} 
-                              className="competitor-screenshot"
-                              onError={(e) => {
-                                console.error(`Error loading screenshot for ${urlMatch[1]}`);
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="screenshot-error">Failed to load screenshot</div>
-                          )
-                        ) : (
-                          <div className="screenshot-placeholder pulse"></div>
-                        )}
-                      </div>
-                    )}
                   </li>
                 );
               },

@@ -682,32 +682,43 @@ app.post('/api/capture-screenshots', async (req, res) => {
   }
 
   try {
-    // Extract URLs first
-    const competitorSection = content.match(/Competitors for Inspiration:[\s\S]*?(?=\n\n|$)/i);
+    // More robust regex for finding the competitor section
+    const competitorSection = content.match(/competitors?\s+for\s+inspiration:[\s\S]*?(?=\n\n|$)/i);
     if (!competitorSection) {
-      console.log('No competitor section found');
+      console.log('No competitor section found in content:', content);
       return res.status(400).json({ error: 'No competitor section found' });
     }
 
     const sectionText = competitorSection[0];
     console.log('Found competitor section:', sectionText);
 
-    const urlRegex = /\d\.\s+(https?:\/\/[^\s:]+)(?=:|\s|$)/g;
-    const urls = Array.from(sectionText.matchAll(urlRegex), m => m[1])
-      .map(url => url.trim())
+    // Updated regex to better handle different URL formats
+    const urlRegex = /(?:\d\.|-)?\s*(https?:\/\/[^\s:,)"']+)/gi;
+    const matches = Array.from(sectionText.matchAll(urlRegex));
+    
+    const urls = matches
+      .map(match => match[1].trim().replace(/[:,.]+$/, '')) // Remove trailing punctuation
       .filter(url => {
         try {
-          new URL(url);
-          return !url.includes('robots.txt') && !url.includes('sitemap.xml');
-        } catch {
+          const parsedUrl = new URL(url);
+          const isValid = !url.includes('robots.txt') && 
+                         !url.includes('sitemap.xml') &&
+                         parsedUrl.protocol.startsWith('http');
+          console.log(`URL validation for ${url}:`, isValid);
+          return isValid;
+        } catch (error) {
+          console.log(`Invalid URL found: ${url}`, error);
           return false;
         }
       })
       .slice(0, 3);
 
     if (urls.length === 0) {
-      console.log('No valid URLs found');
-      return res.status(400).json({ error: 'No valid URLs found' });
+      console.log('No valid URLs found in section:', sectionText);
+      return res.status(400).json({ 
+        error: 'No valid URLs found',
+        section: sectionText // Include this for debugging
+      });
     }
 
     console.log('Processing URLs:', urls);
@@ -718,7 +729,8 @@ app.post('/api/capture-screenshots', async (req, res) => {
     console.error('Error in /api/capture-screenshots:', error);
     res.status(500).json({ 
       error: 'Failed to capture screenshots', 
-      details: error.message 
+      details: error.message,
+      content: content // Include this for debugging
     });
   }
 });
@@ -835,18 +847,15 @@ async function analyzeSecurityMetrics(url) {
 async function runLighthouse(url) {
   let chrome = null;
   try {
-    // Use puppeteer's Chrome instead of chrome-launcher
     const browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     
-    // Get the Chrome DevTools Protocol (CDP) endpoint
     const pages = await browser.pages();
     const page = pages[0];
     const client = await page.target().createCDPSession();
     
-    // Import lighthouse
     const lighthouse = await import('lighthouse');
     
     const options = {
@@ -856,11 +865,22 @@ async function runLighthouse(url) {
       onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
       chromeFlags: ['--headless', '--no-sandbox', '--disable-setuid-sandbox'],
       formFactor: 'desktop',
+      screenEmulation: {
+        mobile: false,
+        width: 1350,
+        height: 940,
+        deviceScaleFactor: 1,
+        disabled: false,
+      },
+      emulatedUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4695.0 Safari/537.36',
       throttling: {
         rttMs: 40,
         throughputKbps: 10240,
         cpuSlowdownMultiplier: 1,
-      },
+        requestLatencyMs: 0,
+        downloadThroughputKbps: 0,
+        uploadThroughputKbps: 0
+      }
     };
 
     // Run Lighthouse
@@ -893,7 +913,14 @@ async function runLighthouse(url) {
     if (chrome) {
       await chrome.kill();
     }
-    throw error;
+    // Return default values instead of throwing
+    return {
+      performance: 0,
+      accessibility: 0,
+      bestPractices: 0,
+      seo: 0,
+      error: error.message
+    };
   }
 }
 
@@ -917,7 +944,9 @@ async function captureCompetitorScreenshots(urls) {
         '--disable-features=site-per-process',
         '--disable-web-security',
         '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+        '--disable-site-isolation-trials',
+        '--ignore-certificate-errors',
+        '--ignore-certificate-errors-spki-list'
       ],
       defaultViewport: { width: SCREENSHOT_WIDTH, height: SCREENSHOT_HEIGHT }
     });
