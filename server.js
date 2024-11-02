@@ -463,6 +463,7 @@ async function evaluateWebsite(url, sendStatus) {
     const htmlContent = await page.content();
     
     sendStatus('Taking screenshot...');
+    await sleep(2000); // Add 2-second delay
     const screenshot = await page.screenshot({ encoding: 'base64' });
     
     // Compress the screenshot once
@@ -1014,7 +1015,7 @@ async function captureCompetitorScreenshots(urls) {
         if (!response || !response.ok()) {
           throw new Error(`Failed to load page: ${response ? response.status() : 'No response'}`);
         }
-
+        await sleep(2000); // Add 2-second delay
         const buffer = await page.screenshot({ 
           type: 'png',
           fullPage: false,
