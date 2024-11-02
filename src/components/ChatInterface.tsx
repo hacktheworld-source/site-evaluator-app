@@ -314,25 +314,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return;
       }
 
-      // Initialize loading state for all URLs
       const urlRegex = /(?:\d\.|-)?\s*(https?:\/\/[^\s,)"']+)/gi;
       const urls: string[] = [];
       let match;
       
-      // Log the content for debugging
-      console.log('Searching for URLs in content:', message.content);
-      
       while ((match = urlRegex.exec(message.content)) !== null) {
         const url = match[1].trim();
         try {
-          new URL(url); // Validate URL
+          new URL(url);
           urls.push(url);
         } catch (error) {
           console.log(`Skipping invalid URL: ${url}`);
         }
       }
-
-      console.log('Found URLs:', urls);
 
       // Set initial loading state for all screenshots at once
       const initialScreenshots: Message['competitorScreenshots'] = {};
@@ -353,29 +347,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         content: message.content
       });
 
-      console.log('Received screenshots:', response.data);
-
       // Update all screenshots in a single state update
       const { competitorScreenshots } = response.data;
-      console.log('Current messages:', messages);
-      console.log('Looking for message with content:', message.content);
-      console.log('And phase:', message.phase);
 
       setMessages(prevMessages => {
-        console.log('Updating messages...');
         const updatedMessages = prevMessages.map(msg => {
-          const isMatch = msg.phase === 'Recommendations' && msg.content === message.content;
-          console.log('Checking message:', {
-            phase: msg.phase,
-            contentMatch: msg.content === message.content,
-            isMatch
-          });
-          
-          if (isMatch) {
-            console.log('Found matching message, updating screenshots');
+          if (msg.phase === 'Recommendations' && msg.content === message.content) {
             const updatedScreenshots: Message['competitorScreenshots'] = {};
             
-            // Properly type the status when creating the updated screenshots
             Object.entries(competitorScreenshots).forEach(([url, screenshot]) => {
               updatedScreenshots[url] = {
                 status: screenshot ? 'loaded' as const : 'error' as const,
@@ -383,38 +362,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               };
             });
 
-            console.log('Updated screenshots:', updatedScreenshots);
             return {
               ...msg,
               competitorScreenshots: updatedScreenshots
-            } as Message; // Assert the entire object as Message type
+            } as Message;
           }
           return msg;
         });
         
-        console.log('Updated messages:', updatedMessages);
         return updatedMessages;
       });
     } catch (error) {
+      // Silent error handling - just log to console
       console.error('Error fetching screenshots:', error);
-      // Handle error state
-      if (message.competitorScreenshots) {
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.phase === 'Recommendations' && msg.content === message.content
-              ? {
-                  ...msg,
-                  competitorScreenshots: Object.fromEntries(
-                    Object.entries(message.competitorScreenshots || {}).map(([url]) => [
-                      url,
-                      { status: 'error' as const }
-                    ])
-                  )
-                }
-              : msg
-          )
-        );
-      }
+      // Don't update UI or show error state
     }
   };
 

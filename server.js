@@ -48,6 +48,12 @@ app.get('/api/evaluate', async (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
 
+  if (isBlockedDomain(url)) {
+    return res.status(400).json({ 
+      error: 'This website actively blocks automated access. Please try analyzing a different site.' 
+    });
+  }
+
   try {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -83,27 +89,48 @@ app.get('/api/evaluate', async (req, res) => {
 async function evaluateWebsite(url, sendStatus) {
   let browser;
   try {
+    logger.info('Starting website evaluation', { url });
     sendStatus('Launching browser...');
-    console.log('Launching browser for URL:', url);
+    
+    // Launch browser with stealth plugin and anti-detection settings
     browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=site-per-process'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-features=site-per-process',
+        '--disable-blink-features=AutomationControlled' // Hide automation
+      ],
       defaultViewport: null
     });
+    logger.debug('Browser launched successfully');
 
+    // Initialize page with randomized properties
     sendStatus('Opening page...');
-    await sleep(1000);
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    await page.setViewport({ width: 1280, height: 800 });
     
+    // Apply anti-detection measures
+    const userAgent = getRandomUserAgent();
+    await page.setUserAgent(userAgent);
+    await page.setViewport({ 
+      width: 1280, 
+      height: 800,
+      deviceScaleFactor: 1 + Math.random() * 0.3 // Random scale factor
+    });
+    await randomizeFingerprint(page);
+    
+    logger.debug('Page configuration complete', { userAgent });
+
+    // Navigate to URL with human-like behavior
+    logger.info('Navigating to URL', { url });
     await page.goto(url, { 
       waitUntil: 'networkidle0',
-      timeout: 30000 // 30 seconds
+      timeout: 30000
     });
 
-    // Reduced wait time
-    await sleep(2000);
+    // Simulate human behavior
+    await humanizeBehavior(page);
+    logger.debug('Human behavior simulation complete');
 
     sendStatus('Gathering performance metrics...');
     const metrics = await page.evaluate(() => {
@@ -928,7 +955,7 @@ async function runLighthouse(url) {
 async function captureCompetitorScreenshots(urls) {
   console.log('Starting screenshot capture for URLs:', urls);
   const screenshots = {};
-  const TIMEOUT = 20000;
+  const TIMEOUT = 45000;
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1000;
   const SCREENSHOT_WIDTH = 1280;
@@ -1114,3 +1141,83 @@ async function ensureErrorImageExists() {
 
 // Call this when the server starts
 ensureErrorImageExists().catch(console.error);
+
+// Utility functions for browser anti-detection and logging
+const logger = {
+  info: (message, data = {}) => {
+    console.log(`[INFO] ${message}`, JSON.stringify(data, null, 2));
+  },
+  error: (message, error) => {
+    console.error(`[ERROR] ${message}`, error);
+  },
+  debug: (message, data = {}) => {
+    if (process.env.DEBUG) {
+      console.debug(`[DEBUG] ${message}`, JSON.stringify(data, null, 2));
+    }
+  }
+};
+
+// Pool of real browser User-Agents for rotation
+const userAgents = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edge/120.0.0.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15'
+];
+
+// Get random User-Agent from pool
+const getRandomUserAgent = () => {
+  const agent = userAgents[Math.floor(Math.random() * userAgents.length)];
+  logger.debug('Selected User-Agent', { agent });
+  return agent;
+};
+
+// Randomize browser fingerprint to avoid detection
+const randomizeFingerprint = async (page) => {
+  logger.debug('Randomizing browser fingerprint');
+  await page.evaluateOnNewDocument(() => {
+    // Override properties that commonly reveal automation
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    
+    // Randomize screen resolution
+    const screenWidth = 1366 + Math.floor(Math.random() * 100);
+    const screenHeight = 768 + Math.floor(Math.random() * 100);
+    Object.defineProperty(window, 'innerWidth', { get: () => screenWidth });
+    Object.defineProperty(window, 'innerHeight', { get: () => screenHeight });
+    
+    // Add random plugins
+    const plugins = ['PDF Viewer', 'Chrome PDF Viewer'].slice(0, 1 + Math.random());
+    Object.defineProperty(navigator, 'plugins', { get: () => plugins });
+  });
+  logger.debug('Fingerprint randomization complete');
+};
+
+// Simulate human-like behavior
+const humanizeBehavior = async (page) => {
+  logger.debug('Starting human behavior simulation');
+  
+  // Random delay between 1-2 seconds
+  const delay = 1000 + Math.random() * 1000;
+  await sleep(delay);
+  
+  // Random scrolling
+  await page.evaluate(() => {
+    window.scrollTo({
+      top: Math.random() * (document.body.scrollHeight / 2),
+      behavior: 'smooth'
+    });
+  });
+  
+  await sleep(500); // Small additional delay after scrolling
+  logger.debug('Human behavior simulation complete', { delay });
+};
+
+const BLOCKED_DOMAINS = [
+  'amazon.com', 'walmart.com', 'target.com', 'bestbuy.com',
+  'chase.com', 'bankofamerica.com', 'wellsfargo.com'
+];
+
+const isBlockedDomain = (url) => {
+  return BLOCKED_DOMAINS.some(domain => url.toLowerCase().includes(domain));
+};

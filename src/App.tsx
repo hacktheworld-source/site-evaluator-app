@@ -110,44 +110,80 @@ const App: React.FC = () => {
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - 1 : null));
 
       const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}`);
+      let timeoutId = setTimeout(() => {
+        eventSource.close();
+        throw new Error('Website analysis timed out. This website might be blocking automated access.');
+      }, 45000); // 45 second timeout
 
       eventSource.onmessage = async (event) => {
         try {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            eventSource.close();
+            setIsLoading(false);
+            setIsGenerating(false);
+            handleError('Website analysis timed out. This website might be blocking automated access.');
+            
+            // Refund the point
+            if (user) {
+              updateUserPoints(user.uid, (userPoints || 0) + 1);
+              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
+            }
+          }, 45000);
+
           const data = JSON.parse(event.data);
-          console.log('Received event data:', data);
           if (data.status) {
             setStatusMessage(data.status);
           } else if (data.result) {
             setEvaluationResults(data.result);
             eventSource.close();
+            clearTimeout(timeoutId);
             setIsLoading(false);
             setIsGenerating(false);
             setStatusMessage('Evaluation complete!');
             setTimeout(() => setStatusMessage(''), 2000);
           } else if (data.error) {
-            throw new Error(data.error);
+            eventSource.close();
+            clearTimeout(timeoutId);
+            setIsLoading(false);
+            setIsGenerating(false);
+            handleError(data.error);
+            
+            // Refund the point
+            if (user) {
+              updateUserPoints(user.uid, (userPoints || 0) + 1);
+              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
+            }
           }
         } catch (error) {
-          console.error('Error processing event data:', error);
-          throw error;
+          eventSource.close();
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          setIsGenerating(false);
+          handleError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
+          
+          // Refund the point
+          if (user) {
+            updateUserPoints(user.uid, (userPoints || 0) + 1);
+            setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
+          }
         }
       };
 
       eventSource.onerror = (error) => {
         console.error('EventSource error:', error);
         eventSource.close();
+        clearTimeout(timeoutId);
         setIsLoading(false);
         setIsGenerating(false);
-        setError('An error occurred while evaluating the website. Please try again.');
-        setStatusMessage('');
+        handleError('The website appears to be blocking automated access. Try a different website or try again later.');
         
         // Refund the point
         updateUserPoints(user.uid, (userPoints || 0) + 1);
         setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
       };
-    } catch (error: unknown) {
-      console.error('Error in handleEvaluation:', error);
-      setError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
+    } catch (error) {
+      handleError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
       setIsLoading(false);
       setIsGenerating(false);
       setStatusMessage('');
