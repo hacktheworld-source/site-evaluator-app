@@ -3,6 +3,11 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import TypewriterText from './TypewriterText';
 import DOMPurify from 'dompurify';
+import { reportGenerator, ReportData } from '../services/reportGenerator';
+import { saveAs } from 'file-saver';
+import { toast } from 'react-toastify';
+import { reportStorage } from '../services/reportStorage';
+import { auth } from '../services/firebase';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -27,6 +32,7 @@ interface ChatInterfaceProps {
   onStartEvaluation: (url: string) => void;
   evaluationResults: any;
   isLoading: boolean;
+  onGenerateReport?: (data: ReportData) => void;
 }
 
 const ScreenshotPlaceholder: React.FC = () => (
@@ -37,7 +43,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   websiteUrl, 
   onStartEvaluation, 
   evaluationResults, 
-  isLoading 
+  isLoading,
+  onGenerateReport 
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -47,6 +54,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [isMessageLoading, setIsMessageLoading] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
@@ -132,15 +140,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     let phaseMetrics;
     switch (phase) {
       case 'Vision':
-        phaseMetrics = {}; // No metrics for Vision phase, just the screenshot
+        phaseMetrics = {}; // Remove all metrics for Vision phase, we only want to analyze the screenshot
         break;
       case 'UI':
-        // Remove screenshot from UI metrics
         phaseMetrics = {
-          colorContrast: allMetrics.colorContrast,
           fontSizes: allMetrics.fontSizes,
           responsiveness: allMetrics.responsiveness,
-          accessibility: allMetrics.accessibility
+          accessibility: allMetrics.accessibility,
+          lighthouse: allMetrics.lighthouse
         };
         break;
       case 'Functionality':
@@ -161,16 +168,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           cumulativeLayoutShift: allMetrics.cumulativeLayoutShift,
           ttfb: allMetrics.ttfb,
           tbt: allMetrics.tbt,
-          estimatedFid: allMetrics.estimatedFid, // Changed from fid to estimatedFid
+          estimatedFid: allMetrics.estimatedFid,
           domElements: allMetrics.domElements,
           pageSize: allMetrics.pageSize,
           requests: allMetrics.requests,
-          security: allMetrics.security
+          security: allMetrics.security,
+          lighthouse: allMetrics.lighthouse
         };
         break;
       case 'SEO':
         phaseMetrics = {
-          seo: allMetrics.seo
+          seo: allMetrics.seo,
+          lighthouse: allMetrics.lighthouse
         };
         break;
       case 'Recommendations':
@@ -555,6 +564,67 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const recommendationsMessage = messages.find(msg => msg.phase === 'Recommendations');
   }, [messages]);
 
+  const handleGenerateReport = async () => {
+    if (!messages.length || !evaluationResults || !auth.currentUser) {
+      toast.error('Please sign in to generate a report');
+      return;
+    }
+
+    setIsGeneratingReport(true);
+    try {
+      // Create a clean version of metrics without HTML content
+      const cleanMetrics = {
+        performance: {
+          loadTime: evaluationResults.loadTime,
+          firstContentfulPaint: evaluationResults.firstContentfulPaint,
+          timeToInteractive: evaluationResults.timeToInteractive,
+          largestContentfulPaint: evaluationResults.largestContentfulPaint,
+          cumulativeLayoutShift: evaluationResults.cumulativeLayoutShift,
+          ttfb: evaluationResults.ttfb,
+          tbt: evaluationResults.tbt,
+          estimatedFid: evaluationResults.estimatedFid,
+        },
+        seo: {
+          score: evaluationResults.lighthouse?.seo,
+          title: evaluationResults.seo?.title,
+          metaDescription: evaluationResults.seo?.metaDescription,
+        },
+        accessibility: {
+          score: evaluationResults.lighthouse?.accessibility,
+          imagesWithAltText: evaluationResults.accessibility?.imagesWithAltText,
+          totalImages: evaluationResults.accessibility?.totalImages,
+        },
+        lighthouse: evaluationResults.lighthouse,
+        security: evaluationResults.security
+      };
+
+      const reportData: ReportData = {
+        websiteUrl,
+        timestamp: new Date(),
+        overallScore: overallScore || 0,
+        phaseScores,
+        metrics: cleanMetrics
+      };
+
+      // Generate PDF
+      const pdfBuffer = await reportGenerator.generatePDF(reportData);
+      
+      // Save metadata to Firestore
+      await reportStorage.saveReport(auth.currentUser.uid, reportData);
+      
+      // Download locally
+      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+      saveAs(blob, `${websiteUrl.replace(/[^a-z0-9]/gi, '_')}_report.pdf`);
+
+      toast.success('Report generated and saved successfully!');
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report. Please try again.');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   return (
     <div className="chat-interface">
       {overallScore !== null && (
@@ -601,15 +671,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         >
           <i className="fas fa-paper-plane"></i>
         </button>
-        {currentPhase && currentPhase !== 'Recommendations' && (
-          <button 
-            type="button" 
-            onClick={handleContinue} 
-            disabled={isLoading || isMessageLoading} 
-            className="continue-button"
-          >
-            Continue
-          </button>
+        {currentPhase && (
+          <>
+            {currentPhase !== 'Recommendations' && (
+              <button 
+                type="button" 
+                onClick={handleContinue} 
+                disabled={isLoading || isMessageLoading} 
+                className="continue-button"
+              >
+                Continue
+              </button>
+            )}
+            {currentPhase === 'Recommendations' && (
+              <button
+                type="button"
+                onClick={handleGenerateReport}
+                disabled={isLoading || isMessageLoading || isGeneratingReport}
+                className="generate-report-button"
+              >
+                {isGeneratingReport ? 'Generating...' : 'Download Report'}
+              </button>
+            )}
+          </>
         )}
       </form>
     </div>

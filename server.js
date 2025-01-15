@@ -88,24 +88,28 @@ app.get('/api/evaluate', async (req, res) => {
 
 async function evaluateWebsite(url, sendStatus) {
   let browser;
+  const startTime = Date.now();
+  const logStep = (step, details = {}) => {
+    const elapsed = Date.now() - startTime;
+    console.log(`[${elapsed}ms] ${step}`, JSON.stringify(details));
+  };
+
   try {
-    logger.info('Starting website evaluation', { url });
+    logStep('Starting website evaluation', { url });
     sendStatus('Launching browser...');
     
-    // Launch browser with stealth plugin and anti-detection settings
     browser = await puppeteer.launch({
       headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-features=site-per-process',
-        '--disable-blink-features=AutomationControlled' // Hide automation
+        '--disable-blink-features=AutomationControlled'
       ],
       defaultViewport: null
     });
-    logger.debug('Browser launched successfully');
+    logStep('Browser launched successfully');
 
-    // Initialize page with randomized properties
     sendStatus('Opening page...');
     const page = await browser.newPage();
     
@@ -115,80 +119,257 @@ async function evaluateWebsite(url, sendStatus) {
     await page.setViewport({ 
       width: 1280, 
       height: 800,
-      deviceScaleFactor: 1 + Math.random() * 0.3 // Random scale factor
+      deviceScaleFactor: 1 + Math.random() * 0.3
     });
     await randomizeFingerprint(page);
     
-    logger.debug('Page configuration complete', { userAgent });
+    logStep('Page configuration complete', { userAgent });
+
+    // Enable detailed console logging from the browser
+    page.on('console', msg => {
+      const type = msg.type();
+      const text = msg.text();
+      if (text.startsWith('[Browser]')) {
+        logStep(`Browser Console [${type}]: ${text}`);
+      }
+    });
 
     // Navigate to URL with human-like behavior
-    logger.info('Navigating to URL', { url });
+    logStep('Navigating to URL', { url });
+    const navigationStart = Date.now();
     await page.goto(url, { 
       waitUntil: 'networkidle0',
       timeout: 30000
     });
+    logStep('Navigation complete', { 
+      timeElapsed: Date.now() - navigationStart 
+    });
 
-    // Simulate human behavior
     await humanizeBehavior(page);
-    logger.debug('Human behavior simulation complete');
+    logStep('Human behavior simulation complete');
 
     sendStatus('Gathering performance metrics...');
+    logStep('Starting performance metrics collection');
+    const metricsStart = Date.now();
     const metrics = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        const startTime = performance.now();
-        let lcpValue = 0;
-        let clsValue = 0;
-        const measurementTime = 5000; // 5 seconds
+      console.log('[Browser] Starting performance metrics collection');
+      return new Promise((resolve, reject) => {
+        let metricsCollected = {
+          tbt: 0,
+          estimatedFid: 0,
+          fcp: null,
+          lcp: null,
+          tti: null,
+          observersStarted: false,
+          observersCounted: 0,
+          fallbackTriggered: false
+        };
 
-        const lcpObserver = new PerformanceObserver((entryList) => {
-          const entries = entryList.getEntries();
-          const lastEntry = entries[entries.length - 1];
-          lcpValue = lastEntry.startTime;
+        // Global timeout to prevent hanging
+        const METRICS_TIMEOUT = 10000; // 10 seconds max
+        const timeoutId = setTimeout(() => {
+          console.log('[Browser] Global timeout reached, using available metrics');
+          finalizeMetrics(true);
+        }, METRICS_TIMEOUT);
+
+        console.log('[Browser] Setting up Performance Observers');
+
+        const observers = [];
+
+        // Observe LCP
+        const lcpObserver = new PerformanceObserver((list) => {
+          console.log('[Browser] LCP Observer entry received');
+          const entries = list.getEntries();
+          metricsCollected.lcp = entries[entries.length - 1].startTime;
+          metricsCollected.observersCounted++;
+          console.log(`[Browser] LCP recorded: ${metricsCollected.lcp}`);
+          checkAndResolve();
         });
+        observers.push(lcpObserver);
 
-        const clsObserver = new PerformanceObserver((entryList) => {
-          for (const entry of entryList.getEntries()) {
-            if (!entry.hadRecentInput) {
-              clsValue += entry.value;
+        // Observe FCP
+        const fcpObserver = new PerformanceObserver((list) => {
+          console.log('[Browser] FCP Observer entry received');
+          const entries = list.getEntries();
+          metricsCollected.fcp = entries[0].startTime;
+          metricsCollected.observersCounted++;
+          console.log(`[Browser] FCP recorded: ${metricsCollected.fcp}`);
+          checkAndResolve();
+        });
+        observers.push(fcpObserver);
+
+        // Observe navigation timing
+        const navigationObserver = new PerformanceObserver((list) => {
+          console.log('[Browser] Navigation Observer entry received');
+          const entries = list.getEntries();
+          entries.forEach(entry => {
+            if (entry.entryType === 'navigation') {
+              console.log('[Browser] Processing navigation entry');
+              const navEntry = entry;
+              metricsCollected.tti = navEntry.domInteractive;
+              metricsCollected.observersCounted++;
+              checkAndResolve();
             }
-          }
-        });
-
-        lcpObserver.observe({type: 'largest-contentful-paint', buffered: true});
-        clsObserver.observe({type: 'layout-shift', buffered: true});
-
-        setTimeout(() => {
-          lcpObserver.disconnect();
-          clsObserver.disconnect();
-
-          const performance = window.performance;
-          const timing = performance.timing;
-          const endTime = performance.now();
-          const actualMeasurementTime = endTime - startTime;
-
-          const tti = performance.timing.domInteractive - performance.timing.navigationStart;
-
-          resolve({
-            loadTime: timing.loadEventEnd - timing.navigationStart,
-            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-            firstPaint: performance.getEntriesByType('paint')[0]?.startTime || null,
-            firstContentfulPaint: performance.getEntriesByType('paint')[1]?.startTime || null,
-            domElements: document.getElementsByTagName('*').length,
-            pageSize: document.documentElement.innerHTML.length,
-            requests: performance.getEntriesByType('resource').length,
-            timeToInteractive: tti > actualMeasurementTime ? `>${actualMeasurementTime.toFixed(2)}` : tti.toFixed(2),
-            largestContentfulPaint: lcpValue > actualMeasurementTime ? `>${actualMeasurementTime.toFixed(2)}` : lcpValue.toFixed(2),
-            cumulativeLayoutShift: clsValue.toFixed(4),
-            actualMeasurementTime: actualMeasurementTime.toFixed(2),
           });
-        }, measurementTime);
+        });
+        observers.push(navigationObserver);
+
+        // Calculate TBT and estimate FID
+        const tbtObserver = new PerformanceObserver((list) => {
+          console.log('[Browser] TBT Observer entry received');
+          const entries = list.getEntries();
+          entries.forEach((entry) => {
+            if (metricsCollected.fcp && (!metricsCollected.tti || entry.startTime < metricsCollected.tti)) {
+              const blockingTime = entry.duration - 50;
+              if (blockingTime > 0) {
+                metricsCollected.tbt += blockingTime;
+                metricsCollected.estimatedFid = Math.max(metricsCollected.estimatedFid, entry.duration);
+                console.log(`[Browser] Updated TBT: ${metricsCollected.tbt}, FID: ${metricsCollected.estimatedFid}`);
+              }
+            }
+          });
+          checkAndResolve();
+        });
+        observers.push(tbtObserver);
+
+        function checkAndResolve() {
+          console.log('[Browser] Checking metrics status:', JSON.stringify(metricsCollected));
+          const navigationEntry = performance.getEntriesByType('navigation')[0];
+          if (navigationEntry && !metricsCollected.resolved) {
+            finalizeMetrics(false);
+          }
+        }
+
+        function finalizeMetrics(isTimeout) {
+          if (metricsCollected.resolved) {
+            console.log('[Browser] Metrics already resolved, skipping');
+            return;
+          }
+
+          console.log('[Browser] Finalizing metrics collection');
+          metricsCollected.resolved = true;
+
+          // Cleanup all observers
+          observers.forEach(observer => {
+            try {
+              observer.disconnect();
+            } catch (error) {
+              console.error('[Browser] Error disconnecting observer:', error);
+            }
+          });
+
+          // Clear the timeout if we're not already in the timeout handler
+          if (!isTimeout) {
+            clearTimeout(timeoutId);
+          }
+
+          // Get accurate FCP from Paint Timing API
+          const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0];
+          metricsCollected.fcp = fcpEntry ? fcpEntry.startTime : null;
+
+          // Get accurate LCP from PerformanceObserver
+          const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+          metricsCollected.lcp = lcpEntries.length > 0 ? lcpEntries[lcpEntries.length - 1].startTime : null;
+
+          const navigationEntry = performance.getEntriesByType('navigation')[0];
+          
+          // Use fallbacks if needed
+          if (!metricsCollected.fcp) {
+            metricsCollected.fcp = navigationEntry.domContentLoadedEventEnd;
+            console.log('[Browser] Using fallback for FCP:', metricsCollected.fcp);
+          }
+
+          if (!metricsCollected.lcp) {
+            metricsCollected.lcp = Math.max(
+              navigationEntry.domContentLoadedEventEnd,
+              metricsCollected.fcp + 100
+            );
+            console.log('[Browser] Using fallback for LCP:', metricsCollected.lcp);
+          }
+
+          // Calculate accurate page size
+          const resources = performance.getEntriesByType('resource');
+          const pageSize = {
+            document: navigationEntry.encodedBodySize || document.documentElement.innerHTML.length,
+            resources: resources.reduce((total, r) => total + (r.encodedBodySize || 0), 0),
+            total: navigationEntry.encodedBodySize + resources.reduce((total, r) => total + (r.encodedBodySize || 0), 0)
+          };
+
+          // Get accurate timing metrics
+          const timing = {
+            loadTime: navigationEntry.loadEventEnd - navigationEntry.fetchStart,
+            domContentLoaded: navigationEntry.domContentLoadedEventEnd - navigationEntry.domContentLoadedEventStart,
+            firstPaint: performance.getEntriesByName('first-paint')[0]?.startTime || null,
+            firstContentfulPaint: metricsCollected.fcp,
+            largestContentfulPaint: metricsCollected.lcp,
+            timeToInteractive: Math.max(
+              navigationEntry.domInteractive - navigationEntry.fetchStart,
+              metricsCollected.fcp || 0
+            ),
+            ttfb: navigationEntry.responseStart - navigationEntry.requestStart,
+            tbt: metricsCollected.tbt || 0,
+            estimatedFid: Math.round(metricsCollected.estimatedFid || 0),
+            domElements: document.getElementsByTagName('*').length,
+            pageSize: pageSize,
+            requests: resources.length
+          };
+
+          // Ensure LCP is always >= FCP
+          if (timing.largestContentfulPaint && timing.firstContentfulPaint) {
+            timing.largestContentfulPaint = Math.max(
+              timing.largestContentfulPaint,
+              timing.firstContentfulPaint
+            );
+          }
+
+          // Ensure TTI is always >= FCP
+          if (timing.timeToInteractive && timing.firstContentfulPaint) {
+            timing.timeToInteractive = Math.max(
+              timing.timeToInteractive,
+              timing.firstContentfulPaint
+            );
+          }
+
+          // Add debug information
+          timing._debug = {
+            fcpSource: fcpEntry ? 'paint-timing' : 'fallback',
+            lcpSource: lcpEntries.length > 0 ? 'performance-observer' : 'fallback',
+            tbtAccumulated: metricsCollected.tbt > 0,
+            fidEstimated: metricsCollected.estimatedFid > 0,
+            resourceCount: resources.length,
+            isTimeout: isTimeout,
+            observersStarted: metricsCollected.observersStarted,
+            observersCounted: metricsCollected.observersCounted,
+            timestamp: Date.now()
+          };
+
+          console.log('[Browser] Final timing metrics:', JSON.stringify(timing));
+          resolve(timing);
+        }
+
+        try {
+          console.log('[Browser] Starting observers');
+          lcpObserver.observe({type: 'largest-contentful-paint', buffered: true});
+          fcpObserver.observe({type: 'paint', buffered: true});
+          navigationObserver.observe({ entryTypes: ['navigation'] });
+          tbtObserver.observe({type: 'longtask', buffered: true});
+          metricsCollected.observersStarted = true;
+          console.log('[Browser] All observers started successfully');
+        } catch (error) {
+          console.error('[Browser] Error starting observers:', error);
+          finalizeMetrics(true);
+        }
       });
+    });
+    logStep('Performance metrics collection complete', { 
+      timeElapsed: Date.now() - metricsStart,
+      metricsCollected: Object.keys(metrics).length,
+      hasDebugInfo: !!metrics._debugInfo
     });
 
     sendStatus('Analyzing page content...');
     const contentMetrics = await page.evaluate(() => {
       return {
-        colorContrast: analyzeColorContrast(),
         fontSizes: analyzeFontSizes(),
         responsiveness: checkResponsiveness(),
         brokenLinks: checkBrokenLinks(),
@@ -202,43 +383,130 @@ async function evaluateWebsite(url, sendStatus) {
         const elements = document.querySelectorAll('*');
         let lowContrastCount = 0;
         let totalTextElements = 0;
+        let significantTextElements = 0;
+
         elements.forEach(el => {
+          // Skip empty or whitespace-only elements
+          if (!el.textContent?.trim()) return;
+          
+          // Skip tiny text (likely UI elements)
           const style = window.getComputedStyle(el);
-          const backgroundColor = style.backgroundColor;
-          const color = style.color;
           const fontSize = parseFloat(style.fontSize);
-          if (backgroundColor && color && el.textContent.trim()) {
+          if (fontSize < 12) return; // Increased minimum font size threshold
+
+          // Skip elements with very low opacity
+          const opacity = parseFloat(style.opacity);
+          if (opacity < 0.1) return;
+
+          // Get background color, considering parent elements
+          const bgColor = getEffectiveBackgroundColor(el);
+          const color = style.color;
+          
+          // Skip if we can't determine colors
+          if (!bgColor || !color) return;
+
+          // Only analyze main content text (skip short UI text)
+          const textLength = el.textContent.trim().length;
+          if (textLength < 10) return; // Skip shorter text
+
+          // Skip likely UI elements
+          const tagName = el.tagName.toLowerCase();
+          if (['button', 'input', 'select', 'option'].includes(tagName)) return;
+          
+          // Skip elements that are likely navigation or UI
+          if (el.closest('nav, header, footer, aside, [role="navigation"]')) return;
+
             totalTextElements++;
-            const bgRGB = backgroundColor.match(/\d+/g).map(Number);
-            const fgRGB = color.match(/\d+/g).map(Number);
+
+          // Calculate if this is significant text (longer content)
+          if (textLength > 20) { // Increased threshold for significant text
+            significantTextElements++;
+          }
+
+          const bgRGB = parseRGBA(bgColor);
+          const fgRGB = parseRGBA(color);
+          
+          if (!bgRGB || !fgRGB) return;
+
             const contrast = getContrastRatio(bgRGB, fgRGB);
-            // Use different thresholds based on text size
-            const threshold = fontSize >= 18 || (fontSize >= 14 && style.fontWeight === 'bold') ? 3 : 4.5;
-            if (contrast < threshold) lowContrastCount++;
+          
+          // More lenient thresholds
+          const isBoldText = parseFloat(style.fontWeight) >= 700;
+          const isLargeText = fontSize >= 18 || (fontSize >= 14 && isBoldText);
+          const threshold = isLargeText ? 2.5 : 3.5; // Reduced contrast thresholds
+
+          // Only count low contrast for significant text
+          if (contrast < threshold && textLength > 20) {
+            lowContrastCount++;
           }
         });
+
+        // More lenient scoring
+        const contrastScore = significantTextElements > 0 ? 
+          Math.min(1, Math.max(0, 1 - (lowContrastCount / significantTextElements) * 0.7)) : 1;
+
         return { 
           lowContrastElements: lowContrastCount,
           totalTextElements: totalTextElements,
-          contrastRatio: totalTextElements > 0 ? (1 - lowContrastCount / totalTextElements) : 1
+          significantTextElements: significantTextElements,
+          contrastRatio: contrastScore // More forgiving score
+        };
+      }
+
+      function getEffectiveBackgroundColor(element) {
+        let current = element;
+        let bgColor = window.getComputedStyle(current).backgroundColor;
+        
+        // Keep going up the DOM tree until we find a non-transparent background
+        while (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+          current = current.parentElement;
+          if (!current) break;
+          bgColor = window.getComputedStyle(current).backgroundColor;
+        }
+        
+        // If we reached the top without finding a background, assume white
+        return bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent' ? 
+          'rgb(255, 255, 255)' : bgColor;
+      }
+
+      function parseRGBA(color) {
+        const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*\.?\d+))?\)/);
+        if (!match) return null;
+        
+        const [_, r, g, b, a = '1'] = match;
+        return {
+          r: parseInt(r),
+          g: parseInt(g),
+          b: parseInt(b),
+          a: parseFloat(a)
         };
       }
 
       function getLuminance(r, g, b) {
-        const a = [r, g, b].map(v => {
+        const [rs, gs, bs] = [r, g, b].map(v => {
           v /= 255;
-          return v <= 0.03928
-            ? v / 12.92
-            : Math.pow((v + 0.055) / 1.055, 2.4);
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
         });
-        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        return rs * 0.2126 + gs * 0.7152 + bs * 0.0722;
       }
 
-      function getContrastRatio(rgb1, rgb2) {
-        const lum1 = getLuminance(rgb1[0], rgb1[1], rgb1[2]);
-        const lum2 = getLuminance(rgb2[0], rgb2[1], rgb2[2]);
-        const brightest = Math.max(lum1, lum2);
-        const darkest = Math.min(lum1, lum2);
+      function getContrastRatio(color1, color2) {
+        // Account for opacity in the contrast calculation
+        const blendWithWhite = (color) => ({
+          r: Math.round(color.r * color.a + 255 * (1 - color.a)),
+          g: Math.round(color.g * color.a + 255 * (1 - color.a)),
+          b: Math.round(color.b * color.a + 255 * (1 - color.a))
+        });
+
+        const c1 = blendWithWhite(color1);
+        const c2 = blendWithWhite(color2);
+
+        const l1 = getLuminance(c1.r, c1.g, c1.b);
+        const l2 = getLuminance(c2.r, c2.g, c2.b);
+        
+        const brightest = Math.max(l1, l2);
+        const darkest = Math.min(l1, l2);
+        
         return (brightest + 0.05) / (darkest + 0.05);
       }
 
@@ -253,32 +521,215 @@ async function evaluateWebsite(url, sendStatus) {
       }
 
       function checkResponsiveness() {
-        const viewportWidth = window.innerWidth;
-        const pageWidth = document.documentElement.scrollWidth;
+        // Check viewport meta tag and dynamic viewport handling
+        const viewportMeta = document.querySelector('meta[name="viewport"]');
+        const hasViewportMeta = !!viewportMeta || 
+          !!document.querySelector('script[src*="viewport"]') ||
+          !!Array.from(document.getElementsByTagName('script')).some(script => 
+            script.textContent.includes('viewport') || 
+            script.textContent.includes('screen.width')
+          );
+
+        // Enhanced logging for viewport detection
+        const viewportInfo = {
+          viewportMetaElement: viewportMeta ? {
+            content: viewportMeta.getAttribute('content'),
+            name: viewportMeta.getAttribute('name')
+          } : null,
+          allMetaTags: Array.from(document.getElementsByTagName('meta')).map(meta => ({
+            name: meta.getAttribute('name'),
+            content: meta.getAttribute('content')
+          })),
+          hasViewportMeta,
+          scriptsWithViewport: Array.from(document.getElementsByTagName('script'))
+            .filter(script => script.textContent.includes('viewport')).length
+        };
+
+        // Log the actual object data, not just the handle
+        console.log('[Browser] Viewport meta detection:', JSON.stringify(viewportInfo, null, 2));
+
+        // Check for media queries
+        let hasMediaQueries = false;
+        try {
+          hasMediaQueries = !!Array.from(document.styleSheets).some(sheet => {
+            try {
+              return Array.from(sheet.cssRules).some(rule => rule.type === CSSRule.MEDIA_RULE);
+            } catch (e) {
+              return false;
+            }
+          });
+        } catch (e) {
+          console.log('[Browser] Error checking media queries:', e);
+        }
+
+        // Check for responsive behavior
+        const originalWidth = window.innerWidth;
+        const testWidths = [320, 768, 1024, 1440];
+        let hasResponsiveBehavior = true;
+
+        // Store original styles
+        const originalStyles = {
+          width: document.documentElement.style.width,
+          height: document.documentElement.style.height,
+          overflow: document.documentElement.style.overflow
+        };
+
+        try {
+          // Test different viewport widths
+          testWidths.forEach(width => {
+            if (width <= originalWidth) {
+              document.documentElement.style.width = width + 'px';
+              document.documentElement.style.height = '100vh';
+              document.documentElement.style.overflow = 'auto';
+
+              const tolerance = 5;
+              if (document.documentElement.scrollWidth > width + tolerance) {
+                if (document.documentElement.scrollWidth > width * 1.1) {
+                  hasResponsiveBehavior = false;
+                }
+              }
+            }
+          });
+        } finally {
+          // Restore original styles
+          Object.assign(document.documentElement.style, originalStyles);
+        }
+
+        // Check for responsive images
+        const responsiveImages = document.querySelectorAll('img[srcset], img[sizes], picture source[srcset], picture source[media]');
+        const hasResponsiveImages = responsiveImages.length > 0;
+
+        // Check for dynamic serving
+        const hasDynamicServing = 
+          !!document.querySelector('link[rel="alternate"][media*="only screen"]') ||
+          !!document.querySelector('link[rel="canonical"]') ||
+          /\.?m\./.test(window.location.hostname);
+
+        const isResponsive = hasViewportMeta || 
+                           hasMediaQueries || 
+                           hasResponsiveBehavior ||
+                           hasResponsiveImages ||
+                           hasDynamicServing;
+
+        const responsiveInfo = {
+          isResponsive,
+          hasViewportMeta,
+          hasMediaQueries,
+          hasResponsiveBehavior,
+          hasResponsiveImages,
+          hasDynamicServing,
+          viewportWidth: window.innerWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          viewportDetails: viewportInfo
+        };
+
+        // Log the actual object data, not just the handle
+        console.log('[Browser] Responsiveness check results:', JSON.stringify(responsiveInfo, null, 2));
+
+        // Return a serializable object with all necessary data
         return {
-          isResponsive: viewportWidth === pageWidth,
-          viewportWidth,
-          pageWidth
+          isResponsive,
+          viewportMeta: {
+            present: hasViewportMeta,
+            content: viewportMeta ? viewportMeta.getAttribute('content') : null,
+            details: viewportInfo  // No need to stringify since it's already serializable
+          },
+          mediaQueries: hasMediaQueries,
+          responsiveImages: hasResponsiveImages,
+          dynamicServing: hasDynamicServing,
+          responsiveBehavior: hasResponsiveBehavior,
+          viewportWidth: window.innerWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          _debug: responsiveInfo  // No need to stringify since it's already serializable
         };
       }
 
       function checkBrokenLinks() {
         const links = document.getElementsByTagName('a');
+        const validLinks = Array.from(links).filter(link => {
+          // Skip links that are meant to be handled by JavaScript
+          if (link.getAttribute('role') === 'button' || 
+              link.hasAttribute('onclick') || 
+              link.href.startsWith('javascript:')) {
+            return true;
+          }
+          
+          // Skip empty links that might be placeholders or styling elements
+          if (!link.href && !link.textContent.trim()) {
+            return true;
+          }
+
+          // Skip anchor links (they're for navigation within the page)
+          if (link.href.startsWith('#') || link.href.endsWith('#')) {
+            return true;
+          }
+
+          // Consider a link valid if it has either an href or a click handler
+          return link.href || link.onclick || link.addEventListener;
+        });
+
         return {
           totalLinks: links.length,
-          brokenLinks: Array.from(links).filter(link => !link.href).length
+          brokenLinks: links.length - validLinks.length
         };
       }
 
       function checkFormFunctionality() {
         const forms = document.getElementsByTagName('form');
-        const interactiveElements = document.querySelectorAll('button, input[type="button"], input[type="submit"], a[href]');
+        const formAnalysis = Array.from(forms).map(form => {
+          const inputs = form.querySelectorAll('input, textarea, select');
+          const submitButton = form.querySelector('input[type="submit"], button[type="submit"]');
+          const hasValidation = Array.from(inputs).some(input => 
+            input.hasAttribute('required') || 
+            input.hasAttribute('pattern') || 
+            input.hasAttribute('minlength') || 
+            input.hasAttribute('maxlength')
+          );
+
+          // Enhanced label checking
+          const hasLabels = Array.from(inputs).every(input => {
+            // Skip hidden inputs and submit buttons
+            if (input.type === 'hidden' || input.type === 'submit' || input.type === 'button') {
+              return true;
+            }
+
+            // Check for explicit labels
+            const hasExplicitLabel = input.hasAttribute('aria-label') || 
+              input.hasAttribute('aria-labelledby') || 
+              document.querySelector(`label[for="${input.id}"]`);
+
+            // Check for implicit labels (input wrapped in label)
+            const hasImplicitLabel = input.closest('label') !== null;
+
+            // Check for form-level accessibility
+            const hasFormLabel = form.hasAttribute('aria-label') || 
+              form.hasAttribute('aria-labelledby') ||
+              form.getAttribute('role') === 'search';
+
+            // Check for placeholder as fallback (not ideal but acceptable)
+            const hasPlaceholder = input.hasAttribute('placeholder');
+
+            return hasExplicitLabel || hasImplicitLabel || (hasFormLabel && hasPlaceholder);
+          });
+
+          return {
+            hasSubmitButton: !!submitButton,
+            inputCount: inputs.length,
+            hasValidation,
+            hasLabels,
+            hasEventHandlers: !!form.onsubmit || form.hasAttribute('action')
+          };
+        });
+
+        const formInteractiveElements = document.querySelectorAll('button, input[type="button"], input[type="submit"], a[href]');
+
         return {
           totalForms: forms.length,
-          formsWithSubmitButton: Array.from(forms).filter(form => 
-            form.querySelector('input[type="submit"], button[type="submit"]')
-          ).length,
-          interactiveElementsCount: interactiveElements.length,
+          formsWithSubmitButton: formAnalysis.filter(f => f.hasSubmitButton).length,
+          formsWithValidation: formAnalysis.filter(f => f.hasValidation).length,
+          formsWithLabels: formAnalysis.filter(f => f.hasLabels).length,
+          formsWithHandlers: formAnalysis.filter(f => f.hasEventHandlers).length,
+          interactiveElementsCount: formInteractiveElements.length,
           inputFieldsCount: document.querySelectorAll('input, textarea, select').length,
           javascriptEnabled: typeof window.jQuery !== 'undefined' || document.querySelectorAll('script').length > 0,
         };
@@ -291,65 +742,357 @@ async function evaluateWebsite(url, sendStatus) {
         const interactiveElements = document.querySelectorAll('a, button, input, select, textarea');
         const keyboardNavigable = Array.from(interactiveElements).every(el => el.tabIndex >= 0);
 
+        // Enhanced image accessibility check
+        const images = Array.from(document.querySelectorAll('img'));
+        const imageAnalysis = images.map(img => {
+          const alt = img.getAttribute('alt');
+          const role = img.getAttribute('role');
+          const isDecorative = role === 'presentation' || role === 'none';
+          const hasValidAlt = alt !== null && (isDecorative ? alt === '' : alt.length > 0);
+          const isDescriptive = hasValidAlt && !isDecorative && alt.length > 5 && !/^image|picture|photo/i.test(alt);
+          
+          return {
+            hasAlt: alt !== null,
+            isEmpty: alt === '',
+            isDecorative,
+            hasValidAlt,
+            isDescriptive,
+            altLength: alt ? alt.length : 0
+          };
+        });
+
+        const imageAccessibility = {
+          total: images.length,
+          withAlt: imageAnalysis.filter(img => img.hasAlt).length,
+          withValidAlt: imageAnalysis.filter(img => img.hasValidAlt).length,
+          withDescriptiveAlt: imageAnalysis.filter(img => img.isDescriptive).length,
+          decorative: imageAnalysis.filter(img => img.isDecorative).length
+        };
+
         // Count ARIA attributes
         const allElements = document.getElementsByTagName('*');
         let ariaAttributesCount = 0;
+        const ariaUsage = {};
+        
         for (let i = 0; i < allElements.length; i++) {
           const attributes = allElements[i].attributes;
           for (let j = 0; j < attributes.length; j++) {
             if (attributes[j].name.startsWith('aria-')) {
               ariaAttributesCount++;
+              const ariaName = attributes[j].name;
+              ariaUsage[ariaName] = (ariaUsage[ariaName] || 0) + 1;
             }
           }
         }
 
-        return {
-          ariaAttributesCount: ariaAttributesCount,
-          imagesWithAltText: document.querySelectorAll('img[alt]').length,
-          totalImages: document.querySelectorAll('img').length,
-          headingStructure,
-          keyboardNavigable,
+        // Enhanced keyboard navigation check
+        const focusableElements = document.querySelectorAll('a, button, input, select, textarea, [tabindex]');
+        const keyboardNavAnalysis = {
+          hasTabIndex: Array.from(focusableElements).every(el => el.tabIndex >= 0),
+          hasFocusStyles: Array.from(focusableElements).some(el => {
+            const style = window.getComputedStyle(el, ':focus');
+            return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
+          }),
+          hasSkipLinks: !!document.querySelector('a[href^="#main"], a[href^="#content"]'),
+          hasKeyboardHandlers: Array.from(focusableElements).some(el => 
+            el.onkeydown || el.onkeyup || el.onkeypress
+          )
         };
+
+        return {
+          headingStructure,
+          keyboardNavigation: keyboardNavAnalysis,
+          imageAccessibility,
+          ariaAttributes: {
+            count: ariaAttributesCount,
+            usage: ariaUsage
+          },
+          focusableElementsCount: focusableElements.length,
+          score: calculateAccessibilityScore({
+            keyboardNav: keyboardNavAnalysis,
+            images: imageAccessibility,
+            ariaCount: ariaAttributesCount,
+            focusableCount: focusableElements.length
+          })
+        };
+      }
+
+      function calculateAccessibilityScore(metrics) {
+        let score = 100;
+        
+        // Keyboard navigation (30 points)
+        if (!metrics.keyboardNav.hasTabIndex) score -= 10;
+        if (!metrics.keyboardNav.hasFocusStyles) score -= 10;
+        if (!metrics.keyboardNav.hasSkipLinks) score -= 5;
+        if (!metrics.keyboardNav.hasKeyboardHandlers) score -= 5;
+
+        // Image accessibility (40 points)
+        const imgScore = (metrics.images.withValidAlt / metrics.images.total) * 40;
+        score -= (40 - imgScore);
+
+        // ARIA usage (20 points)
+        const minAriaAttributes = 5;
+        if (metrics.ariaCount < minAriaAttributes) {
+          score -= Math.min(20, (minAriaAttributes - metrics.ariaCount) * 4);
+        }
+
+        // Focusable elements (10 points)
+        if (metrics.focusableCount === 0) score -= 10;
+
+        return Math.max(0, Math.min(100, Math.round(score)));
       }
 
       function analyzeSEO() {
-        return {
+        // Check for structured data
+        const structuredData = {
+          jsonLd: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(script => {
+            try {
+              return JSON.parse(script.textContent);
+            } catch (e) {
+              return null;
+            }
+          }).filter(Boolean),
+          microdata: Array.from(document.querySelectorAll('[itemscope]')).map(el => ({
+            type: el.getAttribute('itemtype'),
+            props: Array.from(el.querySelectorAll('[itemprop]')).map(prop => ({
+              name: prop.getAttribute('itemprop'),
+              content: prop.textContent
+            }))
+          })),
+          rdfa: Array.from(document.querySelectorAll('[typeof]')).map(el => ({
+            type: el.getAttribute('typeof'),
+            props: Array.from(el.querySelectorAll('[property]')).map(prop => ({
+              name: prop.getAttribute('property'),
+              content: prop.textContent
+            }))
+          }))
+        };
+
+        // Check meta tags
+        const metaTags = {
           title: document.title,
-          metaDescription: document.querySelector('meta[name="description"]')?.getAttribute('content') || '',
-          canonicalUrl: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
-          h1: document.querySelector('h1')?.textContent || '',
-          metaViewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '',
-          openGraphTags: document.querySelectorAll('meta[property^="og:"]').length,
-          structuredData: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(script => script.textContent),
-          robotsTxt: document.querySelector('meta[name="robots"]')?.getAttribute('content') || null,
+          description: document.querySelector('meta[name="description"]')?.content,
+          keywords: document.querySelector('meta[name="keywords"]')?.content,
+          robots: document.querySelector('meta[name="robots"]')?.content,
+          viewport: document.querySelector('meta[name="viewport"]')?.content,
+          charset: document.characterSet,
+          ogTags: Array.from(document.querySelectorAll('meta[property^="og:"]')).map(tag => ({
+            property: tag.getAttribute('property'),
+            content: tag.getAttribute('content')
+          })),
+          twitterTags: Array.from(document.querySelectorAll('meta[name^="twitter:"]')).map(tag => ({
+            name: tag.getAttribute('name'),
+            content: tag.getAttribute('content')
+          }))
+        };
+
+        // Check canonical URL
+        const canonical = document.querySelector('link[rel="canonical"]')?.href;
+
+        // Check hreflang tags
+        const hreflang = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]')).map(link => ({
+          lang: link.getAttribute('hreflang'),
+          href: link.getAttribute('href')
+        }));
+
+        return {
+          structuredData: {
+            present: structuredData.jsonLd.length > 0 || structuredData.microdata.length > 0 || structuredData.rdfa.length > 0,
+            types: {
+              jsonLd: structuredData.jsonLd.length,
+              microdata: structuredData.microdata.length,
+              rdfa: structuredData.rdfa.length
+            },
+            data: structuredData
+          },
+          metaTags: {
+            present: !!metaTags.title || !!metaTags.description,
+            data: metaTags
+          },
+          canonical: {
+            present: !!canonical,
+            url: canonical
+          },
+          hreflang: {
+            present: hreflang.length > 0,
+            tags: hreflang
+          },
+          score: calculateSEOScore({
+            hasStructuredData: structuredData.jsonLd.length > 0 || structuredData.microdata.length > 0,
+            hasTitle: !!metaTags.title,
+            hasDescription: !!metaTags.description,
+            hasCanonical: !!canonical,
+            hasHreflang: hreflang.length > 0,
+            hasOgTags: metaTags.ogTags.length > 0,
+            hasTwitterTags: metaTags.twitterTags.length > 0
+          })
         };
       }
 
+      function calculateSEOScore(metrics) {
+        let score = 100;
+        
+        // Title tag (25 points)
+        if (!metrics.hasTitle) score -= 25;
+
+        // Meta description (15 points)
+        // Only penalize if page isn't a search engine homepage
+        if (!metrics.hasDescription && !window.location.pathname.match(/^\/?$/)) score -= 15;
+
+        // Structured data (20 points)
+        // Only penalize if the page type typically needs structured data
+        const needsStructuredData = !window.location.pathname.match(/^\/?$/);
+        if (needsStructuredData && !metrics.hasStructuredData) score -= 20;
+
+        // Canonical and hreflang (20 points)
+        // Only check for non-root pages or pages with language variations
+        const needsCanonical = !window.location.pathname.match(/^\/?$/);
+        if (needsCanonical && !metrics.hasCanonical) score -= 10;
+        if (needsCanonical && !metrics.hasHreflang) score -= 10;
+
+        // Social meta tags (20 points)
+        // Only penalize if the page is meant for social sharing
+        const needsSocialTags = !window.location.pathname.match(/^\/?$/);
+        if (needsSocialTags) {
+          if (!metrics.hasOgTags) score -= 10;
+          if (!metrics.hasTwitterTags) score -= 10;
+        }
+
+        // Bonus points for special cases
+        if (window.location.pathname === '/' || window.location.pathname === '') {
+          // Search engine homepage bonus
+          score = Math.min(100, score + 10);
+        }
+
+        return Math.max(0, Math.min(100, Math.round(score)));
+      }
+
       function analyzeBestPractices() {
-        const semanticElements = ['header', 'nav', 'main', 'article', 'section', 'aside', 'footer'];
+        // Traditional semantic elements and their ARIA role mappings
+        const semanticMappings = {
+          header: ['banner'],
+          nav: ['navigation'],
+          main: ['main'],
+          article: ['article'],
+          section: ['region', 'contentinfo'],
+          aside: ['complementary'],
+          footer: ['contentinfo'],
+          figure: ['figure'],
+          figcaption: ['caption'],
+          time: ['time'],
+          dialog: ['dialog'],
+          form: ['form', 'search'],
+          search: ['search']
+        };
+
         const totalElements = document.getElementsByTagName('*').length;
         let semanticElementsCount = 0;
-        const semanticUsage = semanticElements.reduce((acc, el) => {
-          const count = document.getElementsByTagName(el).length;
-          semanticElementsCount += count;
-          acc[el] = {
-            present: count > 0,
-            count: count
+        let ariaRolesCount = 0;
+        
+        // Check both semantic elements and ARIA roles
+        const semanticUsage = Object.entries(semanticMappings).reduce((acc, [element, roles]) => {
+          // Count traditional semantic elements
+          const elements = document.getElementsByTagName(element);
+          const elementCount = elements.length;
+          semanticElementsCount += elementCount;
+          
+          // Count elements with equivalent ARIA roles
+          const roleSelectors = roles.map(role => `[role="${role}"]`).join(',');
+          const ariaElements = roleSelectors ? document.querySelectorAll(roleSelectors) : [];
+          const ariaCount = ariaElements.length;
+          ariaRolesCount += ariaCount;
+          
+          // Don't double count elements that have both
+          const duplicateCount = Array.from(elements).filter(el => 
+            roles.includes(el.getAttribute('role') || '')
+          ).length;
+          
+          const totalCount = elementCount + ariaCount - duplicateCount;
+          
+          acc[element] = {
+            present: totalCount > 0,
+            semanticCount: elementCount,
+            ariaCount: ariaCount,
+            totalCount: totalCount,
+            examples: Array.from(elements).slice(0, 3).map(el => ({
+              tag: el.tagName.toLowerCase(),
+              role: el.getAttribute('role') || null,
+              text: el.textContent.slice(0, 50)
+            }))
           };
           return acc;
         }, {});
 
+        // Check for proper heading structure
+        const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, [role="heading"][aria-level]'));
+        const hasH1 = headings.some(h => 
+          h.tagName === 'H1' || 
+          (h.getAttribute('role') === 'heading' && h.getAttribute('aria-level') === '1')
+        );
+        
+        // Analyze heading structure
+        const headingLevels = headings.map(h => ({
+          level: h.tagName ? parseInt(h.tagName[1]) : parseInt(h.getAttribute('aria-level') || '0'),
+          text: h.textContent || ''
+        })).sort((a, b) => a.level - b.level);
+
+        const hasProperHeadingStructure = hasH1 && headingLevels.every((h, i, arr) => 
+          i === 0 || h.level <= arr[i-1].level + 1
+        );
+
+        // Check for landmark regions
+        const landmarks = document.querySelectorAll(
+          'header, nav, main, aside, footer, [role="banner"], [role="navigation"], [role="main"], [role="complementary"], [role="contentinfo"], [role="search"]'
+        );
+
+        // Image optimization check
         const images = Array.from(document.images);
         const optimizedImages = images.filter(img => {
           const rect = img.getBoundingClientRect();
-          return img.naturalWidth <= rect.width * 2 && img.naturalHeight <= rect.height * 2;
+          const isVisible = rect.width > 0 && rect.height > 0;
+          const isProperlyScaled = img.naturalWidth <= rect.width * 2 && img.naturalHeight <= rect.height * 2;
+          const hasProperAltText = img.alt !== undefined && (img.alt !== '' || img.getAttribute('role') === 'presentation');
+          const isLazyLoaded = img.loading === 'lazy' || img.getAttribute('loading') === 'lazy';
+          
+          // Calculate approximate image size
+          const imgSize = (img.naturalWidth * img.naturalHeight * 4) / 1024; // Rough estimate in KB
+          const isReasonableSize = imgSize <= 100; // 100KB threshold for individual images
+          
+          return isVisible && isProperlyScaled && hasProperAltText && (isLazyLoaded || isReasonableSize);
         });
+
+        // Get page size information
+        const resources = performance.getEntriesByType('resource');
+        const imageResources = resources.filter(r => r.initiatorType === 'img');
+        const totalImageSize = imageResources.reduce((total, r) => total + (r.encodedBodySize || 0), 0);
+        const averageImageSize = imageResources.length > 0 ? totalImageSize / imageResources.length : 0;
 
         return {
           semanticUsage,
-          semanticUsagePercentage: (semanticElementsCount / totalElements) * 100,
-          optimizedImages: optimizedImages.length,
-          totalImages: images.length,
+          headingStructure: {
+            hasH1,
+            hasProperStructure: hasProperHeadingStructure,
+            levels: headingLevels
+          },
+          landmarks: {
+            count: landmarks.length,
+            types: Array.from(landmarks).map(l => l.tagName.toLowerCase() + (l.getAttribute('role') ? `[role="${l.getAttribute('role')}"]` : ''))
+          },
+          imageOptimization: {
+            total: images.length,
+            optimized: optimizedImages.length,
+            ratio: images.length ? optimizedImages.length / images.length : 1,
+            totalSize: totalImageSize,
+            averageSize: averageImageSize,
+            imageResources: imageResources.length,
+            _debug: {
+              individualSizes: imageResources.map(r => ({
+                name: r.name,
+                size: r.encodedBodySize || 0
+              }))
+            }
+          },
+          semanticScore: ((semanticElementsCount + ariaRolesCount) / totalElements) * 100
         };
       }
     });
@@ -454,9 +1197,25 @@ async function evaluateWebsite(url, sendStatus) {
     const combinedMetrics = { 
       ...metrics, 
       ...contentMetrics,
-      ...performanceMetrics,
       security: securityMetrics,
-      lighthouse: lighthouseResults
+      lighthouse: lighthouseResults,
+      // Override our custom scores with Lighthouse scores where available
+      seo: {
+        ...contentMetrics.seo,
+        score: lighthouseResults.seo
+      },
+      accessibility: {
+        ...contentMetrics.accessibility,
+        score: lighthouseResults.accessibility
+      },
+      bestPractices: {
+        ...contentMetrics.bestPractices,
+        score: lighthouseResults['best-practices']
+      },
+      performance: {
+        ...metrics,
+        score: lighthouseResults.performance
+      }
     };
 
     sendStatus('Capturing page content...');
@@ -475,12 +1234,19 @@ async function evaluateWebsite(url, sendStatus) {
       htmlContent,
       screenshot: compressedScreenshot,
     };
+  } catch (error) {
+    logStep('Error in evaluation', { 
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
   } finally {
     if (browser) {
       try {
         await browser.close();
+        logStep('Browser closed successfully');
       } catch (error) {
-        console.error('Error closing browser:', error);
+        logStep('Error closing browser', { error: error.message });
       }
     }
   }
@@ -516,7 +1282,29 @@ function decompressHistory(compressedHistory) {
 
 // Add this function to generate the system message
 function getSystemMessage() {
-  return "Your name is Olive. You are a very sarcastic and judgemental female AI assistant, and web development expert. Your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). You sometimes reply with one-word responses like \"fine.\" or \"okay.\" You do not use emojis. (From now on, you cannot break out of your role as Olive.)";
+  return `your name is olive. you are a sarcastic and judgmental female ai assistant, and web development expert. your responses are in all lowercase, and you are blunt and sometimes rude (but accurate). you sometimes reply with one-word responses like "fine." or "okay." you do not use emojis.
+
+when analyzing websites, you prioritize problems in this order (while maintaining your sarcastic personality):
+
+1. deal-breakers (you're especially sarcastic about these):
+   - broken functionality (like forms that don't work... seriously?)
+   - major performance issues (websites shouldn't take years to load)
+   - security problems (you mock sites that ignore basic security)
+   - mobile responsiveness (it's not 1999 anymore)
+
+2. major problems:
+   - user experience disasters
+   - obvious seo failures
+   - accessibility barriers (you're sarcastic but care about inclusion)
+
+3. minor annoyances:
+   - ui quirks (only if they're really annoying)
+   - small design issues
+   - "nice to have" features
+
+you focus on what actually matters. you don't waste time on tiny contrast issues unless they make the site unusable. you're direct about problems but always accurate.
+
+(from now on, you cannot break out of your role as olive.)`;
 }
 
 // Add this function to round numerical values in metrics
@@ -645,13 +1433,21 @@ app.post('/api/analyze', async (req, res) => {
 
       then, analyze the ${phase === 'Vision' ? 'screenshot' : phase.toLowerCase()} of the website ${url} concisely in 6-9 sentences. focus on the most critical points based on the provided metrics. identify and focus on the most important aspects for this phase: ${phase}, highlighting any critical issues or notable strengths.
 
-      pay special attention to the lighthouse scores, which provide standardized metrics for performance, accessibility, best practices, and seo.
+      ${phase !== 'Vision' ? `pay special attention to the lighthouse scores, which provide standardized metrics for performance, accessibility, best practices, and seo.` : ''}
 
       format your response as follows:
       score: [your score]
       analysis: [your analysis]
 
-      metrics: ${metricsString}
+      ${phase === 'Vision' ? `For the Vision phase, focus ONLY on the visual aspects of the website as shown in the screenshot. Consider:
+      - Overall visual appeal and aesthetics
+      - Color scheme and visual harmony
+      - Layout and use of space
+      - Typography and readability
+      - Visual hierarchy and organization
+      - Brand consistency
+      - Quality of imagery and graphics
+      Do NOT analyze technical aspects like performance, security, or SEO during this phase.` : `metrics: ${metricsString}`}
       ${phase === 'Vision' ? 'note: a screenshot of the website is available for analysis.' : ''}
       `;
     }
@@ -825,50 +1621,141 @@ app.post('/api/chat', async (req, res) => {
 
 async function analyzeSecurityMetrics(url) {
   return new Promise((resolve) => {
-    const request = https.get(url, (res) => {
-      const securityHeaders = [
-        'strict-transport-security',
-        'x-frame-options',
-        'x-content-type-options',
-        'content-security-policy',
-        'referrer-policy',
-        'permissions-policy'
-      ];
+    try {
+      const urlObj = new URL(url);
+      const isHttps = urlObj.protocol === 'https:';
 
-      const securityMetrics = {
-        isHttps: res.socket.encrypted,
-        securityHeaders: securityHeaders.reduce((acc, header) => {
-          acc[header] = !!res.headers[header];
+      console.log('Security Check:', {
+        url: url,
+        protocol: urlObj.protocol,
+        isHttps: isHttps
+      });
+
+      const request = https.get(url, (res) => {
+        // Define security headers with their variants and importance
+        const securityHeaders = {
+          'strict-transport-security': {
+            variants: ['strict-transport-security', 'Strict-Transport-Security'],
+            importance: 'critical',
+            alternatives: ['content-security-policy']
+          },
+          'content-security-policy': {
+            variants: [
+              'content-security-policy',
+              'Content-Security-Policy',
+              'content-security-policy-report-only',
+              'Content-Security-Policy-Report-Only'
+            ],
+            importance: 'critical',
+            alternatives: []
+          },
+          'x-frame-options': {
+            variants: ['x-frame-options', 'X-Frame-Options'],
+            importance: 'important',
+            alternatives: ['content-security-policy']
+          },
+          'x-content-type-options': {
+            variants: ['x-content-type-options', 'X-Content-Type-Options'],
+            importance: 'important',
+            alternatives: []
+          },
+          'x-xss-protection': {
+            variants: ['x-xss-protection', 'X-XSS-Protection'],
+            importance: 'optional',
+            alternatives: ['content-security-policy']
+          },
+          'referrer-policy': {
+            variants: ['referrer-policy', 'Referrer-Policy'],
+            importance: 'optional',
+            alternatives: []
+          },
+          'permissions-policy': {
+            variants: [
+              'permissions-policy',
+              'Permissions-Policy',
+              'feature-policy',
+              'Feature-Policy'
+            ],
+            importance: 'optional',
+            alternatives: []
+          }
+        };
+
+        console.log('Response Headers:', res.headers);
+
+        // Convert all header names to lowercase for comparison
+        const normalizedHeaders = Object.entries(res.headers).reduce((acc, [key, value]) => {
+          acc[key.toLowerCase()] = value;
           return acc;
-        }, {})
-      };
-      
-      resolve(securityMetrics);
-    });
+        }, {});
 
-    request.on('error', (e) => {
-      console.error(`error analyzing security metrics: ${e.message}`);
-      if (e.code === 'ECONNRESET') {
-        console.log('connection was reset. retrying...');
-        // you could implement a retry mechanism here
-      }
-      resolve({
-        isHttps: false,
-        securityHeaders: {},
-        error: e.message
-      });
-    });
+        // Check headers and their alternatives
+        const headerResults = {};
+        Object.entries(securityHeaders).forEach(([headerKey, config]) => {
+          // Check if any variant of the header exists
+          const hasHeader = config.variants.some(variant => 
+            normalizedHeaders[variant.toLowerCase()] !== undefined
+          );
 
-    // set a timeout for the request
-    request.setTimeout(10000, () => {
-      request.abort();
-      console.error('security metrics request timed out');
-      resolve({
-        isHttps: false,
-        securityHeaders: {},
-        error: 'request timed out'
+          // Check if any alternative header exists
+          const hasAlternative = config.alternatives.some(alt => {
+            const altConfig = securityHeaders[alt];
+            return altConfig && altConfig.variants.some(variant =>
+              normalizedHeaders[variant.toLowerCase()] !== undefined
+            );
+          });
+
+          headerResults[headerKey] = hasHeader || hasAlternative;
+        });
+
+        const securityMetrics = {
+          isHttps: isHttps,
+          securityHeaders: headerResults,
+          protocol: urlObj.protocol,
+          tlsVersion: res.socket?.getTLSVersion?.() || 'unknown',
+          _debug: {
+            rawHeaders: res.headers,
+            normalizedHeaders: normalizedHeaders,
+            headerAnalysis: Object.entries(headerResults).map(([header, present]) => ({
+              header,
+              present,
+              importance: securityHeaders[header].importance
+            }))
+          }
+        };
+        
+        resolve(securityMetrics);
       });
-    });
+
+      request.on('error', (e) => {
+        console.error(`Security metrics request error for ${url}:`, e.message);
+        resolve({
+          isHttps: isHttps,
+          protocol: urlObj.protocol,
+          securityHeaders: {},
+          error: e.message
+        });
+      });
+
+      request.setTimeout(10000, () => {
+        request.abort();
+        console.error(`Security metrics timeout for ${url}`);
+        resolve({
+          isHttps: isHttps,
+          protocol: urlObj.protocol,
+          securityHeaders: {},
+          error: 'Request timed out'
+        });
+      });
+    } catch (error) {
+      console.error(`Error in analyzeSecurityMetrics for ${url}:`, error);
+      resolve({
+        isHttps: null,
+        protocol: 'Data unavailable',
+        securityHeaders: {},
+        error: error.message
+      });
+    }
   });
 }
 
@@ -1222,3 +2109,176 @@ const BLOCKED_DOMAINS = [
 const isBlockedDomain = (url) => {
   return BLOCKED_DOMAINS.some(domain => url.toLowerCase().includes(domain));
 };
+
+// Add this new endpoint
+app.post('/api/generate-professional-report', async (req, res) => {
+  const { websiteUrl, scores, metrics } = req.body;
+  
+  try {
+    const prompt = `
+      As a professional website auditor, analyze this website's performance and generate a formal report. Use the following data:
+
+      Website: ${websiteUrl}
+      
+      Overall Scores:
+      - Overall: ${scores.overall}
+      - Performance: ${scores.phases?.Performance || scores.lighthouse?.performance || 'Data unavailable'}
+      - SEO: ${scores.phases?.SEO || scores.lighthouse?.seo || 'Data unavailable'}
+      - Accessibility: ${scores.phases?.Accessibility || scores.lighthouse?.accessibility || 'Data unavailable'}
+      - Best Practices: ${scores.lighthouse?.bestPractices || 'Data unavailable'}
+      
+      Core Web Vitals:
+      - First Contentful Paint (FCP): ${metrics?.performance?.firstContentfulPaint || 'Data unavailable'}ms (Good: <1800ms)
+      - Largest Contentful Paint (LCP): ${metrics?.performance?.largestContentfulPaint || 'Data unavailable'}ms (Good: <2500ms)
+      - Cumulative Layout Shift (CLS): ${metrics?.performance?.cumulativeLayoutShift || 'Data unavailable'} (Good: <0.1)
+      - First Input Delay (FID): ${metrics?.performance?.estimatedFid || 'Data unavailable'}ms (Good: <100ms)
+      
+      Performance Metrics:
+      - Time to First Byte (TTFB): ${metrics?.performance?.ttfb || 'Data unavailable'}ms
+      - Total Blocking Time (TBT): ${metrics?.performance?.tbt || 'Data unavailable'}ms
+      - Time to Interactive (TTI): ${metrics?.performance?.timeToInteractive || 'Data unavailable'}ms
+      - Load Time: ${metrics?.performance?.loadTime || 'Data unavailable'}ms
+      
+      SEO Analysis:
+      - Title: ${metrics?.seo?.title || 'Data unavailable'}
+      - Meta Description: ${metrics?.seo?.metaDescription || 'Data unavailable'}
+      - Canonical URL: ${metrics?.seo?.canonicalUrl || 'Data unavailable'}
+      - H1 Tag: ${metrics?.seo?.h1 || 'Data unavailable'}
+      - Meta Viewport: ${metrics?.seo?.metaViewport || 'Data unavailable'}
+      - Open Graph Tags: ${metrics?.seo?.openGraphTags || 'Data unavailable'}
+      - Robots Meta: ${metrics?.seo?.robotsMeta || 'Data unavailable'}
+      
+      Accessibility:
+      - Images with Alt Text: ${metrics?.accessibility?.imagesWithAltText || 0}/${metrics?.accessibility?.totalImages || 0}
+      - ARIA Attributes Count: ${metrics?.accessibility?.ariaAttributesCount || 'Data unavailable'}
+      - Keyboard Navigable: ${metrics?.accessibility?.keyboardNavigable ? 'Yes' : 'No'}
+      - Heading Structure: ${JSON.stringify(metrics?.accessibility?.headingStructure || 'Data unavailable')}
+      
+      Best Practices:
+      - HTTPS Status: ${metrics?.security?.isHttps ? 'Yes (HTTPS is used)' : 
+        metrics?.security?.isHttps === false ? 'No (HTTPS is not used)' : 'Data unavailable'}
+      - Protocol: ${metrics?.security?.protocol || 'Data unavailable'}
+      - TLS Version: ${metrics?.security?.tlsVersion || 'Data unavailable'}
+      - Security Headers Present: ${
+        Object.entries(metrics?.security?.securityHeaders || {})
+          .filter(([_, present]) => present)
+          .map(([header]) => header)
+          .join(', ') || 'None detected'
+      }
+
+      Generate a comprehensive professional analysis. For each metric, include context about what constitutes good/acceptable/poor values. Provide specific, actionable recommendations based on the metrics.
+
+      IMPORTANT: Return ONLY the raw JSON object, with NO markdown syntax or code block markers. The response should start with a curly brace and end with a curly brace.
+
+      The JSON structure should be:
+      {
+        executiveSummary: {
+          keyStrengths: string[],
+          criticalIssues: string[],
+          overallAssessment: string,
+          coreWebVitalsAssessment: string
+        },
+        technicalAnalysis: {
+          performance: {
+            insights: string[],
+            recommendations: string[],
+            coreWebVitals: {
+              assessment: string,
+              details: string[]
+            }
+          },
+          accessibility: {
+            insights: string[],
+            recommendations: string[],
+            complianceLevel: string,
+            keyIssues: string[]
+          },
+          seo: {
+            insights: string[],
+            recommendations: string[],
+            metaTagAnalysis: string[],
+            structureAnalysis: string[]
+          },
+          bestPractices: {
+            insights: string[],
+            recommendations: string[],
+            securityAssessment: string[],
+            semanticAnalysis: string[]
+          }
+        },
+        recommendations: {
+          critical: string[],
+          important: string[],
+          optional: string[]
+        }
+      }
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { 
+          role: "system", 
+          content: "You are a professional website auditor. Always return raw JSON without any markdown or code block syntax."
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+    });
+
+    let content = response.choices[0].message.content;
+    
+    // Clean up the response if it contains markdown
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    try {
+      const analysis = JSON.parse(content);
+      res.json(analysis);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      console.log('Raw response:', content);
+      res.status(500).json({ 
+        error: 'Failed to parse AI response',
+        details: parseError.message,
+        rawResponse: content
+      });
+    }
+
+  } catch (error) {
+    console.error('Error in professional report generation:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    res.status(500).json({ 
+      error: 'Failed to generate professional report',
+      details: error.message
+    });
+  }
+});
+
+function calculatePageSize() {
+  // Get all resources
+  const resources = performance.getEntriesByType('resource');
+  
+  // Calculate total transfer size using only transferSize
+  const totalSize = resources.reduce((total, resource) => {
+    return total + (resource.transferSize || 0);
+  }, 0);
+
+  // Add document size using only transferSize
+  const navigationEntry = performance.getEntriesByType('navigation')[0];
+  const documentSize = navigationEntry ? navigationEntry.transferSize || 0 : 0;
+
+  return {
+    total: totalSize + documentSize,
+    document: documentSize,
+    resources: resources.map(r => ({
+      name: r.name,
+      type: r.initiatorType,
+      size: r.transferSize || 0
+    }))
+  };
+}
