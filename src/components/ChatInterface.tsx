@@ -33,6 +33,7 @@ interface ChatInterfaceProps {
   evaluationResults: any;
   isLoading: boolean;
   onGenerateReport?: (data: ReportData) => void;
+  statusMessage?: string;
 }
 
 const ScreenshotPlaceholder: React.FC = () => (
@@ -44,7 +45,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onStartEvaluation, 
   evaluationResults, 
   isLoading,
-  onGenerateReport 
+  onGenerateReport,
+  statusMessage
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -454,7 +456,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const renderMessage = useCallback((message: Message) => {
     return (
-      <div className={`message ${message.role}`}>
+      <div className={`message ${message.role} fade-in`}>
         {message.role === 'assistant' && message.metrics && message.phase && 
          message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
           <div className="message-score">
@@ -463,7 +465,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
         <div className="message-content">
           {message.isLoading ? (
-            <TypewriterText text="Thinking..." onComplete={() => {}} isLoading={true} />
+            <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
             <ReactMarkdown components={{
               li: ({ node, ...props }) => {
@@ -540,7 +542,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const renderThinkingPlaceholder = () => (
     <div className="message assistant thinking">
       <div className="message-content">
-        <TypewriterText text="Thinking..." onComplete={() => {}} isLoading={true} />
+        <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
       </div>
     </div>
   );
@@ -625,23 +627,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = document.querySelector('.messages-container > div:last-child');
+      if (lastMessage) {
+        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isThinking) {
+      const thinkingMessage = document.querySelector('.message.thinking');
+      if (thinkingMessage) {
+        thinkingMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [isThinking]);
+
   return (
     <div className="chat-interface">
+      <div className="chat-phase-indicator-wrapper">
+        <div className="chat-phase-indicator">
+          {phases.map((phase, index) => (
+            <div 
+              key={phase} 
+              className={`phase-item ${currentPhase === phase ? 'active' : ''} ${index < phases.indexOf(currentPhase!) ? 'completed' : ''}`}
+            >
+              {phase}
+            </div>
+          ))}
+        </div>
+      </div>
       {overallScore !== null && (
         <div className="overall-score">
           overall score: {overallScore}
         </div>
       )}
-      <div className="chat-phase-indicator">
-        {phases.map((phase, index) => (
-          <div 
-            key={phase} 
-            className={`phase-item ${currentPhase === phase ? 'active' : ''} ${index < phases.indexOf(currentPhase!) ? 'completed' : ''}`}
-          >
-            {phase}
-          </div>
-        ))}
-      </div>
       <div className="chat-messages">
         <div className="messages-container">
           {messages.map((message, index) => (
@@ -651,6 +673,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ))}
           {isThinking && renderThinkingPlaceholder()}
         </div>
+        {messages.length === 0 && statusMessage && (
+          <div className="status-message">{statusMessage}</div>
+        )}
         <div ref={chatEndRef} />
       </div>
       <form onSubmit={(e) => {
@@ -680,7 +705,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 disabled={isLoading || isMessageLoading} 
                 className="continue-button"
               >
-                Continue
+                <i className="fas fa-arrow-right"></i>
               </button>
             )}
             {currentPhase === 'Recommendations' && (

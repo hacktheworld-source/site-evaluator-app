@@ -1,69 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 
 interface WebsiteInputProps {
-  onSubmit: (website: string) => void;
+  onSubmit: (website: string, rawInput: string) => void;
   isLoading: boolean;
   isLoggedIn: boolean;
   onSignInRequired: () => void;
+  variant?: 'normal' | 'compact';
+  initialUrl?: string;
+  initialRawInput?: string;
 }
 
-const WebsiteInput: React.FC<WebsiteInputProps> = ({ onSubmit, isLoading, isLoggedIn, onSignInRequired }) => {
-  const [website, setWebsite] = useState('');
-  const [error, setError] = useState('');
+const WebsiteInput: React.FC<WebsiteInputProps> = ({ 
+  onSubmit, 
+  isLoading, 
+  isLoggedIn,
+  onSignInRequired,
+  variant = 'normal',
+  initialUrl = '',
+  initialRawInput = ''
+}) => {
+  const [website, setWebsite] = useState(variant === 'compact' ? initialRawInput : initialUrl);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formattedUrl = formatUrl(website);
-    if (isValidUrl(formattedUrl)) {
-      if (isLoggedIn) {
-        onSubmit(formattedUrl);
-      } else {
-        onSignInRequired();
-      }
-      setError('');
-    } else {
-      setError('Please enter a valid URL');
+  useEffect(() => {
+    if (variant === 'compact' && initialRawInput) {
+      setWebsite(initialRawInput);
     }
-  };
+  }, [initialRawInput, variant]);
 
-  const formatUrl = (url: string) => {
-    if (!/^https?:\/\//i.test(url)) {
+  const formatUrl = (url: string): string => {
+    if (!url.match(/^https?:\/\//i)) {
       return `https://${url}`;
     }
     return url;
   };
 
-  const isValidUrl = (url: string) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      onSignInRequired();
+      return;
+    }
+    if (website.trim()) {
+      onSubmit(formatUrl(website.trim()), website.trim());
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="website-input-form">
+    <form onSubmit={handleSubmit} className={`website-input-form ${variant}`}>
       <div className="input-wrapper">
         <input
           type="text"
           value={website}
           onChange={(e) => setWebsite(e.target.value)}
-          placeholder="Enter website URL (e.g., google.com)"
+          placeholder={variant === 'compact' ? 'Enter new URL...' : 'Enter website URL...'}
           disabled={isLoading}
-          aria-describedby="website-input-error"
         />
-        <button type="submit" disabled={isLoading} className="evaluate-submit-button">
+        <button
+          type="submit"
+          className="evaluate-submit-button"
+          disabled={isLoading || !website.trim()}
+        >
           {isLoading ? (
-            <div className="loading-indicator"></div>
+            <div className="loading-indicator" />
           ) : (
-            <FontAwesomeIcon icon={faArrowRight} />
+            <i className="fas fa-arrow-right" />
           )}
         </button>
       </div>
-      {error && <p id="website-input-error" className="error-message">{error}</p>}
     </form>
   );
 };

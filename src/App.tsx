@@ -16,6 +16,7 @@ import defaultUserIcon from './assets/default-user-icon.png';
 import { User } from 'firebase/auth';
 import ChatInterface from './components/ChatInterface';
 import AnimatedEye from './components/AnimatedEye';
+import MetricsSearch from './components/MetricsSearch';
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -30,9 +31,12 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
+  const [rawInput, setRawInput] = useState<string>('');
   const [chatKey, setChatKey] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+  const [analysisState, setAnalysisState] = useState<'pre' | 'post'>('pre');
+  const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -81,7 +85,13 @@ const App: React.FC = () => {
     setError(message);
   };
 
-  const handleEvaluation = async (website: string) => {
+  const handleEvaluation = async (website: string, rawInput?: string) => {
+    setAnalysisState('post');
+    setWebsiteUrl(website);
+    if (rawInput) {
+      setRawInput(rawInput);
+    }
+    
     if (!user) {
       handleError('You must be signed in to evaluate a website.');
       return;
@@ -98,7 +108,6 @@ const App: React.FC = () => {
     }
 
     setIsGenerating(true);
-    setWebsiteUrl(website);
     setIsLoading(true);
     setError(null);
     setStatusMessage('Initializing evaluation process...');
@@ -229,31 +238,126 @@ const App: React.FC = () => {
     return defaultUserIcon;
   };
 
+  const handleMetricsSearch = (term: string) => {
+    setMetricsSearchTerm(term);
+  };
+
+  const scrollToElement = (element: HTMLElement) => {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
         return (
-          <div className="main-content">
-            <h1>Olive Site Evaluator</h1>
-            <AnimatedEye isGenerating={isGenerating} isWaitingForResponse={isWaitingForResponse} />
-            <p className="app-description">Evaluate any website with just one click. Enter a URL below to get started.</p>
-            <WebsiteInput 
-              onSubmit={handleEvaluation} 
-              isLoading={isLoading} 
-              isLoggedIn={!!user}
-              onSignInRequired={handleSignInRequired}
-            />
-            {statusMessage && <p className="status-message">{statusMessage}</p>}
-            {error && <p className="error-message">{error}</p>}
-            {websiteUrl && (
-              <ChatInterface
-                key={chatKey} // Add this line
-                websiteUrl={websiteUrl}
-                onStartEvaluation={handleEvaluation}
-                evaluationResults={evaluationResults}
-                isLoading={isLoading}
+          <div className={`main-content ${analysisState}`}>
+            <div className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}>
+              <h1>Olive Site Evaluator</h1>
+              <AnimatedEye 
+                isGenerating={isGenerating} 
+                isWaitingForResponse={isWaitingForResponse} 
               />
-            )}
+              <p className="app-description">Evaluate any website with just one click. Enter a URL below to get started.</p>
+              <WebsiteInput 
+                onSubmit={handleEvaluation} 
+                isLoading={isLoading} 
+                isLoggedIn={!!user}
+                onSignInRequired={handleSignInRequired}
+              />
+              {error && <p className="error-message">{error}</p>}
+            </div>
+            
+            <div className={`post-analysis-content ${analysisState === 'post' ? 'fade-in' : ''}`}>
+              <div className={`analysis-layout ${evaluationResults ? 'has-results' : ''}`}>
+                <div className="metrics-panel">
+                  {evaluationResults && (
+                    <>
+                      <div className="metrics-header">
+                        <h3>Analysis Results</h3>
+                        <MetricsSearch 
+                          onSearch={handleMetricsSearch}
+                          onResultSelect={scrollToElement}
+                        />
+                      </div>
+                      <div className="metrics-scrollable">
+                        {evaluationResults.screenshot && (
+                          <div className="screenshot-preview">
+                            <img 
+                              src={`data:image/png;base64,${evaluationResults.screenshot}`}
+                              alt="Website Preview" 
+                              className="preview-image"
+                            />
+                          </div>
+                        )}
+                        {Object.entries(evaluationResults).map(([key, value]) => {
+                          if (key !== 'screenshot' && key !== 'htmlContent') {
+                            const formattedValue = typeof value === 'object' 
+                              ? JSON.stringify(value, null, 2)
+                              : typeof value === 'number'
+                              ? value < 1 && value > 0
+                                ? `${(value * 100).toFixed(2)}%`
+                                : value.toFixed(2)
+                              : String(value);
+
+                            return (
+                              <div key={key} className="metric-box">
+                                <h4>{key
+                                  // First split by capital letters
+                                  .replace(/([A-Z])/g, ' $1')
+                                  // Convert to lowercase
+                                  .toLowerCase()
+                                  // Capitalize first letter of each word
+                                  .split(' ')
+                                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                  .join(' ')
+                                  .trim()}</h4>
+                                <div className="metric-value">
+                                  <pre>{formattedValue}</pre>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="analysis-main">
+                  <div className="compact-header">
+                    <AnimatedEye 
+                      isGenerating={isGenerating}
+                      isWaitingForResponse={isWaitingForResponse}
+                      size="small"
+                    />
+                    <WebsiteInput 
+                      onSubmit={handleEvaluation}
+                      isLoading={isLoading}
+                      isLoggedIn={!!user}
+                      onSignInRequired={handleSignInRequired}
+                      variant="compact"
+                      initialUrl={websiteUrl}
+                      initialRawInput={rawInput}
+                    />
+                  </div>
+                  <div className="chat-container">
+                    {websiteUrl && (
+                      <ChatInterface
+                        key={chatKey}
+                        websiteUrl={websiteUrl}
+                        onStartEvaluation={handleEvaluation}
+                        evaluationResults={evaluationResults}
+                        isLoading={isLoading}
+                        statusMessage={statusMessage}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
       case 'profile':

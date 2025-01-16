@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TypewriterTextProps {
   text: string;
@@ -7,39 +7,23 @@ interface TypewriterTextProps {
 }
 
 const TypewriterText: React.FC<TypewriterTextProps> = ({ text, onComplete, isLoading }) => {
-  const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const getDelay = useCallback((char: string) => {
-    if (['\n', '.', ',', ':', ';', '!', '?'].includes(char)) {
-      return 100; // Longer delay for special characters
-    }
-    return 20; // Base delay for regular characters
-  }, []);
 
   useEffect(() => {
     if (isLoading) {
-      const loadingText = 'Loading...';
       const intervalId = setInterval(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % (loadingText.length + 1));
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % (text.length + 1));
       }, 500);
 
       return () => clearInterval(intervalId);
     }
+  }, [text, isLoading]);
 
-    if (currentIndex < text.length) {
-      const timeoutId = setTimeout(() => {
-        setDisplayedText((prevText) => prevText + text[currentIndex]);
-        setCurrentIndex((prevIndex) => prevIndex + 1);
-      }, getDelay(text[currentIndex]));
+  if (!isLoading) {
+    return <div>{text}</div>;
+  }
 
-      return () => clearTimeout(timeoutId);
-    } else if (onComplete) {
-      onComplete();
-    }
-  }, [text, currentIndex, getDelay, onComplete, isLoading]);
-
-  return <div>{isLoading ? 'Loading'.slice(0, currentIndex) + '...' : displayedText}</div>;
+  return <div>{text.slice(0, currentIndex) + '...'}</div>;
 };
 
 export default React.memo(TypewriterText);

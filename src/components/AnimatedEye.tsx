@@ -3,9 +3,14 @@ import React, { useState, useEffect } from 'react';
 interface AnimatedEyeProps {
   isGenerating: boolean;
   isWaitingForResponse: boolean;
+  size?: 'normal' | 'small';
 }
 
-const AnimatedEye: React.FC<AnimatedEyeProps> = ({ isGenerating, isWaitingForResponse }) => {
+const AnimatedEye: React.FC<AnimatedEyeProps> = ({ 
+  isGenerating, 
+  isWaitingForResponse,
+  size = 'normal' 
+}) => {
   const [currentImage, setCurrentImage] = useState(1);
   const [animationSpeed, setAnimationSpeed] = useState(5000);
 
@@ -30,7 +35,7 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({ isGenerating, isWaitingForRes
   }, [animationSpeed, currentImage]);
 
   return (
-    <div className="animated-eye">
+    <div className={`animated-eye ${size}`}>
       <img src={`/eye-graphics/eye${currentImage}.png`} alt="Animated Eye" />
     </div>
   );
