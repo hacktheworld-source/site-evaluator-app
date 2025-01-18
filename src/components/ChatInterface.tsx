@@ -19,6 +19,7 @@ interface Message {
   screenshot?: string;
   phase?: string;
   isLoading?: boolean;
+  metricsCollapsed?: boolean;
   competitorScreenshots?: {
     [url: string]: {
       status: 'loading' | 'loaded' | 'error';
@@ -390,12 +391,52 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const renderMetrics = useCallback((metrics: { [key: string]: any }) => (
-    <div className="metrics-wrapper fade-in">
+  const toggleMetricsCollapse = useCallback((messageIndex: number) => {
+    // Capture current scroll position before state update
+    const chatMessages = document.querySelector('.chat-messages');
+    const scrollPosition = chatMessages?.scrollTop;
+
+    setMessages(prevMessages => {
+      const newMessages = prevMessages.map((msg, idx) => 
+        idx === messageIndex
+          ? { ...msg, metricsCollapsed: !msg.metricsCollapsed }
+          : msg
+      );
+      
+      // Restore scroll position after state update
+      if (scrollPosition !== undefined) {
+        requestAnimationFrame(() => {
+          if (chatMessages) {
+            chatMessages.scrollTop = scrollPosition;
+          }
+        });
+      }
+      
+      return newMessages;
+    });
+  }, []);
+
+  const renderMetrics = useCallback((metrics: { [key: string]: any }, messageIndex: number, isCollapsed: boolean) => (
+    <div 
+      className={`metrics-wrapper fade-in ${isCollapsed ? 'collapsed' : ''}`} 
+      onClick={() => toggleMetricsCollapse(messageIndex)}
+    >
+      <button 
+        className="toggle-collapse" 
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleMetricsCollapse(messageIndex);
+        }}
+      >
+        <i className={`fas fa-chevron-${isCollapsed ? 'down' : 'up'}`}></i>
+      </button>
       {Object.entries(metrics || {}).map(([key, value]) => {
         if (key !== 'screenshot' && key !== 'htmlContent') {
           return (
-            <div key={key} className="metric-tile">
+            <div 
+              key={key} 
+              className="metric-tile"
+            >
               <div className="metric-title">{key}</div>
               {renderMetricValue(value, 0)}
             </div>
@@ -404,8 +445,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return null;
       })}
     </div>
-  ), []);
-  
+  ), [toggleMetricsCollapse]);
+
   const renderMetricValue = (value: any, depth: number = 0): React.ReactNode => {
     if (value === null || value === undefined) {
       return 'N/A';
@@ -454,9 +495,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     />
   ), []);
 
-  const renderMessage = useCallback((message: Message) => {
+  const renderMessage = useCallback((message: Message, index: number) => {
     return (
-      <div className={`message ${message.role} fade-in`}>
+      <div 
+        className={`message ${message.role} fade-in`}
+        data-just-added={index === messages.length - 1 ? 'true' : 'false'}
+      >
         {message.role === 'assistant' && message.metrics && message.phase && 
          message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
           <div className="message-score">
@@ -532,12 +576,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </ReactMarkdown>
           )}
         </div>
-        {message.phase === 'Overall' && renderMetrics(evaluationResults)}
+        {message.phase === 'Overall' && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
         {(message.phase === 'Overall' || message.phase === 'Vision') && renderScreenshot(evaluationResults.screenshot)}
-        {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && renderMetrics(message.metrics)}
+        {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && 
+          renderMetrics(message.metrics, index, message.metricsCollapsed ?? true)}
       </div>
     );
-  }, [renderMetrics, renderScreenshot, phaseScores, evaluationResults]);
+  }, [renderMetrics, renderScreenshot, phaseScores, evaluationResults, messages.length]);
 
   const renderThinkingPlaceholder = () => (
     <div className="message assistant thinking">
@@ -549,7 +594,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const addMessage = useCallback((newMessage: Message) => {
     setMessages(prevMessages => {
-      const updatedMessages = [...prevMessages, newMessage];
+      // Initialize new messages with collapsed metrics
+      const messageWithCollapsed = {
+        ...newMessage,
+        metricsCollapsed: true
+      };
+      const updatedMessages = [...prevMessages, messageWithCollapsed];
       if (updatedMessages.length > MAX_HISTORY_LENGTH) {
         return updatedMessages.slice(-MAX_HISTORY_LENGTH);
       }
@@ -630,8 +680,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = document.querySelector('.messages-container > div:last-child');
-      if (lastMessage) {
+      const isNewMessage = lastMessage?.getAttribute('data-just-added') === 'true';
+      
+      if (lastMessage && isNewMessage) {
         lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Remove the flag after scrolling
+        lastMessage.removeAttribute('data-just-added');
       }
     }
   }, [messages]);
@@ -661,14 +715,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {overallScore !== null && (
         <div className="overall-score">
-          overall score: {overallScore}
+          overall score: {overallScore}%
+        </div>
+      )}
+      {currentPhase && (
+        <div className="floating-action-container">
+          {currentPhase !== 'Recommendations' ? (
+            <button 
+              type="button" 
+              onClick={handleContinue} 
+              disabled={isLoading || isMessageLoading} 
+              className="floating-action-button"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGenerateReport}
+              disabled={isLoading || isMessageLoading || isGeneratingReport}
+              className="floating-action-button"
+            >
+              {isGeneratingReport ? 'Generating...' : 'Download Report'}
+            </button>
+          )}
         </div>
       )}
       <div className="chat-messages">
         <div className="messages-container">
           {messages.map((message, index) => (
             <React.Fragment key={`${index}-${JSON.stringify(message.competitorScreenshots)}`}>
-              {renderMessage(message)}
+              {renderMessage(message, index)}
             </React.Fragment>
           ))}
           {isThinking && renderThinkingPlaceholder()}
@@ -696,30 +773,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         >
           <i className="fas fa-paper-plane"></i>
         </button>
-        {currentPhase && (
-          <>
-            {currentPhase !== 'Recommendations' && (
-              <button 
-                type="button" 
-                onClick={handleContinue} 
-                disabled={isLoading || isMessageLoading} 
-                className="continue-button"
-              >
-                <i className="fas fa-arrow-right"></i>
-              </button>
-            )}
-            {currentPhase === 'Recommendations' && (
-              <button
-                type="button"
-                onClick={handleGenerateReport}
-                disabled={isLoading || isMessageLoading || isGeneratingReport}
-                className="generate-report-button"
-              >
-                {isGeneratingReport ? 'Generating...' : 'Download Report'}
-              </button>
-            )}
-          </>
-        )}
       </form>
     </div>
   );
