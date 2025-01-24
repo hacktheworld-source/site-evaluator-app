@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../services/firebase';
-import { getUserPoints } from '../services/database';
+import { getUserPoints } from '../services/points';
 import { reportStorage, StoredReport } from '../services/reportStorage';
 import defaultUserIcon from '../assets/default-user-icon.png';
 import { toast } from 'react-toastify';

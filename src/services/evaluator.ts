@@ -1,8 +1,13 @@
 import axios from 'axios';
-import { getRateLimiter } from './rateLimiter';
+import { getRateLimiter } from '../../backend/src/services/rateLimiter';
 import { compressImage } from '../utils/imageCompression';
 
 // Remove the OpenAI import and initialization
+
+const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute
+
+// Set the maximum screenshot size to be 80% of the maximum document size (1 MB)
+const MAX_SCREENSHOT_SIZE = 800000; // 800 KB
 
 export interface EvaluationResult {
   loadTime: number;
@@ -83,12 +88,7 @@ export interface EvaluationResult {
   };
 }
 
-const rateLimiter = getRateLimiter(5, 60000); // 5 requests per minute
-
-// Set the maximum screenshot size to be 80% of the maximum document size (1 MB)
-const MAX_SCREENSHOT_SIZE = 800000; // 800 KB
-
-export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
+export async function evaluateWebsite(url: string, userId: string): Promise<EvaluationResult> {
   if (!rateLimiter.tryRemoveTokens(1)) {
     throw new Error('Rate limit exceeded. Please try again later.');
   }
@@ -96,6 +96,9 @@ export async function evaluateWebsite(url: string): Promise<EvaluationResult> {
   try {
     const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(url)}`, {
       timeout: 120000, // 2 minutes timeout
+      headers: {
+        'user-id': userId
+      }
     });
     
     // Compress the screenshot if it exists

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { updateUserPoints } from '../services/database';
+import { updateUserPoints } from '../../backend/src/services/database';
 
 interface PurchasePointsProps {
   userId: string;

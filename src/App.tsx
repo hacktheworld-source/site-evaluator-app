@@ -6,7 +6,7 @@ import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './services/firebase';
 import { signOut } from 'firebase/auth';
-import { getUserPoints, decrementUserPoints, updateUserPoints } from './services/database';
+import { getUserPoints, decrementUserPoints, updateUserPoints } from './services/points';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ProfilePage from './components/ProfilePage';
@@ -118,7 +118,9 @@ const App: React.FC = () => {
       await decrementUserPoints(user.uid);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - 1 : null));
 
-      const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}`);
+      const eventSource = new EventSource(
+        `${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}&userId=${encodeURIComponent(user.uid)}`
+      );
       let timeoutId = setTimeout(() => {
         eventSource.close();
         throw new Error('Website analysis timed out. This website might be blocking automated access.');

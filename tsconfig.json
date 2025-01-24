@@ -27,5 +27,5 @@
   },
   "include": [
     "src"
-  ]
+, "backend/src/services/queueService.ts", "src/services/evaluator.ts", "backend/src/services/rateLimiter.ts", "backend/src/services/database.ts"  ]
 }
