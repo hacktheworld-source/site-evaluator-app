@@ -114,6 +114,19 @@ const App: React.FC = () => {
     setEvaluationResults(null);
     setChatKey(prevKey => prevKey + 1);
 
+    const cleanupAndRefund = async () => {
+      setIsLoading(false);
+      setIsGenerating(false);
+      if (user) {
+        try {
+          await updateUserPoints(user.uid, (userPoints || 0) + 1);
+          setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
+        } catch (error) {
+          console.error('Error refunding point:', error);
+        }
+      }
+    };
+
     try {
       await decrementUserPoints(user.uid);
       setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - 1 : null));
@@ -121,86 +134,66 @@ const App: React.FC = () => {
       const eventSource = new EventSource(
         `${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}&userId=${encodeURIComponent(user.uid)}`
       );
+
+      // Increased timeout to 2 minutes to match Lighthouse's typical analysis time
       let timeoutId = setTimeout(() => {
         eventSource.close();
-        throw new Error('Website analysis timed out. This website might be blocking automated access.');
-      }, 45000); // 45 second timeout
+        cleanupAndRefund();
+        handleError('Website analysis timed out after 2 minutes. The website might be blocking automated access or is too slow to respond.');
+      }, 120000);
 
       eventSource.onmessage = async (event) => {
         try {
           clearTimeout(timeoutId);
           timeoutId = setTimeout(() => {
             eventSource.close();
-            setIsLoading(false);
-            setIsGenerating(false);
-            handleError('Website analysis timed out. This website might be blocking automated access.');
-            
-            // Refund the point
-            if (user) {
-              updateUserPoints(user.uid, (userPoints || 0) + 1);
-              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
-            }
-          }, 45000);
+            cleanupAndRefund();
+            handleError('Website analysis timed out waiting for the next update. The process might have stalled.');
+          }, 120000);
 
           const data = JSON.parse(event.data);
           if (data.status) {
             setStatusMessage(data.status);
           } else if (data.result) {
             setEvaluationResults(data.result);
-            eventSource.close();
+            setStatusMessage('Evaluation complete!');
             clearTimeout(timeoutId);
+            eventSource.close();
             setIsLoading(false);
             setIsGenerating(false);
-            setStatusMessage('Evaluation complete!');
             setTimeout(() => setStatusMessage(''), 2000);
           } else if (data.error) {
-            eventSource.close();
             clearTimeout(timeoutId);
-            setIsLoading(false);
-            setIsGenerating(false);
+            eventSource.close();
+            await cleanupAndRefund();
             handleError(data.error);
-            
-            // Refund the point
-            if (user) {
-              updateUserPoints(user.uid, (userPoints || 0) + 1);
-              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
-            }
           }
         } catch (error) {
-          eventSource.close();
           clearTimeout(timeoutId);
-          setIsLoading(false);
-          setIsGenerating(false);
-          handleError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
-          
-          // Refund the point
-          if (user) {
-            updateUserPoints(user.uid, (userPoints || 0) + 1);
-            setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
-          }
+          eventSource.close();
+          await cleanupAndRefund();
+          handleError(`Error processing evaluation data: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
         }
       };
 
-      eventSource.onerror = (error) => {
+      eventSource.onerror = async (error) => {
         console.error('EventSource error:', error);
-        eventSource.close();
         clearTimeout(timeoutId);
-        setIsLoading(false);
-        setIsGenerating(false);
-        handleError('The website appears to be blocking automated access. Try a different website or try again later.');
+        eventSource.close();
         
-        // Refund the point
-        updateUserPoints(user.uid, (userPoints || 0) + 1);
-        setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
+        if (!evaluationResults) {
+          await cleanupAndRefund();
+          handleError('Lost connection to the evaluation server. Please try again.');
+        } else {
+          setIsLoading(false);
+          setIsGenerating(false);
+        }
       };
+
     } catch (error) {
+      await cleanupAndRefund();
       handleError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
-      setIsLoading(false);
-      setIsGenerating(false);
       setStatusMessage('');
-      // Refund the point
-      await updateUserPoints(user.uid, (userPoints || 0) + 1);
-      setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + 1 : null));
     }
   };
 
