@@ -151,24 +151,36 @@ const App: React.FC = () => {
             handleError('Website analysis timed out waiting for the next update. The process might have stalled.');
           }, 120000);
 
+          console.log('Received EventSource message:', event.data);
           const data = JSON.parse(event.data);
+          console.log('Parsed server response:', data);
+
           if (data.status) {
+            console.log('Status update:', data.status);
             setStatusMessage(data.status);
-          } else if (data.result) {
-            setEvaluationResults(data.result);
-            setStatusMessage('Evaluation complete!');
-            clearTimeout(timeoutId);
-            eventSource.close();
-            setIsLoading(false);
-            setIsGenerating(false);
-            setTimeout(() => setStatusMessage(''), 2000);
+            
+            // If we get a completion status, close the connection properly
+            if (data.status === 'completed' && data.result) {
+              console.log('Evaluation results received:', data.result);
+              setEvaluationResults(data.result);
+              setStatusMessage('Evaluation complete!');
+              clearTimeout(timeoutId);
+              eventSource.close();
+              setIsLoading(false);
+              setIsGenerating(false);
+              setTimeout(() => setStatusMessage(''), 2000);
+            }
           } else if (data.error) {
+            console.error('Server reported error:', data.error);
             clearTimeout(timeoutId);
             eventSource.close();
             await cleanupAndRefund();
             handleError(data.error);
+          } else {
+            console.log('Received unknown message type:', data);
           }
         } catch (error) {
+          console.error('Error processing message:', error, 'Raw event data:', event.data);
           clearTimeout(timeoutId);
           eventSource.close();
           await cleanupAndRefund();
@@ -178,13 +190,34 @@ const App: React.FC = () => {
 
       eventSource.onerror = async (error) => {
         console.error('EventSource error:', error);
-        clearTimeout(timeoutId);
-        eventSource.close();
+        console.log('EventSource readyState:', eventSource.readyState, {
+          CONNECTING: EventSource.CONNECTING,
+          OPEN: EventSource.OPEN,
+          CLOSED: EventSource.CLOSED
+        });
         
+        // Only handle errors if we haven't received results yet
         if (!evaluationResults) {
-          await cleanupAndRefund();
-          handleError('Lost connection to the evaluation server. Please try again.');
+          if (eventSource.readyState === EventSource.CLOSED) {
+            console.log('Connection closed without results - treating as error');
+            clearTimeout(timeoutId);
+            eventSource.close();
+            await cleanupAndRefund();
+            handleError('Lost connection to the evaluation server. Please try again.');
+          } else if (eventSource.readyState === EventSource.CONNECTING) {
+            // Connection is attempting to reconnect - log but don't take action yet
+            console.log('EventSource is attempting to reconnect...');
+          } else {
+            console.error('EventSource in unexpected state:', eventSource.readyState);
+            clearTimeout(timeoutId);
+            eventSource.close();
+            await cleanupAndRefund();
+            handleError('Connection error. Please try again.');
+          }
         } else {
+          // We have results, so just close quietly
+          console.log('Connection closed after receiving results - normal completion');
+          eventSource.close();
           setIsLoading(false);
           setIsGenerating(false);
         }
