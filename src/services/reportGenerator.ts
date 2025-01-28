@@ -11,36 +11,71 @@ export interface ReportData {
   phaseScores: { [phase: string]: number };
   metrics: {
     performance: {
-      loadTime?: number;
-      firstContentfulPaint?: number;
-      timeToInteractive?: number;
-      largestContentfulPaint?: number;
-      cumulativeLayoutShift?: number;
-      ttfb?: number;
-      tbt?: number;
-      estimatedFid?: number;
+      loadTime: number;
+      firstContentfulPaint: number;
+      timeToInteractive: number;
+      largestContentfulPaint: number;
+      cumulativeLayoutShift: number;
+      ttfb: number;
+      tbt: number;
+      estimatedFid: number;
+      speedIndex?: number;
+      totalBlockingTime?: number;
     };
     seo: {
-      score?: number;
-      title?: string;
-      metaDescription?: string;
+      score: number;
+      title: string;
+      metaDescription: string;
+      headings?: {
+        h1Count: number;
+        h2Count: number;
+        h3Count: number;
+      };
+      robotsTxt?: boolean;
+      sitemapXml?: boolean;
+      canonicalUrl?: string;
+      mobileResponsive?: boolean;
     };
     accessibility: {
-      score?: number;
-      imagesWithAltText?: number;
-      totalImages?: number;
+      score: number;
+      imagesWithAltText: number;
+      totalImages: number;
+      ariaAttributesCount: number;
+      keyboardNavigable: boolean;
+      contrastRatio?: {
+        pass: number;
+        fail: number;
+      };
+      formLabels?: {
+        labeled: number;
+        total: number;
+      };
     };
-    lighthouse?: {
-      performance?: number;
-      accessibility?: number;
-      seo?: number;
-      bestPractices?: number;
+    lighthouse: {
+      performance: number;
+      accessibility: number;
+      seo: number;
+      bestPractices: number;
+      pwa?: number;
     };
-    security?: {
-      isHttps: boolean | null;
+    security: {
+      isHttps: boolean;
       protocol: string;
-      securityHeaders: { [key: string]: boolean };
-      tlsVersion?: string;
+      securityHeaders: { 
+        'Strict-Transport-Security': boolean;
+        'Content-Security-Policy': boolean;
+        'X-Frame-Options': boolean;
+        'X-Content-Type-Options': boolean;
+        'X-XSS-Protection': boolean;
+        'Referrer-Policy': boolean;
+      };
+      tlsVersion: string;
+      certificateExpiry?: Date;
+      mixedContent?: boolean;
+      vulnerabilities?: {
+        severity: string;
+        count: number;
+      }[];
     };
   };
 }
@@ -80,17 +115,26 @@ class ReportGenerator {
   }
 
   private createSecurityTable(security: any) {
+    if (!security) {
+      return {
+        headers: ['Security Feature', 'Status'],
+        rows: [['Security Data', 'Not Available']]
+      };
+    }
+
     const getStatus = (present: boolean) => present ? 'Present' : 'Missing';
     const headers = ['Security Feature', 'Status'];
     const rows = [
-      ['HTTPS', security.isHttps ? 'Present' : 'Missing'],
-      ['Protocol', security.protocol],
-      ['TLS Version', security.tlsVersion ? security.tlsVersion.toUpperCase() : 'Unknown'],
+      ['HTTPS', security?.isHttps ? 'Present' : 'Missing'],
+      ['Protocol', security?.protocol || 'Not Available'],
+      ['TLS Version', security?.tlsVersion ? security.tlsVersion.toUpperCase() : 'Unknown'],
     ];
 
-    Object.entries(security.securityHeaders || {}).forEach(([header, present]) => {
-      rows.push([header, getStatus(present as boolean)]);
-    });
+    if (security?.securityHeaders) {
+      Object.entries(security.securityHeaders).forEach(([header, present]) => {
+        rows.push([header, getStatus(present as boolean)]);
+      });
+    }
 
     return { headers, rows };
   }

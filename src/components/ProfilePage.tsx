@@ -82,64 +82,68 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page">
-      <h2>User Profile</h2>
-      <div className="profile-info">
-        <img 
-          src={user.photoURL || defaultUserIcon} 
-          alt="Profile" 
-          className="profile-picture"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = defaultUserIcon;
-          }}
-        />
-        <p><strong>Name:</strong> {user.displayName || 'N/A'}</p>
-        <p><strong>Email:</strong> {user.email}</p>
-        <p><strong>Points:</strong> {userPoints !== null ? userPoints : 'Loading...'}</p>
-      </div>
-      
-      <div className="reports-section">
-        <h3>Your Reports</h3>
-        {isLoading ? (
-          <div className="loading-state">
-            <FontAwesomeIcon icon={faSpinner} spin />
-            <p>Loading reports...</p>
+      <div className="profile-layout">
+        <div className="profile-column">
+          <h2>User Profile</h2>
+          <div className="profile-info">
+            <img 
+              src={user.photoURL || defaultUserIcon} 
+              alt="Profile" 
+              className="profile-picture"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = defaultUserIcon;
+              }}
+            />
+            <p><strong>Name:</strong> {user.displayName || 'N/A'}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+            <p><strong>Points:</strong> {userPoints !== null ? userPoints : 'Loading...'}</p>
           </div>
-        ) : reports.length > 0 ? (
-          <div className="reports-list">
-            {reports.map(report => (
-              <div key={report.id} className="report-item">
-                <div className="report-info">
-                  <h4>{report.websiteUrl}</h4>
-                  <p className="report-date">Generated on {formatDate(report.timestamp)}</p>
-                  <div className="report-metrics">
-                    <span className="metric">
-                      <strong>Overall Score:</strong> {report.overallScore}%
-                    </span>
-                    {report.essentialMetrics.performance.loadTime && (
+        </div>
+        
+        <div className="reports-column">
+          <h2>Your Reports</h2>
+          {isLoading ? (
+            <div className="loading-state">
+              <FontAwesomeIcon icon={faSpinner} spin />
+              <p>Loading reports...</p>
+            </div>
+          ) : reports.length > 0 ? (
+            <div className="reports-list">
+              {reports.map(report => (
+                <div key={report.id} className="report-item">
+                  <div className="report-info">
+                    <h4>{report.websiteUrl}</h4>
+                    <p className="report-date">Generated on {formatDate(report.timestamp)}</p>
+                    <div className="report-metrics">
                       <span className="metric">
-                        <strong>Load Time:</strong> {report.essentialMetrics.performance.loadTime}ms
+                        <strong>Overall Score:</strong> {report.overallScore}%
                       </span>
-                    )}
+                      {report.essentialMetrics.performance.loadTime && (
+                        <span className="metric">
+                          <strong>Load Time:</strong> {report.essentialMetrics.performance.loadTime}ms
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => handleDownload(report)}
+                    className="download-report-button"
+                    disabled={downloadingReportId === report.id}
+                  >
+                    {downloadingReportId === report.id ? (
+                      <FontAwesomeIcon icon={faSpinner} spin />
+                    ) : (
+                      <FontAwesomeIcon icon={faDownload} />
+                    )}
+                  </button>
                 </div>
-                <button 
-                  onClick={() => handleDownload(report)}
-                  className="download-report-button"
-                  disabled={downloadingReportId === report.id}
-                >
-                  {downloadingReportId === report.id ? (
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                  ) : (
-                    <FontAwesomeIcon icon={faDownload} />
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No reports generated yet.</p>
-        )}
+              ))}
+            </div>
+          ) : (
+            <p className="no-reports">No reports generated yet.</p>
+          )}
+        </div>
       </div>
     </div>
   );

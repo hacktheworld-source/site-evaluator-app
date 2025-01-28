@@ -627,27 +627,59 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // Create a clean version of metrics without HTML content
       const cleanMetrics = {
         performance: {
-          loadTime: evaluationResults.loadTime,
-          firstContentfulPaint: evaluationResults.firstContentfulPaint,
-          timeToInteractive: evaluationResults.timeToInteractive,
-          largestContentfulPaint: evaluationResults.largestContentfulPaint,
-          cumulativeLayoutShift: evaluationResults.cumulativeLayoutShift,
-          ttfb: evaluationResults.ttfb,
-          tbt: evaluationResults.tbt,
-          estimatedFid: evaluationResults.estimatedFid,
+          loadTime: evaluationResults.loadTime || 0,
+          firstContentfulPaint: evaluationResults.firstContentfulPaint || 0,
+          timeToInteractive: evaluationResults.timeToInteractive || 0,
+          largestContentfulPaint: evaluationResults.largestContentfulPaint || 0,
+          cumulativeLayoutShift: evaluationResults.cumulativeLayoutShift || 0,
+          ttfb: evaluationResults.ttfb || 0,
+          tbt: evaluationResults.tbt || 0,
+          estimatedFid: evaluationResults.estimatedFid || 0,
+          speedIndex: evaluationResults.speedIndex,
+          totalBlockingTime: evaluationResults.totalBlockingTime
         },
         seo: {
-          score: evaluationResults.lighthouse?.seo,
-          title: evaluationResults.seo?.title,
-          metaDescription: evaluationResults.seo?.metaDescription,
+          score: evaluationResults.lighthouse?.seo || 0,
+          title: evaluationResults.seo?.title || '',
+          metaDescription: evaluationResults.seo?.metaDescription || '',
+          headings: evaluationResults.seo?.headings,
+          robotsTxt: evaluationResults.seo?.robotsTxt,
+          sitemapXml: evaluationResults.seo?.sitemapXml,
+          canonicalUrl: evaluationResults.seo?.canonicalUrl,
+          mobileResponsive: evaluationResults.seo?.mobileResponsive
         },
         accessibility: {
-          score: evaluationResults.lighthouse?.accessibility,
-          imagesWithAltText: evaluationResults.accessibility?.imagesWithAltText,
-          totalImages: evaluationResults.accessibility?.totalImages,
+          score: evaluationResults.lighthouse?.accessibility || 0,
+          imagesWithAltText: evaluationResults.accessibility?.imagesWithAltText || 0,
+          totalImages: evaluationResults.accessibility?.totalImages || 0,
+          ariaAttributesCount: evaluationResults.accessibility?.ariaAttributesCount || 0,
+          keyboardNavigable: evaluationResults.accessibility?.keyboardNavigable || false,
+          contrastRatio: evaluationResults.accessibility?.contrastRatio,
+          formLabels: evaluationResults.accessibility?.formLabels
         },
-        lighthouse: evaluationResults.lighthouse,
-        security: evaluationResults.security
+        lighthouse: {
+          performance: evaluationResults.lighthouse?.performance || 0,
+          accessibility: evaluationResults.lighthouse?.accessibility || 0,
+          seo: evaluationResults.lighthouse?.seo || 0,
+          bestPractices: evaluationResults.lighthouse?.bestPractices || 0,
+          pwa: evaluationResults.lighthouse?.pwa
+        },
+        security: {
+          isHttps: evaluationResults.security?.isHttps || false,
+          protocol: evaluationResults.security?.protocol || '',
+          securityHeaders: {
+            'Strict-Transport-Security': evaluationResults.security?.securityHeaders?.['Strict-Transport-Security'] || false,
+            'Content-Security-Policy': evaluationResults.security?.securityHeaders?.['Content-Security-Policy'] || false,
+            'X-Frame-Options': evaluationResults.security?.securityHeaders?.['X-Frame-Options'] || false,
+            'X-Content-Type-Options': evaluationResults.security?.securityHeaders?.['X-Content-Type-Options'] || false,
+            'X-XSS-Protection': evaluationResults.security?.securityHeaders?.['X-XSS-Protection'] || false,
+            'Referrer-Policy': evaluationResults.security?.securityHeaders?.['Referrer-Policy'] || false
+          },
+          tlsVersion: evaluationResults.security?.tlsVersion || '',
+          certificateExpiry: evaluationResults.security?.certificateExpiry,
+          mixedContent: evaluationResults.security?.mixedContent,
+          vulnerabilities: evaluationResults.security?.vulnerabilities
+        }
       };
 
       const reportData: ReportData = {

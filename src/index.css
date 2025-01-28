@@ -244,7 +244,218 @@ input[type="text"]:focus, input[type="number"]:focus {
   margin: 10px;
 }
 
-.profile-page, .points-management-page {
+.profile-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: calc(100vh - var(--header-height));
+  box-sizing: border-box;
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.profile-column {
+  position: relative;
+}
+
+.profile-column h2,
+.reports-column h2 {
+  margin: 0 0 20px 0;
+  color: var(--accent-color);
+  font-size: 1.5em;
+}
+
+.profile-info {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 30px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.profile-info:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.profile-picture {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 25px;
+  background-color: var(--accent-color);
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.3s ease;
+}
+
+.profile-picture:hover {
+  border-color: var(--accent-color);
+}
+
+.profile-info p {
+  margin: 12px 0;
+  color: var(--off-white);
+  font-size: 1.1em;
+  width: 100%;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-info p:last-child {
+  border-bottom: none;
+}
+
+.profile-info strong {
+  color: var(--accent-color);
+  margin-right: 8px;
+}
+
+.reports-column {
+  flex: 1;
+  min-width: 0;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: calc(100vh - var(--header-height) - 140px);
+  overflow-y: auto;
+  padding-right: 15px;
+}
+
+.reports-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reports-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.reports-list::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 3px;
+}
+
+.report-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s ease;
+}
+
+.report-item:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
+}
+
+.report-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-info h4 {
+  margin: 0 0 10px 0;
+  color: var(--off-white);
+  font-size: 1.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-date {
+  color: var(--accent-color);
+  font-size: 0.9em;
+  margin: 0 0 12px 0;
+}
+
+.report-metrics {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.metric {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.download-report-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.download-report-button:hover:not(:disabled) {
+  background-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+.download-report-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 40px;
+  color: var(--accent-color);
+}
+
+.no-reports {
+  text-align: center;
+  color: var(--accent-color);
+  font-style: italic;
+  padding: 40px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+@media (max-width: 900px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .profile-column {
+    position: static;
+  }
+
+  .reports-list {
+    max-height: none;
+  }
+}
+
+.points-management-page {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;

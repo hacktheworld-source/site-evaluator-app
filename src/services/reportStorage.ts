@@ -11,18 +11,45 @@ export interface StoredReport {
   phaseScores: { [phase: string]: number };
   essentialMetrics: {
     performance: {
-      loadTime?: number;
-      firstContentfulPaint?: number;
-      timeToInteractive?: number;
+      loadTime: number;
+      firstContentfulPaint: number;
+      timeToInteractive: number;
+      largestContentfulPaint: number;
+      cumulativeLayoutShift: number;
+      ttfb: number;
+      tbt: number;
+      estimatedFid: number;
     };
     seo: {
-      score?: number;
+      score: number;
+      title: string;
+      metaDescription: string;
     };
     accessibility: {
-      score?: number;
+      score: number;
+      imagesWithAltText: number;
+      totalImages: number;
+      ariaAttributesCount: number;
+      keyboardNavigable: boolean;
     };
-    bestPractices?: {
-      score?: number;
+    lighthouse: {
+      performance: number;
+      accessibility: number;
+      seo: number;
+      bestPractices: number;
+    };
+    security: {
+      isHttps: boolean;
+      protocol: string;
+      securityHeaders: {
+        'Strict-Transport-Security': boolean;
+        'Content-Security-Policy': boolean;
+        'X-Frame-Options': boolean;
+        'X-Content-Type-Options': boolean;
+        'X-XSS-Protection': boolean;
+        'Referrer-Policy': boolean;
+      };
+      tlsVersion: string;
     };
   };
 }
@@ -37,18 +64,38 @@ class ReportStorageService {
         phaseScores: reportData.phaseScores,
         essentialMetrics: {
           performance: {
-            loadTime: reportData.metrics?.performance?.loadTime,
-            firstContentfulPaint: reportData.metrics?.performance?.firstContentfulPaint,
-            timeToInteractive: reportData.metrics?.performance?.timeToInteractive,
+            loadTime: reportData.metrics.performance.loadTime,
+            firstContentfulPaint: reportData.metrics.performance.firstContentfulPaint,
+            timeToInteractive: reportData.metrics.performance.timeToInteractive,
+            largestContentfulPaint: reportData.metrics.performance.largestContentfulPaint,
+            cumulativeLayoutShift: reportData.metrics.performance.cumulativeLayoutShift,
+            ttfb: reportData.metrics.performance.ttfb,
+            tbt: reportData.metrics.performance.tbt,
+            estimatedFid: reportData.metrics.performance.estimatedFid,
           },
           seo: {
-            score: reportData.metrics?.seo?.score,
+            score: reportData.metrics.seo.score,
+            title: reportData.metrics.seo.title,
+            metaDescription: reportData.metrics.seo.metaDescription,
           },
           accessibility: {
-            score: reportData.metrics?.accessibility?.score,
+            score: reportData.metrics.accessibility.score,
+            imagesWithAltText: reportData.metrics.accessibility.imagesWithAltText,
+            totalImages: reportData.metrics.accessibility.totalImages,
+            ariaAttributesCount: reportData.metrics.accessibility.ariaAttributesCount,
+            keyboardNavigable: reportData.metrics.accessibility.keyboardNavigable,
           },
-          bestPractices: {
-            score: reportData.metrics?.lighthouse?.bestPractices,
+          lighthouse: {
+            performance: reportData.metrics.lighthouse.performance,
+            accessibility: reportData.metrics.lighthouse.accessibility,
+            seo: reportData.metrics.lighthouse.seo,
+            bestPractices: reportData.metrics.lighthouse.bestPractices,
+          },
+          security: {
+            isHttps: reportData.metrics.security.isHttps,
+            protocol: reportData.metrics.security.protocol,
+            securityHeaders: reportData.metrics.security.securityHeaders,
+            tlsVersion: reportData.metrics.security.tlsVersion,
           },
         },
         createdAt: Timestamp.fromDate(new Date())
@@ -84,15 +131,35 @@ class ReportStorageService {
               loadTime: data.essentialMetrics?.performance?.loadTime,
               firstContentfulPaint: data.essentialMetrics?.performance?.firstContentfulPaint,
               timeToInteractive: data.essentialMetrics?.performance?.timeToInteractive,
+              largestContentfulPaint: data.essentialMetrics?.performance?.largestContentfulPaint,
+              cumulativeLayoutShift: data.essentialMetrics?.performance?.cumulativeLayoutShift,
+              ttfb: data.essentialMetrics?.performance?.ttfb,
+              tbt: data.essentialMetrics?.performance?.tbt,
+              estimatedFid: data.essentialMetrics?.performance?.estimatedFid,
             },
             seo: {
               score: data.essentialMetrics?.seo?.score,
+              title: data.essentialMetrics?.seo?.title,
+              metaDescription: data.essentialMetrics?.seo?.metaDescription,
             },
             accessibility: {
               score: data.essentialMetrics?.accessibility?.score,
+              imagesWithAltText: data.essentialMetrics?.accessibility?.imagesWithAltText,
+              totalImages: data.essentialMetrics?.accessibility?.totalImages,
+              ariaAttributesCount: data.essentialMetrics?.accessibility?.ariaAttributesCount,
+              keyboardNavigable: data.essentialMetrics?.accessibility?.keyboardNavigable,
             },
-            bestPractices: {
-              score: data.essentialMetrics?.bestPractices?.score,
+            lighthouse: {
+              performance: data.essentialMetrics?.lighthouse?.performance,
+              accessibility: data.essentialMetrics?.lighthouse?.accessibility,
+              seo: data.essentialMetrics?.lighthouse?.seo,
+              bestPractices: data.essentialMetrics?.lighthouse?.bestPractices,
+            },
+            security: {
+              isHttps: data.essentialMetrics?.security?.isHttps,
+              protocol: data.essentialMetrics?.security?.protocol,
+              securityHeaders: data.essentialMetrics?.security?.securityHeaders,
+              tlsVersion: data.essentialMetrics?.security?.tlsVersion,
             },
           },
         };
@@ -112,10 +179,34 @@ class ReportStorageService {
         overallScore: report.overallScore,
         phaseScores: report.phaseScores,
         metrics: {
-          ...report.essentialMetrics,
+          performance: {
+            ...report.essentialMetrics.performance,
+            speedIndex: undefined,
+            totalBlockingTime: undefined,
+          },
+          seo: {
+            ...report.essentialMetrics.seo,
+            headings: undefined,
+            robotsTxt: undefined,
+            sitemapXml: undefined,
+            canonicalUrl: undefined,
+            mobileResponsive: undefined,
+          },
+          accessibility: {
+            ...report.essentialMetrics.accessibility,
+            contrastRatio: undefined,
+            formLabels: undefined,
+          },
           lighthouse: {
-            bestPractices: report.essentialMetrics.bestPractices?.score
-          }
+            ...report.essentialMetrics.lighthouse,
+            pwa: undefined,
+          },
+          security: {
+            ...report.essentialMetrics.security,
+            certificateExpiry: undefined,
+            mixedContent: undefined,
+            vulnerabilities: undefined,
+          },
         }
       };
 
