@@ -24,6 +24,7 @@ interface Message {
     [url: string]: {
       status: 'loading' | 'loaded' | 'error';
       data?: string;
+      error?: string;
     };
   };
 }
@@ -277,7 +278,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         console.log('Received response:', response.data);
 
-        const { score, analysis } = response.data;
+        const { score, analysis, competitorScreenshots } = response.data;
 
         const newMessage: Message = {
           role: 'assistant',
@@ -286,7 +287,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
           phase: nextPhase,
           isLoading: false,
-          competitorScreenshots: {}
+          competitorScreenshots: competitorScreenshots || undefined
         };
 
         console.log('New message:', newMessage);
@@ -512,6 +513,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
             <ReactMarkdown components={{
+              a: ({ node, ...props }) => (
+                <a 
+                  {...props} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ 
+                    color: 'var(--accent-color)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer'
+                  }}
+                />
+              ),
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
@@ -747,7 +760,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {overallScore !== null && (
         <div className="overall-score">
-          overall score: {overallScore}%
+          overall score: {overallScore}
         </div>
       )}
       {currentPhase && (

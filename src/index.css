@@ -1790,3 +1790,17 @@ input[type="text"]:focus, input[type="number"]:focus {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.message a {
+  color: var(--accent-color);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.message a:hover {
+  color: var(--off-white);
+}
+
+.message a:visited {
+  color: #6c757d;
+}

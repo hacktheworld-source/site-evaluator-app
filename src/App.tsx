@@ -135,6 +135,14 @@ const App: React.FC = () => {
         `${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}&userId=${encodeURIComponent(user.uid)}`
       );
 
+      // Track connection state and retry attempts
+      let isFirstConnect = true;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 2000;
+      let hasResults = false;
+      let lastStatus = '';
+
       // Increased timeout to 2 minutes to match Lighthouse's typical analysis time
       let timeoutId = setTimeout(() => {
         eventSource.close();
@@ -157,10 +165,15 @@ const App: React.FC = () => {
 
           if (data.status) {
             console.log('Status update:', data.status);
-            setStatusMessage(data.status);
+            // Don't show "Connecting to existing analysis" if we're already showing progress
+            if (!(data.status === 'Connecting to existing analysis...' && lastStatus !== '')) {
+              setStatusMessage(data.status);
+              lastStatus = data.status;
+            }
             
             // If we get a completion status, close the connection properly
             if (data.status === 'completed' && data.result) {
+              hasResults = true;
               console.log('Evaluation results received:', data.result);
               setEvaluationResults(data.result);
               setStatusMessage('Evaluation complete!');
@@ -197,16 +210,25 @@ const App: React.FC = () => {
         });
         
         // Only handle errors if we haven't received results yet
-        if (!evaluationResults) {
+        if (!hasResults) {
           if (eventSource.readyState === EventSource.CLOSED) {
-            console.log('Connection closed without results - treating as error');
-            clearTimeout(timeoutId);
-            eventSource.close();
-            await cleanupAndRefund();
-            handleError('Lost connection to the evaluation server. Please try again.');
+            // If this is the first connection attempt, or we've exceeded retries, treat as error
+            if (isFirstConnect || retryCount >= MAX_RETRIES) {
+              console.log('Connection closed without results - treating as error');
+              clearTimeout(timeoutId);
+              eventSource.close();
+              await cleanupAndRefund();
+              handleError('Lost connection to the evaluation server. Please try again.');
+            } else {
+              // Otherwise, increment retry count and wait for reconnect
+              retryCount++;
+              console.log(`Retry attempt ${retryCount}/${MAX_RETRIES}`);
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            }
           } else if (eventSource.readyState === EventSource.CONNECTING) {
             // Connection is attempting to reconnect - log but don't take action yet
             console.log('EventSource is attempting to reconnect...');
+            isFirstConnect = false;
           } else {
             console.error('EventSource in unexpected state:', eventSource.readyState);
             clearTimeout(timeoutId);
