@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../services/firebase';
+import { auth, deleteUserAccount } from '../services/firebase';
 import { getUserPoints } from '../services/points';
 import { reportStorage, StoredReport } from '../services/reportStorage';
 import defaultUserIcon from '../assets/default-user-icon.png';
@@ -14,6 +14,8 @@ const ProfilePage: React.FC = () => {
   const [reports, setReports] = useState<StoredReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -70,6 +72,21 @@ const ProfilePage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setIsDeletingAccount(true);
+    try {
+      await deleteUserAccount(user);
+      toast.success('Account deleted successfully');
+      // Redirect to home page will happen automatically due to auth state change
+    } catch (error) {
+      console.error('Failed to delete account:', error);
+      toast.error('Failed to delete account. Please try again.');
+      setIsDeletingAccount(false);
+    }
   };
 
   if (loading) {
@@ -143,6 +160,45 @@ const ProfilePage: React.FC = () => {
           ) : (
             <p className="no-reports">No reports generated yet.</p>
           )}
+        </div>
+
+        <div className="danger-zone">
+          <h3>Danger Zone</h3>
+          <div className="delete-account-section">
+            <p>Delete your account and all associated data. This action cannot be undone.</p>
+            {!showDeleteConfirm ? (
+              <button 
+                className="delete-account-button"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete Account
+              </button>
+            ) : (
+              <div className="delete-confirmation">
+                <p>Are you sure you want to delete your account? This cannot be undone.</p>
+                <div className="confirmation-buttons">
+                  <button
+                    className="confirm-delete-button"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeletingAccount}
+                  >
+                    {isDeletingAccount ? (
+                      <FontAwesomeIcon icon={faSpinner} spin />
+                    ) : (
+                      'Yes, Delete My Account'
+                    )}
+                  </button>
+                  <button
+                    className="cancel-delete-button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeletingAccount}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

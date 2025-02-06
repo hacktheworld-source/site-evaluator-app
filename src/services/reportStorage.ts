@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { ReportData, reportGenerator } from './reportGenerator';
 import { saveAs } from 'file-saver';
@@ -216,6 +216,24 @@ class ReportStorageService {
     } catch (error) {
       console.error('Error regenerating report:', error);
       throw new Error('Failed to regenerate report');
+    }
+  }
+
+  async deleteAllUserReports(userId: string): Promise<void> {
+    try {
+      // Get all reports for the user
+      const userReportsRef = collection(db, 'users', userId, 'reports');
+      const querySnapshot = await getDocs(userReportsRef);
+      
+      // Delete each report document
+      const deletePromises = querySnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error deleting user reports:', error);
+      throw new Error('Failed to delete user reports');
     }
   }
 }

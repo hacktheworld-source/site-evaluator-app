@@ -636,73 +636,144 @@ input[type="text"]:focus, input[type="number"]:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
 }
 
 .auth-modal {
-  background-color: var(--deep-black);
-  padding: 30px;
-  border-radius: 10px;
+  background: rgba(24, 24, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 400px;
   position: relative;
-  width: 300px;
-  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .auth-modal h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  text-align: center;
+  margin: 0 0 24px 0;
+  font-size: 24px;
+  font-weight: 500;
 }
 
 .auth-modal form {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 .auth-modal input {
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid var(--accent-color);
-  border-radius: 5px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
   color: var(--off-white);
+  font-size: 16px;
+  transition: all 0.2s ease;
 }
 
-.auth-modal button {
-  margin-top: 10px;
-  padding: 10px;
-  background-color: var(--accent-color);
+.auth-modal input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-modal button[type="submit"] {
+  background: var(--accent-color);
   color: var(--off-white);
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
 }
 
-.close-button {
+.auth-modal button[type="submit"]:hover {
+  background: rgba(128, 128, 128, 0.8);
+  transform: translateY(-1px);
+}
+
+.auth-modal .close-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
   background: none;
   border: none;
+  color: var(--off-white);
   font-size: 24px;
   cursor: pointer;
-  color: var(--off-white);
+  padding: 4px 8px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 
-.toggle-auth-mode {
-  background: none !important;
-  color: var(--accent-color) !important;
-  text-decoration: underline;
+.auth-modal .close-button:hover {
+  opacity: 1;
 }
 
-.google-sign-in-button {
-  background-color: #4285F4 !important;
+.auth-modal .toggle-auth-mode {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  font-size: 14px;
+  margin-top: 16px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.auth-modal .toggle-auth-mode:hover {
+  opacity: 1;
+}
+
+.auth-modal .google-sign-in-button {
+  background: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-modal .google-sign-in-button:hover {
+  background: #357abd;
+  transform: translateY(-1px);
+}
+
+.auth-modal .divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-modal .divider::before,
+.auth-modal .divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-modal .divider span {
+  padding: 0 10px;
+  font-size: 14px;
 }
 
 .status-message {
@@ -1803,4 +1874,140 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .message a:visited {
   color: #6c757d;
+}
+
+/* Toast Container */
+.Toastify__toast-container {
+  padding: 0;
+}
+
+/* Individual Toast */
+.Toastify__toast {
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: var(--off-white);
+  font-size: 0.9em;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  margin-bottom: 12px;
+}
+
+/* Close Button */
+.Toastify__close-button {
+  color: var(--off-white);
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1;
+}
+
+/* Progress Bar */
+.Toastify__progress-bar {
+  background: var(--accent-color);
+  height: 2px;
+  opacity: 0.7;
+}
+
+/* Toast Types */
+.Toastify__toast--success {
+  background: rgba(30, 30, 30, 0.95);
+  border-left: 4px solid #4caf50;
+}
+
+.Toastify__toast--error {
+  background: rgba(30, 30, 30, 0.95);
+  border-left: 4px solid #f44336;
+}
+
+.Toastify__toast--warning {
+  background: rgba(30, 30, 30, 0.95);
+  border-left: 4px solid #ff9800;
+}
+
+.Toastify__toast--info {
+  background: rgba(30, 30, 30, 0.95);
+  border-left: 4px solid #2196f3;
+}
+
+.danger-zone {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 82, 82, 0.05);
+}
+
+.danger-zone h3 {
+  color: #ff5252;
+  margin-bottom: 1rem;
+}
+
+.delete-account-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.delete-account-button {
+  background: #ff5252;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.delete-account-button:hover {
+  background: #ff3838;
+}
+
+.delete-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.confirm-delete-button {
+  background: #ff5252;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirm-delete-button:hover:not(:disabled) {
+  background: #ff3838;
+}
+
+.cancel-delete-button {
+  background: transparent;
+  color: var(--off-white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-delete-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.confirm-delete-button:disabled,
+.cancel-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

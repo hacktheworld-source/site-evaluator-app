@@ -91,7 +91,7 @@ const App: React.FC = () => {
     if (rawInput) {
       setRawInput(rawInput);
     }
-    
+
     if (!user) {
       handleError('You must be signed in to evaluate a website.');
       return;
@@ -170,7 +170,7 @@ const App: React.FC = () => {
               setStatusMessage(data.status);
               lastStatus = data.status;
             }
-            
+
             // If we get a completion status, close the connection properly
             if (data.status === 'completed' && data.result) {
               hasResults = true;
@@ -208,7 +208,7 @@ const App: React.FC = () => {
           OPEN: EventSource.OPEN,
           CLOSED: EventSource.CLOSED
         });
-        
+
         // Only handle errors if we haven't received results yet
         if (!hasResults) {
           if (eventSource.readyState === EventSource.CLOSED) {
@@ -279,12 +279,12 @@ const App: React.FC = () => {
 
   const getProfilePicture = (user: User | null) => {
     if (!user) return defaultUserIcon;
-    
+
     if (user.photoURL) {
       const highResURL = user.photoURL.replace('s96-c', 's400-c');
       return `${process.env.REACT_APP_API_URL}/api/proxy-image?url=${encodeURIComponent(highResURL)}`;
     }
-    
+
     return defaultUserIcon;
   };
 
@@ -306,20 +306,20 @@ const App: React.FC = () => {
           <div className={`main-content ${analysisState}`}>
             <div className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}>
               <h1>Olive Site Evaluator</h1>
-              <AnimatedEye 
-                isGenerating={isGenerating} 
-                isWaitingForResponse={isWaitingForResponse} 
+              <AnimatedEye
+                isGenerating={isGenerating}
+                isWaitingForResponse={isWaitingForResponse}
               />
               <p className="app-description">Evaluate any website with just one click. Enter a URL below to get started.</p>
-              <WebsiteInput 
-                onSubmit={handleEvaluation} 
-                isLoading={isLoading} 
+              <WebsiteInput
+                onSubmit={handleEvaluation}
+                isLoading={isLoading}
                 isLoggedIn={!!user}
                 onSignInRequired={handleSignInRequired}
               />
               {error && <p className="error-message">{error}</p>}
             </div>
-            
+
             <div className={`post-analysis-content ${analysisState === 'post' ? 'fade-in' : ''}`}>
               <div className={`analysis-layout ${evaluationResults ? 'has-results' : ''}`}>
                 <div className="metrics-panel">
@@ -327,7 +327,7 @@ const App: React.FC = () => {
                     <>
                       <div className="metrics-header">
                         <h3>Analysis Results</h3>
-                        <MetricsSearch 
+                        <MetricsSearch
                           onSearch={handleMetricsSearch}
                           onResultSelect={scrollToElement}
                         />
@@ -335,22 +335,22 @@ const App: React.FC = () => {
                       <div className="metrics-scrollable">
                         {evaluationResults.screenshot && (
                           <div className="screenshot-preview">
-                            <img 
+                            <img
                               src={`data:image/png;base64,${evaluationResults.screenshot}`}
-                              alt="Website Preview" 
+                              alt="Website Preview"
                               className="preview-image"
                             />
                           </div>
                         )}
                         {Object.entries(evaluationResults).map(([key, value]) => {
                           if (key !== 'screenshot' && key !== 'htmlContent') {
-                            const formattedValue = typeof value === 'object' 
+                            const formattedValue = typeof value === 'object'
                               ? JSON.stringify(value, null, 2)
                               : typeof value === 'number'
-                              ? value < 1 && value > 0
-                                ? `${(value * 100).toFixed(2)}%`
-                                : value.toFixed(2)
-                              : String(value);
+                                ? value < 1 && value > 0
+                                  ? `${(value * 100).toFixed(2)}%`
+                                  : value.toFixed(2)
+                                : String(value);
 
                             return (
                               <div key={key} className="metric-box">
@@ -378,12 +378,12 @@ const App: React.FC = () => {
                 </div>
                 <div className="analysis-main">
                   <div className="compact-header">
-                    <AnimatedEye 
+                    <AnimatedEye
                       isGenerating={isGenerating}
                       isWaitingForResponse={isWaitingForResponse}
                       size="small"
                     />
-                    <WebsiteInput 
+                    <WebsiteInput
                       onSubmit={handleEvaluation}
                       isLoading={isLoading}
                       isLoggedIn={!!user}
@@ -429,14 +429,14 @@ const App: React.FC = () => {
         <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
         {user ? (
           <div className="user-menu-container" ref={userMenuRef}>
-            <div 
+            <div
               className="points-counter"
               onClick={() => { setCurrentPage('points'); setShowUserMenu(false); }}
             >
               {userPoints !== null ? `${userPoints} pts` : 'Loading...'}
             </div>
             <button className="user-menu-button" onClick={() => setShowUserMenu(!showUserMenu)}>
-              <img 
+              <img
                 src={getProfilePicture(user)}
                 alt="User Avatar"
                 className="user-avatar"
@@ -464,7 +464,21 @@ const App: React.FC = () => {
         </main>
       </div>
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
-      <ToastContainer position="top-right" autoClose={5000} />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable={false}
+        pauseOnHover
+        theme="dark"
+        style={{
+          zIndex: 9999
+        }}
+      />
     </div>
   );
 };

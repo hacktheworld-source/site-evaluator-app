@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, User, deleteUser } from 'firebase/auth';
+import { getFirestore, doc, deleteDoc } from 'firebase/firestore';
+import { reportStorage } from './reportStorage';
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -13,5 +14,24 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+export const deleteUserAccount = async (user: User) => {
+  try {
+    // Delete all reports
+    await reportStorage.deleteAllUserReports(user.uid);
+    
+    // Delete user points document
+    const userDocRef = doc(db, 'users', user.uid);
+    await deleteDoc(userDocRef);
+    
+    // Delete the Firebase Auth account
+    await deleteUser(user);
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    throw error;
+  }
+};
