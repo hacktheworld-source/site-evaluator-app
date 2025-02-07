@@ -12,6 +12,8 @@ import { auth } from '../services/firebase';
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
 
+const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])|(\b(?:[a-z\d]+\.){1,2}[a-z]{2,}\b)/gi;
+
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -62,8 +64,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
+  const roundMetrics = (metrics: any) => {
+    if (!metrics) return {};
+    const rounded: any = {};
+    for (const [key, value] of Object.entries(metrics)) {
+      if (typeof value === 'number') {
+        rounded[key] = Number(value.toFixed(2));
+      } else if (typeof value === 'object' && value !== null) {
+        rounded[key] = roundMetrics(value);
+      } else {
+        rounded[key] = value;
+      }
+    }
+    return rounded;
+  };
+
   useEffect(() => {
     if (evaluationResults && !messages.length) {
+      setIsThinking(true);
       startVisionAnalysis();
     }
   }, [evaluationResults]);
@@ -118,7 +136,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const { score, analysis } = response.data;
 
         const initialMessage: Message = {
-          role: 'assistant',
+          role: 'assistant' as const,
           content: analysis,
           screenshot: evaluationResults.screenshot,
           phase: 'Vision',
@@ -130,12 +148,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const newPhaseScores = { ...phaseScores, Vision: score };
         setPhaseScores(newPhaseScores);
         updateOverallScore(newPhaseScores);
+
+        // Turn off the thinking indicator now that the vision analysis is complete
+        setIsThinking(false);
       } catch (error) {
         console.error('error starting vision analysis:', error);
         addMessage({
-          role: 'assistant',
+          role: 'assistant' as const,
           content: 'an error occurred while starting the vision analysis. please try again.'
         });
+        setIsThinking(false);
       }
     }
   };
@@ -223,7 +245,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSendMessage = async () => {
     if (userInput.trim()) {
       const newUserMessage: Message = { 
-        role: 'user', 
+        role: 'user' as const, 
         content: userInput.trim()
       };
       addMessage(newUserMessage);
@@ -241,7 +263,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
 
         const newAssistantMessage: Message = {
-          role: 'assistant',
+          role: 'assistant' as const,
           content: response.data.reply
         };
 
@@ -250,7 +272,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } catch (error) {
         console.error('error fetching ai response:', error);
         addMessage({
-          role: 'assistant',
+          role: 'assistant' as const,
           content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
         });
         setIsMessageLoading(false);
@@ -268,127 +290,134 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       try {
         const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
-          url: websiteUrl,
-          phase: nextPhase,
-          metrics: phaseMetrics,
-          history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
-          screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
-        });
-
-        console.log('Received response:', response.data);
-
-        const { score, analysis, competitorScreenshots } = response.data;
-
-        const newMessage: Message = {
-          role: 'assistant',
-          content: analysis,
-          metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
-          screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
-          phase: nextPhase,
-          isLoading: false,
-          competitorScreenshots: competitorScreenshots || undefined
-        };
-
-        console.log('New message:', newMessage);
-
-        setIsThinking(false);
-        setIsMessageLoading(false);
-        addMessage(newMessage);
 
         if (nextPhase === 'Recommendations') {
-          fetchScreenshots(newMessage);
-        }
+          // Send the POST request to initialize the analysis
+          const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+            url: websiteUrl,
+            phase: nextPhase,
+            metrics: phaseMetrics,
+            history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
+            screenshot: undefined
+          });
 
-        if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
-          const newPhaseScores = { ...phaseScores, [nextPhase]: score };
-          setPhaseScores(newPhaseScores);
-          updateOverallScore(newPhaseScores);
+          // Create EventSource for SSE using the job ID from the response
+          const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/analyze/stream/${response.data.jobId}`);
+
+          eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'analysis') {
+              const newMessage: Message = {
+                role: 'assistant' as const,
+                content: data.analysis,
+                phase: 'Recommendations',
+                competitorScreenshots: data.competitorScreenshots
+              };
+              setIsThinking(false);
+              setIsMessageLoading(false);
+              addMessage(newMessage);
+            } else if (data.type === 'screenshot') {
+              setMessages(prevMessages => 
+                prevMessages.map(msg => {
+                  if (msg.phase === 'Recommendations') {
+                    const updatedScreenshots = {
+                      ...msg.competitorScreenshots,
+                      [data.url]: {
+                        status: 'loaded',
+                        data: data.screenshot
+                      }
+                    };
+                    return { ...msg, competitorScreenshots: updatedScreenshots };
+                  }
+                  return msg;
+                })
+              );
+            } else if (data.type === 'screenshot_error') {
+              setMessages(prevMessages => 
+                prevMessages.map(msg => {
+                  if (msg.phase === 'Recommendations') {
+                    const updatedScreenshots = {
+                      ...msg.competitorScreenshots,
+                      [data.url]: {
+                        status: 'error',
+                        error: data.error
+                      }
+                    };
+                    return { ...msg, competitorScreenshots: updatedScreenshots };
+                  }
+                  return msg;
+                })
+              );
+            } else if (data.type === 'complete') {
+              eventSource.close();
+            } else if (data.type === 'error') {
+              console.error('Error in recommendations phase:', data.error);
+              eventSource.close();
+              setIsThinking(false);
+              setIsMessageLoading(false);
+              addMessage({
+                role: 'assistant' as const,
+                content: `An error occurred during the recommendations phase: ${data.error}`,
+                phase: 'Recommendations'
+              });
+            }
+          };
+
+          eventSource.onerror = (error) => {
+            console.error('EventSource error:', error);
+            eventSource.close();
+            setIsThinking(false);
+            setIsMessageLoading(false);
+            addMessage({
+              role: 'assistant' as const,
+              content: 'An error occurred during the recommendations phase. Please try again.',
+              phase: 'Recommendations'
+            });
+          };
+        } else {
+          // Handle non-recommendations phases as before
+          const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
+            url: websiteUrl,
+            phase: nextPhase,
+            metrics: phaseMetrics,
+            history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
+            screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
+          });
+
+          const { score, analysis } = response.data;
+
+          const newMessage: Message = {
+            role: 'assistant' as const,
+            content: analysis,
+            metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
+            screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
+            phase: nextPhase,
+            isLoading: false
+          };
+
+          setIsThinking(false);
+          setIsMessageLoading(false);
+          addMessage(newMessage);
+
+          if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
+            const newPhaseScores = { ...phaseScores, [nextPhase]: score };
+            setPhaseScores(newPhaseScores);
+            updateOverallScore(newPhaseScores);
+          }
         }
       } catch (error) {
         setIsThinking(false);
         setIsMessageLoading(false);
-        console.error(`error starting ${nextPhase} analysis:`, error);
+        console.error(`Error starting ${nextPhase} analysis:`, error);
         addMessage({
-          role: 'assistant',
-          content: `an error occurred while starting the ${nextPhase} analysis. please try again.`,
+          role: 'assistant' as const,
+          content: `An error occurred while starting the ${nextPhase} analysis. Please try again.`,
           isLoading: false
         });
       }
     } else {
       setCurrentPhase(null); // evaluation complete
-    }
-  };
-
-  const fetchScreenshots = async (message: Message) => {
-    try {
-      if (!message.content || typeof message.content !== 'string') {
-        console.error('Invalid message content:', message.content);
-        return;
-      }
-
-      const urlRegex = /(?:\d\.|-)?\s*(https?:\/\/[^\s,)"']+)/gi;
-      const urls: string[] = [];
-      let match;
-      
-      while ((match = urlRegex.exec(message.content)) !== null) {
-        const url = match[1].trim();
-        try {
-          new URL(url);
-          urls.push(url);
-        } catch (error) {
-          console.log(`Skipping invalid URL: ${url}`);
-        }
-      }
-
-      // Set initial loading state for all screenshots at once
-      const initialScreenshots: Message['competitorScreenshots'] = {};
-      urls.forEach(url => {
-        initialScreenshots[url] = { status: 'loading' };
-      });
-
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.phase === 'Recommendations' && msg.content === message.content
-            ? { ...msg, competitorScreenshots: initialScreenshots }
-            : msg
-        )
-      );
-
-      // Fetch screenshots
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/capture-screenshots`, {
-        content: message.content
-      });
-
-      // Update all screenshots in a single state update
-      const { competitorScreenshots } = response.data;
-
-      setMessages(prevMessages => {
-        const updatedMessages = prevMessages.map(msg => {
-          if (msg.phase === 'Recommendations' && msg.content === message.content) {
-            const updatedScreenshots: Message['competitorScreenshots'] = {};
-            
-            Object.entries(competitorScreenshots).forEach(([url, screenshot]) => {
-              updatedScreenshots[url] = {
-                status: screenshot ? 'loaded' as const : 'error' as const,
-                data: screenshot as string
-              };
-            });
-
-            return {
-              ...msg,
-              competitorScreenshots: updatedScreenshots
-            } as Message;
-          }
-          return msg;
-        });
-        
-        return updatedMessages;
-      });
-    } catch (error) {
-      // Silent error handling - just log to console
-      console.error('Error fetching screenshots:', error);
-      // Don't update UI or show error state
     }
   };
 
@@ -513,6 +542,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
             <ReactMarkdown components={{
+              a: ({ node, ...props }) => (
+                <a 
+                  {...props} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                />
+              ),
+              p: ({ children }) => <p className="message-paragraph">{children}</p>,
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
@@ -595,18 +635,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const addMessage = useCallback((newMessage: Message) => {
     setMessages(prevMessages => {
-      // Initialize new messages with collapsed metrics
-      const messageWithCollapsed = {
+      const processedMessage = {
         ...newMessage,
+        content: convertUrlsToMarkdown(newMessage.content),
         metricsCollapsed: true
       };
-      const updatedMessages = [...prevMessages, messageWithCollapsed];
+      const updatedMessages = [...prevMessages, processedMessage];
       if (updatedMessages.length > MAX_HISTORY_LENGTH) {
         return updatedMessages.slice(-MAX_HISTORY_LENGTH);
       }
       return updatedMessages;
     });
   }, []);
+
+  const convertUrlsToMarkdown = (text: string): string => {
+    return text.replace(URL_REGEX, (url) => {
+      // Add http:// if the URL doesn't start with a protocol
+      const fullUrl = url.startsWith('http') ? url : `http://${url}`;
+      return `[${url}](${fullUrl})`;
+    });
+  };
 
   const extractUrls = (content: string): string[] => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
