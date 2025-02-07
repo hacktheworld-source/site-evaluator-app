@@ -116,6 +116,45 @@ const ProfilePage: React.FC = () => {
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Points:</strong> {userPoints !== null ? userPoints : 'Loading...'}</p>
           </div>
+
+          <div className="danger-zone">
+            <h3>Danger Zone</h3>
+            <div className="delete-account-section">
+              <p>Delete your account and all associated data. This action cannot be undone.</p>
+              {!showDeleteConfirm ? (
+                <button 
+                  className="delete-account-button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete Account
+                </button>
+              ) : (
+                <div className="delete-confirmation">
+                  <p>Are you sure you want to delete your account? This cannot be undone.</p>
+                  <div className="confirmation-buttons">
+                    <button
+                      className="confirm-delete-button"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeletingAccount}
+                    >
+                      {isDeletingAccount ? (
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                      ) : (
+                        'Yes, Delete My Account'
+                      )}
+                    </button>
+                    <button
+                      className="cancel-delete-button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeletingAccount}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         
         <div className="reports-column">
@@ -160,45 +199,6 @@ const ProfilePage: React.FC = () => {
           ) : (
             <p className="no-reports">No reports generated yet.</p>
           )}
-        </div>
-
-        <div className="danger-zone">
-          <h3>Danger Zone</h3>
-          <div className="delete-account-section">
-            <p>Delete your account and all associated data. This action cannot be undone.</p>
-            {!showDeleteConfirm ? (
-              <button 
-                className="delete-account-button"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete Account
-              </button>
-            ) : (
-              <div className="delete-confirmation">
-                <p>Are you sure you want to delete your account? This cannot be undone.</p>
-                <div className="confirmation-buttons">
-                  <button
-                    className="confirm-delete-button"
-                    onClick={handleDeleteAccount}
-                    disabled={isDeletingAccount}
-                  >
-                    {isDeletingAccount ? (
-                      <FontAwesomeIcon icon={faSpinner} spin />
-                    ) : (
-                      'Yes, Delete My Account'
-                    )}
-                  </button>
-                  <button
-                    className="cancel-delete-button"
-                    onClick={() => setShowDeleteConfirm(false)}
-                    disabled={isDeletingAccount}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

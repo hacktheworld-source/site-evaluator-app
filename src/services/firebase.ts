@@ -19,10 +19,7 @@ export const db = getFirestore(app);
 
 export const deleteUserAccount = async (user: User) => {
   try {
-    // Delete all reports
-    await reportStorage.deleteAllUserReports(user.uid);
-    
-    // Delete user points document
+    // Delete user document and all subcollections
     const userDocRef = doc(db, 'users', user.uid);
     await deleteDoc(userDocRef);
     
