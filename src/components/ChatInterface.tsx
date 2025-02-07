@@ -12,8 +12,6 @@ import { auth } from '../services/firebase';
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
 
-const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])|(\b(?:[a-z\d]+\.){1,2}[a-z]{2,}\b)/gi;
-
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -66,7 +64,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     if (evaluationResults && !messages.length) {
-      setIsThinking(true); // Add this line
       startVisionAnalysis();
     }
   }, [evaluationResults]);
@@ -133,15 +130,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const newPhaseScores = { ...phaseScores, Vision: score };
         setPhaseScores(newPhaseScores);
         updateOverallScore(newPhaseScores);
-
-        setIsThinking(false);
       } catch (error) {
         console.error('error starting vision analysis:', error);
         addMessage({
           role: 'assistant',
           content: 'an error occurred while starting the vision analysis. please try again.'
         });
-        setIsThinking(false);
       }
     }
   };
@@ -273,182 +267,53 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setIsMessageLoading(true);
 
       try {
-        const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' 
-          ? {} 
-          : getPhaseMetrics(nextPhase, evaluationResults);
-
+        const phaseMetrics = nextPhase === 'Overall' || nextPhase === 'Recommendations' ? {} : getPhaseMetrics(nextPhase, evaluationResults);
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
           url: websiteUrl,
           phase: nextPhase,
           metrics: phaseMetrics,
           history: JSON.stringify(messages.slice(-MAX_HISTORY_LENGTH).map(({ role, content }) => ({ role, content }))),
-          screenshot: evaluationResults.screenshot
+          screenshot: nextPhase === 'Vision' ? evaluationResults.screenshot : undefined
         });
 
-        if (nextPhase === 'Recommendations') {
-          setIsThinking(true);
-          setIsMessageLoading(true);
+        console.log('Received response:', response.data);
 
-          try {
-            // Log the response to verify we're getting the job ID
-            console.log('Recommendations response:', response.data);
+        const { score, analysis, competitorScreenshots } = response.data;
 
-            if (!response.data.jobId) {
-              throw new Error('No job ID received from server');
-            }
+        const newMessage: Message = {
+          role: 'assistant',
+          content: analysis,
+          metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
+          screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
+          phase: nextPhase,
+          isLoading: false,
+          competitorScreenshots: competitorScreenshots || undefined
+        };
 
-            // Create initial message with loading state
-            const initialMessage: Message = {
-              role: 'assistant',
-              content: 'analyzing competitors...',
-              phase: nextPhase,
-              isLoading: true,
-              competitorScreenshots: {}
-            };
-            setMessages(prev => [...prev, initialMessage]);
+        console.log('New message:', newMessage);
 
-            // Set up event source for progress updates
-            const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/job-progress/${response.data.jobId}`);
-            
-            eventSource.onmessage = (event) => {
-              console.log('Progress event received:', event.data);
-              const data = JSON.parse(event.data);
-              
-              if (data.status === 'analysis_complete') {
-                setIsThinking(false);
-                setIsMessageLoading(false);
-                
-                // Update the message with analysis and initial placeholders
-                setMessages(prevMessages => {
-                  const lastMessageIndex = prevMessages.length - 1;
-                  const updatedMessages = [...prevMessages];
-                  const lastMessage = { ...updatedMessages[lastMessageIndex] };
-                  
-                  lastMessage.content = data.analysis;
-                  lastMessage.competitorScreenshots = data.competitorScreenshots;
-                  lastMessage.isLoading = false;
-                  
-                  updatedMessages[lastMessageIndex] = lastMessage;
-                  return updatedMessages;
-                });
-              } else if (data.status === 'screenshot_ready') {
-                setMessages(prevMessages => {
-                  const lastMessageIndex = prevMessages.length - 1;
-                  const updatedMessages = [...prevMessages];
-                  const lastMessage = { ...updatedMessages[lastMessageIndex] };
-                  
-                  const screenshots = lastMessage.competitorScreenshots || {};
-                  screenshots[data.url] = {
-                    status: 'loaded',
-                    data: data.screenshot
-                  };
-                  
-                  lastMessage.competitorScreenshots = screenshots;
-                  updatedMessages[lastMessageIndex] = lastMessage;
-                  return updatedMessages;
-                });
-              } else if (data.status === 'screenshot_error') {
-                setMessages(prevMessages => {
-                  const lastMessageIndex = prevMessages.length - 1;
-                  const updatedMessages = [...prevMessages];
-                  const lastMessage = { ...updatedMessages[lastMessageIndex] };
-                  
-                  const screenshots = lastMessage.competitorScreenshots || {};
-                  screenshots[data.url] = {
-                    status: 'error',
-                    error: data.error
-                  };
-                  
-                  lastMessage.competitorScreenshots = screenshots;
-                  updatedMessages[lastMessageIndex] = lastMessage;
-                  return updatedMessages;
-                });
-              } else if (data.status === 'error') {
-                console.error('Job error:', data.error);
-                eventSource.close();
-                setIsThinking(false);
-                setIsMessageLoading(false);
-                
-                setMessages(prevMessages => {
-                  const lastMessageIndex = prevMessages.length - 1;
-                  const updatedMessages = [...prevMessages];
-                  const lastMessage = { ...updatedMessages[lastMessageIndex] };
-                  
-                  lastMessage.content = `error: ${data.error}`;
-                  lastMessage.isLoading = false;
-                  
-                  updatedMessages[lastMessageIndex] = lastMessage;
-                  return updatedMessages;
-                });
-              } else if (data.status === 'complete') {
-                eventSource.close();
-              }
-            };
-
-            eventSource.onerror = () => {
-              console.error('EventSource error');
-              eventSource.close();
-              setIsThinking(false);
-              setIsMessageLoading(false);
-              
-              setMessages(prevMessages => {
-                const lastMessageIndex = prevMessages.length - 1;
-                const updatedMessages = [...prevMessages];
-                const lastMessage = { ...updatedMessages[lastMessageIndex] };
-                
-                lastMessage.content = 'error: failed to get recommendations. please try again.';
-                lastMessage.isLoading = false;
-                
-                updatedMessages[lastMessageIndex] = lastMessage;
-                return updatedMessages;
-              });
-            };
-          } catch (error) {
-            console.error('Error setting up event source:', error);
-            setIsThinking(false);
-            setIsMessageLoading(false);
-            
-            const errorMessage: Message = {
-              role: 'assistant',
-              content: 'error: failed to get recommendations. please try again.',
-              phase: nextPhase
-            };
-            setMessages(prev => [...prev, errorMessage]);
-          }
-        } else {
-          // Handle non-recommendations phases
-          const { score, analysis } = response.data;
-
-          const newMessage: Message = {
-            role: 'assistant',
-            content: analysis,
-            metrics: nextPhase === 'Overall' ? undefined : phaseMetrics,
-            screenshot: nextPhase === 'Overall' ? undefined : evaluationResults.screenshot,
-            phase: nextPhase,
-            isLoading: false
-          };
-
-          setIsThinking(false);
-          setIsMessageLoading(false);
-          setMessages(prev => [...prev, newMessage]);
-
-          if (nextPhase !== 'Overall' && score !== null) {
-            const newPhaseScores = { ...phaseScores, [nextPhase]: score };
-            setPhaseScores(newPhaseScores);
-            updateOverallScore(newPhaseScores);
-          }
-        }
-      } catch (error) {
-        console.error(`Error starting ${nextPhase} analysis:`, error);
         setIsThinking(false);
         setIsMessageLoading(false);
-        
-        const errorMessage: Message = {
+        addMessage(newMessage);
+
+        if (nextPhase === 'Recommendations') {
+          fetchScreenshots(newMessage);
+        }
+
+        if (nextPhase !== 'Overall' && nextPhase !== 'Recommendations' && score !== null) {
+          const newPhaseScores = { ...phaseScores, [nextPhase]: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
+        }
+      } catch (error) {
+        setIsThinking(false);
+        setIsMessageLoading(false);
+        console.error(`error starting ${nextPhase} analysis:`, error);
+        addMessage({
           role: 'assistant',
           content: `an error occurred while starting the ${nextPhase} analysis. please try again.`,
-          phase: nextPhase
-        };
-        setMessages(prev => [...prev, errorMessage]);
+          isLoading: false
+        });
       }
     } else {
       setCurrentPhase(null); // evaluation complete
@@ -648,22 +513,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
             <ReactMarkdown components={{
-              a: ({ node, ...props }) => (
-                <a 
-                  {...props} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    color: 'var(--accent-color)',
-                    textDecoration: 'underline',
-                    cursor: 'pointer'
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    //window.open(props.href, '_blank');
-                  }}
-                />
-              ),
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
@@ -723,7 +572,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </li>
                 );
               },
-              p: ({ children }) => <p className="message-paragraph">{children}</p>
             }}>
               {DOMPurify.sanitize(message.content)}
             </ReactMarkdown>
@@ -747,26 +595,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const addMessage = useCallback((newMessage: Message) => {
     setMessages(prevMessages => {
-      const processedMessage = {
+      // Initialize new messages with collapsed metrics
+      const messageWithCollapsed = {
         ...newMessage,
-        content: convertUrlsToMarkdown(newMessage.content),
         metricsCollapsed: true
       };
-      const updatedMessages = [...prevMessages, processedMessage];
+      const updatedMessages = [...prevMessages, messageWithCollapsed];
       if (updatedMessages.length > MAX_HISTORY_LENGTH) {
         return updatedMessages.slice(-MAX_HISTORY_LENGTH);
       }
       return updatedMessages;
     });
   }, []);
-
-  const convertUrlsToMarkdown = (text: string): string => {
-    return text.replace(URL_REGEX, (url) => {
-      // Add http:// if the URL doesn't start with a protocol
-      const fullUrl = url.startsWith('http') ? url : `http://${url}`;
-      return `[${url}](${fullUrl})`;
-    });
-  };
 
   const extractUrls = (content: string): string[] => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
