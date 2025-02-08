@@ -87,6 +87,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [evaluationResults]);
 
   useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.phase === 'Recommendations') return;
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -530,6 +532,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div 
         className={`message ${message.role} fade-in`}
         data-just-added={index === messages.length - 1 ? 'true' : 'false'}
+        data-phase={message.phase || ''}
       >
         {message.role === 'assistant' && message.metrics && message.phase && 
          message.phase !== 'Overall' && message.phase !== 'Recommendations' && (
@@ -728,6 +731,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           certificateExpiry: evaluationResults.security?.certificateExpiry,
           mixedContent: evaluationResults.security?.mixedContent,
           vulnerabilities: evaluationResults.security?.vulnerabilities
+        },
+        formFunctionality: {
+          totalForms: evaluationResults.formFunctionality?.totalForms || 0,
+          formsWithSubmitButton: evaluationResults.formFunctionality?.formsWithSubmitButton || 0,
+          interactiveElementsCount: evaluationResults.formFunctionality?.interactiveElementsCount || 0,
+          inputFieldsCount: evaluationResults.formFunctionality?.inputFieldsCount || 0,
+          javascriptEnabled: evaluationResults.formFunctionality?.javascriptEnabled || false
+        },
+        brokenLinks: {
+          totalLinks: evaluationResults.brokenLinks?.totalLinks || 0,
+          brokenLinks: evaluationResults.brokenLinks?.brokenLinks || 0
+        },
+        responsiveness: {
+          isResponsive: evaluationResults.responsiveness?.isResponsive || false,
+          viewportWidth: evaluationResults.responsiveness?.viewportWidth || 0,
+          pageWidth: evaluationResults.responsiveness?.pageWidth || 0
+        },
+        bestPractices: {
+          semanticUsage: evaluationResults.bestPractices?.semanticUsage || {},
+          optimizedImages: evaluationResults.bestPractices?.optimizedImages || 0,
+          totalImages: evaluationResults.bestPractices?.totalImages || 0
         }
       };
 
@@ -762,10 +786,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (messages.length > 0) {
       const lastMessage = document.querySelector('.messages-container > div:last-child');
       const isNewMessage = lastMessage?.getAttribute('data-just-added') === 'true';
-      
-      if (lastMessage && isNewMessage) {
+      const isRecommendations = messages[messages.length - 1]?.phase === 'Recommendations';
+
+      if (lastMessage && isNewMessage && !isRecommendations) {
         lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Remove the flag after scrolling
         lastMessage.removeAttribute('data-just-added');
       }
     }

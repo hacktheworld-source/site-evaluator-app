@@ -51,6 +51,27 @@ export interface StoredReport {
       };
       tlsVersion: string;
     };
+    formFunctionality: {
+      totalForms: number;
+      formsWithSubmitButton: number;
+      interactiveElementsCount: number;
+      inputFieldsCount: number;
+      javascriptEnabled: boolean;
+    };
+    brokenLinks: {
+      totalLinks: number;
+      brokenLinks: number;
+    };
+    responsiveness: {
+      isResponsive: boolean;
+      viewportWidth: number;
+      pageWidth: number;
+    };
+    bestPractices: {
+      semanticUsage: { [key: string]: number };
+      optimizedImages: number;
+      totalImages: number;
+    };
   };
 }
 
@@ -97,6 +118,27 @@ class ReportStorageService {
             securityHeaders: reportData.metrics.security.securityHeaders,
             tlsVersion: reportData.metrics.security.tlsVersion,
           },
+          formFunctionality: {
+            totalForms: reportData.metrics.formFunctionality.totalForms,
+            formsWithSubmitButton: reportData.metrics.formFunctionality.formsWithSubmitButton,
+            interactiveElementsCount: reportData.metrics.formFunctionality.interactiveElementsCount,
+            inputFieldsCount: reportData.metrics.formFunctionality.inputFieldsCount,
+            javascriptEnabled: reportData.metrics.formFunctionality.javascriptEnabled
+          },
+          brokenLinks: {
+            totalLinks: reportData.metrics.brokenLinks.totalLinks,
+            brokenLinks: reportData.metrics.brokenLinks.brokenLinks
+          },
+          responsiveness: {
+            isResponsive: reportData.metrics.responsiveness.isResponsive,
+            viewportWidth: reportData.metrics.responsiveness.viewportWidth,
+            pageWidth: reportData.metrics.responsiveness.pageWidth
+          },
+          bestPractices: {
+            semanticUsage: reportData.metrics.bestPractices.semanticUsage,
+            optimizedImages: reportData.metrics.bestPractices.optimizedImages,
+            totalImages: reportData.metrics.bestPractices.totalImages
+          }
         },
         createdAt: Timestamp.fromDate(new Date())
       };
@@ -161,6 +203,27 @@ class ReportStorageService {
               securityHeaders: data.essentialMetrics?.security?.securityHeaders,
               tlsVersion: data.essentialMetrics?.security?.tlsVersion,
             },
+            formFunctionality: {
+              totalForms: data.essentialMetrics?.formFunctionality?.totalForms,
+              formsWithSubmitButton: data.essentialMetrics?.formFunctionality?.formsWithSubmitButton,
+              interactiveElementsCount: data.essentialMetrics?.formFunctionality?.interactiveElementsCount,
+              inputFieldsCount: data.essentialMetrics?.formFunctionality?.inputFieldsCount,
+              javascriptEnabled: data.essentialMetrics?.formFunctionality?.javascriptEnabled
+            },
+            brokenLinks: {
+              totalLinks: data.essentialMetrics?.brokenLinks?.totalLinks,
+              brokenLinks: data.essentialMetrics?.brokenLinks?.brokenLinks
+            },
+            responsiveness: {
+              isResponsive: data.essentialMetrics?.responsiveness?.isResponsive,
+              viewportWidth: data.essentialMetrics?.responsiveness?.viewportWidth,
+              pageWidth: data.essentialMetrics?.responsiveness?.pageWidth
+            },
+            bestPractices: {
+              semanticUsage: data.essentialMetrics?.bestPractices?.semanticUsage,
+              optimizedImages: data.essentialMetrics?.bestPractices?.optimizedImages,
+              totalImages: data.essentialMetrics?.bestPractices?.totalImages
+            }
           },
         };
         return report;
@@ -207,6 +270,31 @@ class ReportStorageService {
             mixedContent: undefined,
             vulnerabilities: undefined,
           },
+          formFunctionality: {
+            ...report.essentialMetrics.formFunctionality,
+            totalForms: 0,
+            formsWithSubmitButton: 0,
+            interactiveElementsCount: 0,
+            inputFieldsCount: 0,
+            javascriptEnabled: false
+          },
+          brokenLinks: {
+            ...report.essentialMetrics.brokenLinks,
+            totalLinks: 0,
+            brokenLinks: 0
+          },
+          responsiveness: {
+            ...report.essentialMetrics.responsiveness,
+            isResponsive: false,
+            viewportWidth: 0,
+            pageWidth: 0
+          },
+          bestPractices: {
+            ...report.essentialMetrics.bestPractices,
+            semanticUsage: {},
+            optimizedImages: 0,
+            totalImages: 0
+          }
         }
       };
 

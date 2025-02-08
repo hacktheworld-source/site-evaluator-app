@@ -101,7 +101,6 @@ const ProfilePage: React.FC = () => {
     <div className="profile-page">
       <div className="profile-layout">
         <div className="profile-column">
-          <h2>User Profile</h2>
           <div className="profile-info">
             <img 
               src={user.photoURL || defaultUserIcon} 

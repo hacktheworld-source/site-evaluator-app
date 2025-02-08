@@ -245,11 +245,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .profile-page {
-  max-width: 1200px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
   padding: 40px 20px;
-  min-height: calc(100vh - var(--header-height));
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .profile-layout {
@@ -257,7 +258,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   grid-template-columns: 350px 1fr;
   gap: 40px;
   align-items: start;
-  min-height: calc(100vh - var(--header-height) - 80px); /* Account for padding */
+  min-height: calc(100vh - var(--header-height) - 80px);
 }
 
 .profile-column {
@@ -265,36 +266,33 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-height: calc(100vh - var(--header-height) - 80px);
-  overflow-y: auto;
-  padding-right: 10px; /* Add space for scrollbar */
+  padding-right: 10px;
 }
 
 .profile-info {
-  flex-shrink: 0; /* Prevent profile info from shrinking */
+  flex-shrink: 0;
 }
 
 .danger-zone {
-  flex-shrink: 0; /* Prevent danger zone from shrinking */
-  margin-bottom: 20px; /* Add space at bottom */
+  flex-shrink: 0;
+  margin-bottom: 20px;
 }
 
-/* Add custom scrollbar styling */
-.profile-column::-webkit-scrollbar {
-  width: 8px;
+.profile-page::-webkit-scrollbar {
+  width: 6px;
 }
 
-.profile-column::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+.profile-page::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
-.profile-column::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+.profile-page::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 3px;
 }
 
-.profile-column::-webkit-scrollbar-thumb:hover {
+.profile-page::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
@@ -496,6 +494,30 @@ input[type="text"]:focus, input[type="number"]:focus {
   overflow-y: auto;
   padding: 20px;
   box-sizing: border-box;
+}
+
+.points-management-page::-webkit-scrollbar {
+  width: 6px;
+}
+
+.points-management-page::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.points-management-page::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 3px;
+}
+
+.points-management-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* For Firefox support */
+.points-management-page {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) rgba(255, 255, 255, 0.1);
 }
 
 .points-header {
@@ -1659,7 +1681,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  /*border-right: 1px solid rgba(255, 255, 255, 0.1);*/
   width: 0;
   opacity: 0;
   visibility: hidden;
@@ -1970,7 +1991,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .floating-action-container {
   position: absolute;
-  bottom: 100px; /* Position it above the chat input */
+  bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;

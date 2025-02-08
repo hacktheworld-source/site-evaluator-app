@@ -77,7 +77,75 @@ export interface ReportData {
         count: number;
       }[];
     };
+    formFunctionality: {
+      totalForms: number;
+      formsWithSubmitButton: number;
+      interactiveElementsCount: number;
+      inputFieldsCount: number;
+      javascriptEnabled: boolean;
+    };
+    brokenLinks: {
+      totalLinks: number;
+      brokenLinks: number;
+    };
+    responsiveness: {
+      isResponsive: boolean;
+      viewportWidth: number;
+      pageWidth: number;
+    };
+    bestPractices: {
+      semanticUsage: { [key: string]: number };
+      optimizedImages: number;
+      totalImages: number;
+    };
   };
+}
+
+interface ReportResponse {
+  executiveSummary: {
+    keyStrengths: string[];
+    criticalIssues: string[];
+    overallAssessment: string;
+    coreWebVitalsAssessment: string;
+  };
+  technicalAnalysis: {
+    performance: {
+      insights: string[];
+      recommendations: string[];
+      coreWebVitals: {
+        assessment: string;
+        details: string[];
+      };
+    };
+    accessibility: {
+      insights: string[];
+      recommendations: string[];
+      complianceLevel: string;
+      keyIssues: string[];
+    };
+    seo: {
+      insights: string[];
+      recommendations: string[];
+      metaTagAnalysis: string[];
+      structureAnalysis: string[];
+    };
+    bestPractices: {
+      insights: string[];
+      recommendations: string[];
+      securityAssessment: string[];
+      semanticAnalysis: string[];
+    };
+  };
+  recommendations: {
+    critical: string[];
+    important: string[];
+    optional: string[];
+  };
+}
+
+interface Vulnerability {
+  severity: string;
+  count: number;
 }
 
 class ReportGenerator {
@@ -153,6 +221,131 @@ class ReportGenerator {
       ['ARIA Usage', metrics.ariaAttributesCount ? `${metrics.ariaAttributesCount} attributes` : 'Not Found', metrics.ariaAttributesCount > 0 ? 'Present' : 'Missing'],
       ['Keyboard Navigation', metrics.keyboardNavigable ? 'Supported' : 'Not Supported', metrics.keyboardNavigable ? 'Good' : 'Poor']
     ];
+  }
+
+  private createTechnicalDetailsSection(metrics: any): Content {
+    return {
+      stack: [
+        {
+          text: 'Complete Metrics Reference',
+          style: 'sectionHeader',
+          margin: [0, 0, 0, 10]
+        },
+        {
+          text: 'This section contains all raw metrics collected during the analysis.',
+          style: 'thresholdInfo',
+          margin: [0, 0, 0, 20]
+        },
+
+        // Performance Metrics (Extended)
+        {
+          text: 'Performance Metrics (Extended)',
+          style: 'subheader',
+          margin: [0, 0, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', '*'],
+            body: [
+              [{ text: 'Metric', style: 'tableHeader' }, { text: 'Value', style: 'tableHeader' }],
+              ['Load Time', `${metrics.performance?.loadTime?.toFixed(2) || 'N/A'} ms`],
+              ['DOM Content Loaded', `${metrics.performance?.domContentLoaded?.toFixed(2) || 'N/A'} ms`],
+              ['First Paint', `${metrics.performance?.firstPaint?.toFixed(2) || 'N/A'} ms`],
+              ['First Contentful Paint', `${metrics.performance?.firstContentfulPaint?.toFixed(2) || 'N/A'} ms`],
+              ['Largest Contentful Paint', `${metrics.performance?.largestContentfulPaint?.toFixed(2) || 'N/A'} ms`],
+              ['Time to Interactive', `${metrics.performance?.timeToInteractive?.toFixed(2) || 'N/A'} ms`],
+              ['Total Blocking Time', `${metrics.performance?.totalBlockingTime?.toFixed(2) || 'N/A'} ms`],
+              ['Speed Index', `${metrics.performance?.speedIndex?.toFixed(2) || 'N/A'}`],
+              ['Cumulative Layout Shift', `${metrics.performance?.cumulativeLayoutShift?.toFixed(3) || 'N/A'}`],
+              ['Time to First Byte', `${metrics.performance?.ttfb?.toFixed(2) || 'N/A'} ms`],
+              ['Estimated FID', `${metrics.performance?.estimatedFid?.toFixed(2) || 'N/A'} ms`],
+              ['DOM Elements', metrics.performance?.domElements || 'N/A'],
+              ['Page Size', metrics.performance?.pageSize ? `${(metrics.performance.pageSize / 1024).toFixed(2)} KB` : 'N/A'],
+              ['Total Requests', metrics.performance?.requests || 'N/A']
+            ]
+          },
+          margin: [0, 0, 0, 20]
+        },
+
+        // Lighthouse Scores (Detailed)
+        {
+          text: 'Lighthouse Scores (Detailed)',
+          style: 'subheader',
+          margin: [0, 20, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', '*'],
+            body: [
+              [{ text: 'Category', style: 'tableHeader' }, { text: 'Score', style: 'tableHeader' }],
+              ['Performance', `${(metrics.lighthouse?.performance * 100).toFixed(1) || 'N/A'}%`],
+              ['Accessibility', `${(metrics.lighthouse?.accessibility * 100).toFixed(1) || 'N/A'}%`],
+              ['Best Practices', `${(metrics.lighthouse?.bestPractices * 100).toFixed(1) || 'N/A'}%`],
+              ['SEO', `${(metrics.lighthouse?.seo * 100).toFixed(1) || 'N/A'}%`],
+              ['PWA', metrics.lighthouse?.pwa ? `${(metrics.lighthouse.pwa * 100).toFixed(1)}%` : 'N/A']
+            ]
+          },
+          margin: [0, 0, 0, 20]
+        },
+
+        // Security Details (Extended)
+        {
+          text: 'Security Details (Extended)',
+          style: 'subheader',
+          margin: [0, 20, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', '*'],
+            body: [
+              [{ text: 'Feature', style: 'tableHeader' }, { text: 'Status', style: 'tableHeader' }],
+              ['Protocol', metrics.security?.protocol || 'N/A'],
+              ['TLS Version', metrics.security?.tlsVersion || 'N/A'],
+              ['Certificate Expiry', metrics.security?.certificateExpiry ? new Date(metrics.security.certificateExpiry).toLocaleDateString() : 'N/A'],
+              ['Mixed Content', metrics.security?.mixedContent ? 'Present' : 'Not Found'],
+              ...Object.entries(metrics.security?.securityHeaders || {}).map(([header, value]) => 
+                [header, value ? 'Present' : 'Missing']
+              ),
+              ...(metrics.security?.vulnerabilities || []).map((vuln: Vulnerability) => 
+                [`Vulnerability (${vuln.severity})`, `Count: ${vuln.count}`]
+              )
+            ]
+          },
+          margin: [0, 0, 0, 20]
+        },
+
+        // Additional Metrics
+        {
+          text: 'Additional Metrics',
+          style: 'subheader',
+          margin: [0, 20, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', '*'],
+            body: [
+              [{ text: 'Metric', style: 'tableHeader' }, { text: 'Value', style: 'tableHeader' }],
+              ['Form Fields', metrics.accessibility?.formLabels ? 
+                `${metrics.accessibility.formLabels.labeled}/${metrics.accessibility.formLabels.total} labeled` : 'N/A'
+              ],
+              ['Interactive Elements', metrics.formFunctionality?.interactiveElementsCount || 'N/A'],
+              ['Forms with Submit', metrics.formFunctionality?.formsWithSubmitButton || 'N/A'],
+              ['JavaScript Enabled', metrics.formFunctionality?.javascriptEnabled ? 'Yes' : 'No'],
+              ['Broken Links', metrics.brokenLinks ? 
+                `${metrics.brokenLinks.brokenLinks}/${metrics.brokenLinks.totalLinks}` : 'N/A'
+              ],
+              ['Viewport Width', metrics.responsiveness?.viewportWidth || 'N/A'],
+              ['Page Width', metrics.responsiveness?.pageWidth || 'N/A']
+            ]
+          },
+          margin: [0, 0, 0, 20]
+        }
+      ]
+    } as Content;
   }
 
   private async createDocumentDefinition(data: ReportData, analysis: any): Promise<TDocumentDefinitions> {
@@ -371,16 +564,7 @@ class ReportGenerator {
         margin: [0, 0, 0, 30]
       } as Content,
 
-      {
-        text: 'SEO Analysis',
-        style: 'subheader',
-        margin: [0, 0, 0, 10]
-      } as ContentText,
-      {
-        text: 'Best Practices: Include title (50-60 chars), meta description (150-160 chars), canonical URL, and structured data',
-        style: 'thresholdInfo',
-        margin: [0, 0, 0, 10]
-      } as ContentText,
+      this.createTechnicalDetailsSection(data.metrics),
 
       // Report Validation
       {
@@ -558,60 +742,6 @@ class ReportGenerator {
     return recommendations;
   }
 
-  private createTechnicalDetailsSection(metrics: any): Content {
-    return {
-      stack: [
-        {
-          text: 'Performance Metrics',
-          style: 'subheader',
-          margin: [0, 0, 0, 10]
-        },
-        {
-          table: {
-            headerRows: 1,
-            widths: ['*', '*', '*'],
-            body: [
-              [
-                { text: 'Metric', style: 'tableHeader' },
-                { text: 'Value', style: 'tableHeader' },
-                { text: 'Status', style: 'tableHeader' }
-              ],
-              ...this.createPerformanceMetricsRows(metrics.performance)
-            ]
-          },
-          margin: [0, 0, 0, 20]
-        },
-
-        {
-          text: 'SEO Analysis',
-          style: 'subheader',
-          margin: [0, 20, 0, 10]
-        },
-        {
-          table: {
-            headerRows: 1,
-            widths: ['*', '*'],
-            body: [
-              [
-                { text: 'Feature', style: 'tableHeader' },
-                { text: 'Status', style: 'tableHeader' }
-              ],
-              ['Title', metrics.seo.title || 'Missing'],
-              ['Meta Description', metrics.seo.metaDescription || 'Missing'],
-              ['SEO Score', `${(metrics.lighthouse?.seo || 0).toFixed(0)}%`],
-              ['Structured Data', metrics.seo.structuredData?.present ? 'Present' : 'Missing'],
-              ['Canonical URL', metrics.seo.canonical?.present ? 'Present' : 'Missing'],
-              ['Hreflang Tags', metrics.seo.hreflang?.present ? 'Present' : 'Missing'],
-              ['Open Graph Tags', metrics.seo.metaTags?.ogTags?.length > 0 ? 'Present' : 'Missing'],
-              ['Twitter Cards', metrics.seo.metaTags?.twitterTags?.length > 0 ? 'Present' : 'Missing']
-            ]
-          },
-          margin: [0, 0, 0, 20]
-        }
-      ]
-    } as Content;
-  }
-
   private createPerformanceMetricsRows(metrics: any) {
     const thresholds = {
       firstContentfulPaint: { good: 1800, poor: 3000 },
@@ -662,7 +792,7 @@ class ReportGenerator {
 
   private async generateProfessionalAnalysis(data: ReportData) {
     try {
-
+      // Initialize the report generation
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/generate-professional-report`,
         {
@@ -680,33 +810,67 @@ class ReportGenerator {
         }
       );
 
+      // Create EventSource for SSE using the job ID from the response
+      const report = await new Promise<ReportResponse>((resolve, reject) => {
+        const eventSource = new EventSource(
+          `${process.env.REACT_APP_API_URL}/api/generate-professional-report/stream/${response.data.jobId}`
+        );
+
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'complete' && data.report) {
+            eventSource.close();
+            resolve(data.report as ReportResponse);
+          } else if (data.type === 'error') {
+            eventSource.close();
+            reject(new Error(data.error));
+          }
+        };
+
+        eventSource.onerror = (error) => {
+          console.error('EventSource error:', error);
+          eventSource.close();
+          reject(new Error('Failed to generate professional analysis'));
+        };
+      });
+
       // Validate the generated report
       const reportValidation = reportValidator.validateReport({
         ...data,
-        analysis: response.data
+        analysis: report
       });
 
       // Log validation results
       console.log('Report Validation:', reportValidation);
 
-      if (!reportValidation.overall.isValid) {
+      if (!reportValidation.overall.isValid && reportValidation.overall.issues.length > 0) {
         console.warn('Report validation issues:', reportValidation.overall.issues);
         toast.warn('Some report data may be incomplete or inaccurate');
       }
 
       if (reportValidation.overall.warnings.length > 0) {
-        console.warn('Report validation warnings:', reportValidation.overall.warnings);
+        // Filter out warnings for intentionally empty fields
+        const significantWarnings = reportValidation.overall.warnings.filter(warning => 
+          !warning.includes('Missing meta description') && 
+          !warning.includes('Missing best practices metrics')
+        );
+
+        if (significantWarnings.length > 0) {
+          console.warn('Report validation warnings:', significantWarnings);
+        }
       }
 
       // Add validation metadata to the report
       return {
-        ...response.data,
+        ...report,
         validationMetadata: {
           confidence: reportValidation.overall.confidence,
           warnings: reportValidation.overall.warnings,
           testingMetadata: metricValidator.generateTestingMetadata()
         }
       };
+
     } catch (error) {
       console.error('Error generating professional analysis:', error);
       throw new Error('Failed to generate professional analysis');
