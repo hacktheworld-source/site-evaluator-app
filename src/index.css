@@ -2181,3 +2181,57 @@ input[type="text"]:focus, input[type="number"]:focus {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.popular-badge {
+  position: relative;
+  width: 40%;
+  top: -24px;
+  left: -24px;
+  background: linear-gradient(145deg, #ff8c00, #ffa500);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9em;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.popular-badge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-20deg);
+  opacity: 0;
+}
+
+.popular-badge:hover::after {
+  animation: sheen 0.8s forwards;
+}
+
+@keyframes sheen {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  50% {
+    left: 100%;
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+.popular-badge .crown-icon {
+  width: 16px;
+  height: 16px;
+}
