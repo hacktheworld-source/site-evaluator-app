@@ -110,7 +110,7 @@ const App: React.FC = () => {
     setIsGenerating(true);
     setIsLoading(true);
     setError(null);
-    setStatusMessage('Initializing evaluation process...');
+    setStatusMessage('Job in queue...');
     setEvaluationResults(null);
     setChatKey(prevKey => prevKey + 1);
 
