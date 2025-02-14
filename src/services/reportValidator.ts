@@ -53,12 +53,12 @@ class ReportValidator {
 
     // Check section validations
     const sectionResults = Object.values(validation.sections);
-    validation.overall.isValid = validation.overall.isValid && 
+    validation.overall.isValid = validation.overall.isValid &&
       sectionResults.every(section => section.isValid);
-    
+
     // Calculate overall confidence
     validation.overall.confidence = sectionResults.reduce(
-      (acc, section) => acc * section.confidence, 
+      (acc, section) => acc * section.confidence,
       1.0
     );
 
@@ -85,28 +85,14 @@ class ReportValidator {
       return result;
     }
 
-    // Validate Core Web Vitals
+    // Validate performance metrics
     const validations = metricValidator.validatePerformanceMetrics(metrics);
     validations.forEach(validation => {
       if (validation.rating === 'poor') {
-        result.issues.push(`${validation.value} exceeds threshold of ${validation.threshold}`);
-        result.confidence *= 0.8;
-      } else if (validation.rating === 'needs-improvement') {
-        result.warnings.push(`${validation.value} is close to threshold of ${validation.threshold}`);
-        result.confidence *= 0.9;
+        result.issues.push(`Performance metric ${validation.value} is outside acceptable range`);
+        result.confidence *= 0.8; // Reduce confidence for poor ratings
       }
     });
-
-    // Check for unrealistic values
-    if (metrics.loadTime && metrics.loadTime < 100) {
-      result.warnings.push('Suspiciously fast load time');
-      result.confidence *= 0.7;
-    }
-
-    if (metrics.loadTime && metrics.loadTime > 30000) {
-      result.warnings.push('Unusually slow load time');
-      result.confidence *= 0.7;
-    }
 
     return result;
   }
@@ -196,28 +182,20 @@ class ReportValidator {
 
     const metrics = reportData.metrics?.bestPractices;
     if (!metrics) {
-      result.warnings.push('Missing best practices metrics');
-      result.confidence *= 0.9;
+      result.isValid = false;
+      result.issues.push('Missing best practices metrics');
+      result.confidence *= 0.9; // Reduce confidence if metrics are missing
       return result;
     }
 
-    // Check semantic HTML usage
-    if (metrics.semanticUsage) {
-      const hasMainElement = metrics.semanticUsage.main?.present;
-      if (!hasMainElement) {
-        result.warnings.push('No <main> element found');
-        result.confidence *= 0.9;
+    // Validate best practices metrics
+    const validations = metricValidator.validateBestPracticesMetrics(metrics);
+    validations.forEach(validation => {
+      if (validation.rating === 'poor') {
+        result.issues.push(`Best practice metric ${validation.value} is outside acceptable range`);
+        result.confidence *= 0.8;
       }
-    }
-
-    // Check image optimization
-    if (metrics.optimizedImages && metrics.totalImages) {
-      const optimizationRatio = metrics.optimizedImages / metrics.totalImages;
-      if (optimizationRatio < 0.8) {
-        result.warnings.push('Less than 80% of images are optimized');
-        result.confidence *= 0.9;
-      }
-    }
+    });
 
     return result;
   }

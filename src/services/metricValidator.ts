@@ -117,16 +117,32 @@ class MetricValidator {
     const validations: MetricValidation[] = [];
 
     if (metrics.title) {
-      const titleLength = metrics.title.length;
       validations.push({
-        value: titleLength,
-        threshold: MetricValidator.THRESHOLDS.SEO.titleLength.max,
-        rating: this.getRatingSEO(
-          titleLength, 
-          MetricValidator.THRESHOLDS.SEO.titleLength
-        ),
-        confidence: 1.0,
-        benchmark: 55
+        value: metrics.title.length,
+        threshold: MetricValidator.THRESHOLDS.SEO.titleLength.min,
+        rating: this.getRatingSEO(metrics.title.length, MetricValidator.THRESHOLDS.SEO.titleLength),
+        confidence: 0.95,
+        benchmark: 60
+      });
+    }
+
+    if (metrics.metaDescription) {
+      validations.push({
+        value: metrics.metaDescription.length,
+        threshold: MetricValidator.THRESHOLDS.SEO.descriptionLength.min,
+        rating: this.getRatingSEO(metrics.metaDescription.length, MetricValidator.THRESHOLDS.SEO.descriptionLength),
+        confidence: 0.95,
+        benchmark: 160
+      });
+    }
+
+    if (metrics.h1Count) {
+      validations.push({
+        value: metrics.h1Count,
+        threshold: MetricValidator.THRESHOLDS.SEO.h1Count.min,
+        rating: this.getRatingSEO(metrics.h1Count, MetricValidator.THRESHOLDS.SEO.h1Count),
+        confidence: 0.9,
+        benchmark: 1
       });
     }
 
@@ -136,14 +152,35 @@ class MetricValidator {
   validateAccessibilityMetrics(metrics: any): MetricValidation[] {
     const validations: MetricValidation[] = [];
 
-    if (metrics.imagesWithAltText && metrics.totalImages) {
-      const ratio = metrics.imagesWithAltText / metrics.totalImages;
+    if (metrics.totalImages && metrics.imagesWithAltText) {
+      const ratio = metrics.totalImages > 0 ? metrics.imagesWithAltText / metrics.totalImages : 0;
       validations.push({
         value: ratio,
         threshold: MetricValidator.THRESHOLDS.ACCESSIBILITY.altTextRatio.good,
-        rating: ratio >= MetricValidator.THRESHOLDS.ACCESSIBILITY.altTextRatio.good ? 'good' : 'poor',
-        confidence: 1.0,
-        benchmark: 1.0
+        rating: this.getRating(ratio, MetricValidator.THRESHOLDS.ACCESSIBILITY.altTextRatio),
+        confidence: 0.9,
+        benchmark: 1
+      });
+    }
+
+    if (metrics.ariaAttributesCount) {
+      validations.push({
+        value: metrics.ariaAttributesCount,
+        threshold: MetricValidator.THRESHOLDS.ACCESSIBILITY.ariaAttributesMinimum,
+        rating: metrics.ariaAttributesCount >= MetricValidator.THRESHOLDS.ACCESSIBILITY.ariaAttributesMinimum ? 'good' : 'needs-improvement',
+        confidence: 0.8,
+        benchmark: 5
+      });
+    }
+
+    if (metrics.keyboardNavigable !== undefined) {
+      const ratio = metrics.keyboardNavigable ? 1 : 0;
+      validations.push({
+        value: ratio,
+        threshold: MetricValidator.THRESHOLDS.ACCESSIBILITY.keyboardNav.good,
+        rating: this.getRating(ratio, MetricValidator.THRESHOLDS.ACCESSIBILITY.keyboardNav),
+        confidence: 0.9,
+        benchmark: 1
       });
     }
 
@@ -226,6 +263,75 @@ class MetricValidator {
         threshold: 0.6,  // Reduced from 0.7
         rating: weightedScore >= 0.6 ? 'good' : 
                 weightedScore >= 0.4 ? 'needs-improvement' : 'poor',
+        confidence: 0.95,
+        benchmark: 0.7  // Reduced from 0.8
+      });
+
+      // Add debug information
+      validations[validations.length - 1].debug = {
+        totalScore,
+        maxScore,
+        headerPresence: securityHeaders,
+        rawHeaders: metrics.security._debug?.rawHeaders
+      };
+    }
+
+    return validations;
+  }
+
+  validateBestPracticesMetrics(metrics: any): MetricValidation[] {
+    const validations: MetricValidation[] = [];
+
+    if (metrics.imageOptimizationRatio !== undefined) {
+      validations.push({
+        value: metrics.imageOptimizationRatio,
+        threshold: MetricValidator.THRESHOLDS.BEST_PRACTICES.imageOptimization.good,
+        rating: this.getRating(metrics.imageOptimizationRatio, MetricValidator.THRESHOLDS.BEST_PRACTICES.imageOptimization),
+        confidence: 0.9,
+        benchmark: 0.85
+      });
+    }
+
+    if (metrics.jsErrors !== undefined) {
+      validations.push({
+        value: metrics.jsErrors,
+        threshold: MetricValidator.THRESHOLDS.BEST_PRACTICES.jsErrors.max,
+        rating: metrics.jsErrors <= MetricValidator.THRESHOLDS.BEST_PRACTICES.jsErrors.max ? 'good' : 'poor',
+        confidence: 0.9,
+        benchmark: 0
+      });
+    }
+
+    if (metrics.deprecatedAPIs !== undefined) {
+      validations.push({
+        value: metrics.deprecatedAPIs,
+        threshold: MetricValidator.THRESHOLDS.BEST_PRACTICES.deprecatedAPIs.max,
+        rating: metrics.deprecatedAPIs <= MetricValidator.THRESHOLDS.BEST_PRACTICES.deprecatedAPIs.max ? 'good' : 'poor',
+        confidence: 0.9,
+        benchmark: 0
+      });
+    }
+
+    if (metrics.security && metrics.security.securityHeaders) {
+      const securityHeaders = metrics.security.securityHeaders;
+      const requiredHeaders = ['Strict-Transport-Security', 'Content-Security-Policy', 'X-Content-Type-Options', 'X-Frame-Options', 'X-XSS-Protection', 'Referrer-Policy'];
+      let totalScore = 0;
+      let maxScore = requiredHeaders.length;
+
+      requiredHeaders.forEach(header => {
+        if (securityHeaders[header]) {
+          totalScore++;
+        }
+      });
+
+      const weightedScore = maxScore > 0 ? totalScore / maxScore : 0;
+
+      // More lenient thresholds for header score
+      validations.push({
+        value: weightedScore,
+        threshold: 0.6,  // Reduced from 0.7
+        rating: weightedScore >= 0.6 ? 'good' :
+          weightedScore >= 0.4 ? 'needs-improvement' : 'poor',
         confidence: 0.95,
         benchmark: 0.7  // Reduced from 0.8
       });

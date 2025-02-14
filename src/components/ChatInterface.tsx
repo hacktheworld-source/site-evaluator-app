@@ -61,6 +61,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isThinking, setIsThinking] = useState(false);
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const SCREENSHOT_TIMEOUT = 45000; // 45 seconds
 
   const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
@@ -803,6 +804,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     }
   }, [isThinking]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessageIndex = messages.length - 1;
+      const lastMessage = messages[lastMessageIndex];
+      
+      // If this is a recommendations message with competitor screenshots
+      if (lastMessage.competitorScreenshots) {
+        // Set up timeouts for each loading screenshot
+        const timeouts = Object.entries(lastMessage.competitorScreenshots)
+          .filter(([_, data]) => data.status === 'loading')
+          .map(([url]) =>
+            setTimeout(() => {
+              setMessages((prevMessages) => {
+                // In case the messages array has changed, ensure we have the expected index
+                if (prevMessages.length <= lastMessageIndex) return prevMessages;
+                return prevMessages.map((msg, idx) => {
+                  if (idx === lastMessageIndex && msg.competitorScreenshots) {
+                    const updatedScreenshots = {
+                      ...msg.competitorScreenshots,
+                      [url]: { status: 'error' as const, error: 'Screenshot load timeout' }
+                    };
+                    return { ...msg, competitorScreenshots: updatedScreenshots };
+                  }
+                  return msg;
+                });
+              });
+            }, SCREENSHOT_TIMEOUT)
+          );
+        
+        // Cleanup timeouts
+        return () => {
+          timeouts.forEach((timeout) => clearTimeout(timeout));
+        };
+      }
+    }
+  }, [messages]);
 
   return (
     <div className="chat-interface">

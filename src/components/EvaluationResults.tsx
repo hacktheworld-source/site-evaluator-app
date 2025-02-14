@@ -67,8 +67,6 @@ const EvaluationResults: React.FC<EvaluationResultsProps> = ({ result }) => {
         <li>Best Practices: {formatMetric(result.lighthouse?.bestPractices)}</li>
         <li>SEO: {formatMetric(result.lighthouse?.seo)}</li>
       </ul>
-
-      {/* ... (rest of the component remains the same) */}
     </div>
   );
 };

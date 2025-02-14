@@ -1,14 +1,14 @@
 import { TDocumentDefinitions, Content, ContentText } from 'pdfmake/interfaces';
 import axios from 'axios';
-import { metricValidator } from './metricValidator';
-import { reportValidator } from './reportValidator';
-import { toast } from 'react-toastify';
+import pdfMake from 'pdfmake/build/pdfmake';
+import { saveAs } from 'file-saver';
 
 export interface ReportData {
   websiteUrl: string;
   timestamp: Date;
   overallScore: number;
   phaseScores: { [phase: string]: number };
+  professionalAnalysis?: ReportResponse;
   metrics: {
     performance: {
       loadTime: number;
@@ -101,7 +101,7 @@ export interface ReportData {
   };
 }
 
-interface ReportResponse {
+export interface ReportResponse {
   executiveSummary: {
     keyStrengths: string[];
     criticalIssues: string[];
@@ -150,7 +150,6 @@ interface Vulnerability {
 
 class ReportGenerator {
   private async loadPdfMake() {
-    const pdfMake = await import('pdfmake/build/pdfmake');
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
     const pdfMakeLib = pdfMake.default || pdfMake;
     
@@ -348,7 +347,22 @@ class ReportGenerator {
     } as Content;
   }
 
-  private async createDocumentDefinition(data: ReportData, analysis: any): Promise<TDocumentDefinitions> {
+  private async createDocumentDefinition(data: ReportData): Promise<TDocumentDefinitions> {
+    // Add fallbacks for missing data
+    const executiveSummary = data.professionalAnalysis?.executiveSummary || {
+      keyStrengths: [],
+      criticalIssues: [],
+      overallAssessment: 'No summary available',
+      coreWebVitalsAssessment: ''
+    };
+
+    // Store recommendations in a variable and use it
+    const recommendationsList = data.professionalAnalysis?.recommendations || {
+      critical: [],
+      important: [],
+      optional: []
+    };
+
     const performanceChart = this.createPerformanceChart(data.metrics.performance);
     const securityTable = this.createSecurityTable(data.metrics.security);
     const accessibilityScorecard = this.createAccessibilityScorecard(data.metrics.accessibility);
@@ -412,7 +426,47 @@ class ReportGenerator {
         margin: [0, 0, 0, 20]
       } as ContentText,
       {
-        text: analysis.executiveSummary.overallAssessment,
+        text: executiveSummary.overallAssessment || 'No overall assessment available.',
+        margin: [0, 0, 0, 20]
+      } as ContentText,
+
+      // Key Strengths
+      {
+        text: 'Key Strengths',
+        style: 'subheader',
+        margin: [0, 10, 0, 5]
+      } as ContentText,
+      {
+        ul: (executiveSummary.keyStrengths || []).map(strength => ({
+          text: strength,
+          style: 'listItem'
+        })),
+        margin: [0, 0, 0, 15]
+      },
+
+      // Critical Issues
+      {
+        text: 'Critical Issues',
+        style: 'subheader',
+        margin: [0, 10, 0, 5]
+      } as ContentText,
+      {
+        ul: (executiveSummary.criticalIssues || []).map(issue => ({
+          text: issue,
+          style: 'listItem',
+          color: '#d32f2f'
+        })),
+        margin: [0, 0, 0, 15]
+      },
+
+      // Core Web Vitals Assessment
+      {
+        text: 'Core Web Vitals Assessment',
+        style: 'subheader',
+        margin: [0, 10, 0, 5]
+      } as ContentText,
+      {
+        text: executiveSummary.coreWebVitalsAssessment || 'No Core Web Vitals assessment available.',
         margin: [0, 0, 0, 20]
       } as ContentText,
 
@@ -526,57 +580,7 @@ class ReportGenerator {
       this.createRecommendationsSection(data.metrics),
 
       // Technical Details
-      {
-        text: 'Technical Details',
-        style: 'sectionHeader',
-        pageBreak: 'before'
-      } as ContentText,
-      {
-        text: 'Performance Metrics',
-        style: 'subheader',
-        margin: [0, 0, 0, 10]
-      } as ContentText,
-      {
-        text: 'Thresholds: FCP < 1800ms, LCP < 2500ms, TTFB < 600ms, TBT < 300ms',
-        style: 'thresholdInfo',
-        margin: [0, 0, 0, 10]
-      } as ContentText,
-      {
-        table: {
-          headerRows: 1,
-          widths: ['*', '*', '*'],
-          body: [
-            [
-              { text: 'Metric', style: 'tableHeader' },
-              { text: 'Value', style: 'tableHeader' },
-              { text: 'Status', style: 'tableHeader' }
-            ],
-            ...performanceChart.map(metric => [
-              { text: metric.name, style: 'metric' },
-              { text: metric.displayValue, style: 'metric' },
-              { 
-                text: metric.status,
-                style: metric.status === 'Good' ? 'good' : 'warning'
-              }
-            ])
-          ]
-        },
-        margin: [0, 0, 0, 30]
-      } as Content,
-
-      this.createTechnicalDetailsSection(data.metrics),
-
-      // Report Validation
-      {
-        text: 'Report Validation',
-        style: 'sectionHeader',
-        pageBreak: 'before'
-      } as ContentText,
-      {
-        text: `Confidence Score: ${(analysis.validationMetadata.confidence * 100).toFixed(1)}%`,
-        style: 'subheader',
-        margin: [0, 0, 0, 10]
-      } as ContentText
+      this.createTechnicalDetailsSection(data.metrics)
     ];
 
     return {
@@ -642,6 +646,14 @@ class ReportGenerator {
           fontSize: 11,
           color: '#666666',
           italics: true
+        },
+        listItem: {
+          fontSize: 11,
+          lineHeight: 1.3
+        },
+        bold: {
+          bold: true,
+          fontSize: 11
         }
       },
       defaultStyle: {
@@ -772,108 +784,168 @@ class ReportGenerator {
   async generatePDF(data: ReportData): Promise<Uint8Array> {
     const pdfMake = await this.loadPdfMake();
     
-    // Generate professional analysis
-    const analysis = await this.generateProfessionalAnalysis(data);
-    
-    // Create PDF with professional content
-    const docDefinition = await this.createDocumentDefinition(data, analysis);
-
-    return new Promise((resolve, reject) => {
-      try {
+    try {
+      // Move professional analysis before PDF creation
+      data.professionalAnalysis = await this.generateProfessionalAnalysis(data);
+      
+      const docDefinition = await this.createDocumentDefinition(data);
+      
+      return new Promise((resolve, reject) => {
         const pdfDoc = pdfMake.createPdf(docDefinition);
-        pdfDoc.getBuffer((buffer: Uint8Array) => {
-          resolve(buffer);
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
+        pdfDoc.getBuffer(resolve);
+      });
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      throw error;
+    }
   }
 
   private async generateProfessionalAnalysis(data: ReportData) {
+    let completedReport: ReportResponse | null = null;
+    let eventSource: EventSource | null = null;
     try {
-      // Initialize the report generation
+      console.log('[Report Generator] Initializing professional analysis generation');
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/generate-professional-report`,
-        {
-          websiteUrl: data.websiteUrl,
-          scores: {
-            overall: data.overallScore,
-            phases: data.phaseScores,
-            lighthouse: data.metrics.lighthouse
-          },
-          metrics: {
-            performance: data.metrics.performance,
-            seo: data.metrics.seo,
-            accessibility: data.metrics.accessibility
-          }
-        }
+        data
       );
+      console.log('[Report Generator] Initial response:', response.data);
 
-      // Create EventSource for SSE using the job ID from the response
-      const report = await new Promise<ReportResponse>((resolve, reject) => {
-        const eventSource = new EventSource(
-          `${process.env.REACT_APP_API_URL}/api/generate-professional-report/stream/${response.data.jobId}`
-        );
+      if (!response.data?.jobId) {
+        throw new Error('No job ID received from server');
+      }
 
-        eventSource.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'complete' && data.report) {
-            eventSource.close();
-            resolve(data.report as ReportResponse);
-          } else if (data.type === 'error') {
-            eventSource.close();
-            reject(new Error(data.error));
-          }
-        };
+      const apiUrl = process.env.REACT_APP_API_URL?.replace(/\/$/, '');
+      if (!apiUrl) {
+        throw new Error('API URL not configured');
+      }
 
-        eventSource.onerror = (error) => {
-          console.error('EventSource error:', error);
+      const streamUrl = `${apiUrl}/api/generate-professional-report/stream/${response.data.jobId}`;
+      console.log('[Report Generator] Connecting to stream:', streamUrl);
+
+      eventSource = new EventSource(streamUrl);
+      
+      let completed = false;
+      let isConnected = false;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000;
+
+      // Set up cleanup function
+      const cleanup = () => {
+        console.log('[Report Generator] Cleaning up EventSource connection');
+        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
           eventSource.close();
-          reject(new Error('Failed to generate professional analysis'));
-        };
-      });
-
-      // Validate the generated report
-      const reportValidation = reportValidator.validateReport({
-        ...data,
-        analysis: report
-      });
-
-      // Log validation results
-      console.log('Report Validation:', reportValidation);
-
-      if (!reportValidation.overall.isValid && reportValidation.overall.issues.length > 0) {
-        console.warn('Report validation issues:', reportValidation.overall.issues);
-        toast.warn('Some report data may be incomplete or inaccurate');
-      }
-
-      if (reportValidation.overall.warnings.length > 0) {
-        // Filter out warnings for intentionally empty fields
-        const significantWarnings = reportValidation.overall.warnings.filter(warning => 
-          !warning.includes('Missing meta description') && 
-          !warning.includes('Missing best practices metrics')
-        );
-
-        if (significantWarnings.length > 0) {
-          console.warn('Report validation warnings:', significantWarnings);
-        }
-      }
-
-      // Add validation metadata to the report
-      return {
-        ...report,
-        validationMetadata: {
-          confidence: reportValidation.overall.confidence,
-          warnings: reportValidation.overall.warnings,
-          testingMetadata: metricValidator.generateTestingMetadata()
         }
       };
 
-    } catch (error) {
-      console.error('Error generating professional analysis:', error);
-      throw new Error('Failed to generate professional analysis');
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        console.warn('[Report Generator] EventSource timeout - closing connection');
+        cleanup();
+        if (!completed) {
+          throw new Error('Analysis stream timeout');
+        }
+      }, 120000); // 2 minute timeout
+
+      eventSource.onopen = () => {
+        console.log('[Report Generator] EventSource connection opened');
+        isConnected = true;
+        retryCount = 0;
+      };
+
+      eventSource.onmessage = (event) => {
+        console.log('[Report Generator] Received raw message:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[Report Generator] Parsed message data:', data);
+          
+          if (data.type === 'complete' && data.report) {
+            console.log('[Report Generator] Received complete report:', data.report);
+            if (!data.report?.executiveSummary || !data.report.technicalAnalysis || !data.report.recommendations) {
+              throw new Error('Received incomplete report from server');
+            }
+            completed = true;
+            clearTimeout(timeout);
+            completedReport = data.report as ReportResponse;
+            return;
+          } else if (data.type === 'end') {
+            console.log('[Report Generator] Received end event');
+            cleanup();
+          }
+        } catch (error) {
+          console.error('[Report Generator] Error parsing message:', error);
+          if (!completed) {
+            cleanup();
+            clearTimeout(timeout);
+            throw new Error('Failed to parse server message');
+          }
+        }
+      };
+
+      eventSource.onerror = async (error) => {
+        console.error('[Report Generator] EventSource error:', error);
+        console.log('[Report Generator] EventSource readyState:', eventSource?.readyState, {
+          CONNECTING: EventSource.CONNECTING,
+          OPEN: EventSource.OPEN,
+          CLOSED: EventSource.CLOSED
+        });
+        
+        // Ignore errors if we've already completed successfully
+        if (completed) {
+          cleanup();
+          return;
+        }
+
+        if (!isConnected) {
+          // Connection establishment error
+          retryCount++;
+          console.log(`[Report Generator] Connection attempt ${retryCount}/${MAX_RETRIES}`);
+          if (retryCount >= MAX_RETRIES) {
+            console.error('[Report Generator] Failed to establish connection after multiple attempts');
+            cleanup();
+            clearTimeout(timeout);
+            throw new Error('Failed to establish analysis connection');
+          } else {
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            return;
+          }
+        } else if (eventSource?.readyState === EventSource.CLOSED) {
+          // Normal closure or server-initiated close
+          console.log('[Report Generator] EventSource connection closed');
+          cleanup();
+          if (!completed) {
+            clearTimeout(timeout);
+            throw new Error('Connection closed before completion');
+          }
+        } else {
+          // Other error during active connection
+          console.error('[Report Generator] EventSource error during active connection');
+          cleanup();
+          clearTimeout(timeout);
+          throw new Error('Analysis stream error');
+        }
+      };
+
+      // Wait for completion
+      await new Promise((resolve) => {
+        const checkComplete = () => {
+          if (completedReport) {
+            resolve(true);
+          } else {
+            setTimeout(checkComplete, 100);
+          }
+        };
+        checkComplete();
+      });
+
+      console.log('[Report Generator] Report validation passed, returning report');
+      return completedReport!;
+    } finally {
+      if (eventSource) {
+        eventSource.close();
+      }
     }
   }
 
@@ -920,6 +992,23 @@ class ReportGenerator {
         margin: [0, 10, 0, 5]
       }
     };
+  }
+
+  async generatePDFFromStored(data: ReportData): Promise<Uint8Array> {
+    const pdfMake = await this.loadPdfMake();
+    
+    try {
+      // Skip analysis generation and use existing data
+      const docDefinition = await this.createDocumentDefinition(data);
+      
+      return new Promise((resolve) => {
+        const pdfDoc = pdfMake.createPdf(docDefinition);
+        pdfDoc.getBuffer(resolve);
+      });
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      throw error;
+    }
   }
 }
 

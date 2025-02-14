@@ -1,6 +1,6 @@
 import { collection, addDoc, query, where, getDocs, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { ReportData, reportGenerator } from './reportGenerator';
+import { ReportData, reportGenerator, ReportResponse } from './reportGenerator';
 import { saveAs } from 'file-saver';
 
 export interface StoredReport {
@@ -9,6 +9,7 @@ export interface StoredReport {
   timestamp: Date;
   overallScore: number;
   phaseScores: { [phase: string]: number };
+  professionalAnalysis?: ReportResponse;
   essentialMetrics: {
     performance: {
       loadTime: number;
@@ -83,6 +84,25 @@ class ReportStorageService {
         timestamp: Timestamp.fromDate(reportData.timestamp),
         overallScore: reportData.overallScore,
         phaseScores: reportData.phaseScores,
+        professionalAnalysis: {
+          executiveSummary: reportData.professionalAnalysis?.executiveSummary || {
+            keyStrengths: [],
+            criticalIssues: [],
+            overallAssessment: 'No professional analysis available',
+            coreWebVitalsAssessment: ''
+          },
+          technicalAnalysis: reportData.professionalAnalysis?.technicalAnalysis || {
+            performance: { insights: [], recommendations: [], coreWebVitals: { assessment: '', details: [] } },
+            accessibility: { insights: [], recommendations: [], complianceLevel: '', keyIssues: [] },
+            seo: { insights: [], recommendations: [], metaTagAnalysis: [], structureAnalysis: [] },
+            bestPractices: { insights: [], recommendations: [], securityAssessment: [], semanticAnalysis: [] }
+          },
+          recommendations: reportData.professionalAnalysis?.recommendations || {
+            critical: [],
+            important: [],
+            optional: []
+          }
+        },
         essentialMetrics: {
           performance: {
             loadTime: reportData.metrics.performance.loadTime,
@@ -168,6 +188,7 @@ class ReportStorageService {
           timestamp: data.timestamp?.toDate() || new Date(),
           overallScore: data.overallScore,
           phaseScores: data.phaseScores || {},
+          professionalAnalysis: data.professionalAnalysis || undefined,
           essentialMetrics: {
             performance: {
               loadTime: data.essentialMetrics?.performance?.loadTime,
@@ -236,69 +257,28 @@ class ReportStorageService {
 
   async regenerateAndDownloadReport(report: StoredReport): Promise<void> {
     try {
+      // Create report data from stored values without regeneration
       const reportData: ReportData = {
         websiteUrl: report.websiteUrl,
         timestamp: report.timestamp,
         overallScore: report.overallScore,
         phaseScores: report.phaseScores,
+        professionalAnalysis: report.professionalAnalysis,
         metrics: {
-          performance: {
-            ...report.essentialMetrics.performance,
-            speedIndex: undefined,
-            totalBlockingTime: undefined,
-          },
-          seo: {
-            ...report.essentialMetrics.seo,
-            headings: undefined,
-            robotsTxt: undefined,
-            sitemapXml: undefined,
-            canonicalUrl: undefined,
-            mobileResponsive: undefined,
-          },
-          accessibility: {
-            ...report.essentialMetrics.accessibility,
-            contrastRatio: undefined,
-            formLabels: undefined,
-          },
-          lighthouse: {
-            ...report.essentialMetrics.lighthouse,
-            pwa: undefined,
-          },
-          security: {
-            ...report.essentialMetrics.security,
-            certificateExpiry: undefined,
-            mixedContent: undefined,
-            vulnerabilities: undefined,
-          },
-          formFunctionality: {
-            ...report.essentialMetrics.formFunctionality,
-            totalForms: 0,
-            formsWithSubmitButton: 0,
-            interactiveElementsCount: 0,
-            inputFieldsCount: 0,
-            javascriptEnabled: false
-          },
-          brokenLinks: {
-            ...report.essentialMetrics.brokenLinks,
-            totalLinks: 0,
-            brokenLinks: 0
-          },
-          responsiveness: {
-            ...report.essentialMetrics.responsiveness,
-            isResponsive: false,
-            viewportWidth: 0,
-            pageWidth: 0
-          },
-          bestPractices: {
-            ...report.essentialMetrics.bestPractices,
-            semanticUsage: {},
-            optimizedImages: 0,
-            totalImages: 0
-          }
+          performance: report.essentialMetrics.performance,
+          seo: report.essentialMetrics.seo,
+          accessibility: report.essentialMetrics.accessibility,
+          lighthouse: report.essentialMetrics.lighthouse,
+          security: report.essentialMetrics.security,
+          formFunctionality: report.essentialMetrics.formFunctionality,
+          brokenLinks: report.essentialMetrics.brokenLinks,
+          responsiveness: report.essentialMetrics.responsiveness,
+          bestPractices: report.essentialMetrics.bestPractices
         }
       };
 
-      const pdfBuffer = await reportGenerator.generatePDF(reportData);
+      // Generate PDF using existing analysis
+      const pdfBuffer = await reportGenerator.generatePDFFromStored(reportData);
       const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
       saveAs(blob, `${report.websiteUrl.replace(/[^a-z0-9]/gi, '_')}_report.pdf`);
     } catch (error) {
