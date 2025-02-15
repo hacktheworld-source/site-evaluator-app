@@ -20,9 +20,9 @@ body {
 }
 
 .App {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0px;
   position: relative;
   height: 100vh;
   overflow: hidden;
@@ -251,226 +251,257 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 40px 20px;
   box-sizing: border-box;
   overflow-y: auto;
+  display: flex;
+  justify-content: center;
 }
 
 .profile-layout {
   display: grid;
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 40px;
   align-items: start;
   min-height: calc(100vh - var(--header-height) - 80px);
+  padding: 0px 40px;
 }
 
 .profile-column {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-right: 10px;
+  gap: 10px;
 }
 
 .profile-info {
-  flex-shrink: 0;
-}
-
-.danger-zone {
-  flex-shrink: 0;
-  margin-bottom: 20px;
-}
-
-.profile-page::-webkit-scrollbar {
-  width: 6px;
-}
-
-.profile-page::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.profile-page::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 3px;
-}
-
-.profile-page::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.profile-column h2,
-.reports-column h2 {
-  margin: 0 0 20px 0;
-  color: var(--accent-color);
-  font-size: 1.5em;
-}
-
-.profile-info {
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 30px;
-  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.profile-info:hover {
-  background-color: rgba(255, 255, 255, 0.07);
 }
 
 .profile-picture {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
   background-color: var(--accent-color);
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  transition: border-color 0.3s ease;
-}
-
-.profile-picture:hover {
-  border-color: var(--accent-color);
 }
 
 .profile-info p {
-  margin: 12px 0;
+  margin: 8px 0;
   color: var(--off-white);
-  font-size: 1.1em;
   width: 100%;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.profile-info p:last-child {
-  border-bottom: none;
-}
-
-.profile-info strong {
-  color: var(--accent-color);
-  margin-right: 8px;
-}
-
-.reports-column {
-  flex: 1;
-  min-width: 0;
-}
-
-.reports-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  max-height: calc(100vh - var(--header-height) - 140px);
-  overflow-y: auto;
-  padding-right: 15px;
-}
-
-.reports-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.reports-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.reports-list::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 3px;
-}
-
-.report-item {
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  transition: all 0.3s ease;
+  padding: 4px 0;
 }
 
-.report-item:hover {
-  background-color: rgba(255, 255, 255, 0.07);
-  transform: translateY(-2px);
-}
-
-.report-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.report-info h4 {
-  margin: 0 0 10px 0;
-  color: var(--off-white);
-  font-size: 1.1em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.report-date {
+.profile-info p strong {
   color: var(--accent-color);
-  font-size: 0.9em;
-  margin: 0 0 12px 0;
+  font-weight: normal;
+  opacity: 0.8;
 }
 
-.report-metrics {
+.account-actions {
   display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.metric {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.9em;
-  white-space: nowrap;
-}
-
-.download-report-button {
-  background-color: rgba(255, 255, 255, 0.1);
+.change-password-button,
+.sign-out-button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--off-white);
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  width: 44px;
-  height: 44px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  gap: 8px;
+  font-size: 0.9em;
 }
 
-.download-report-button:hover:not(:disabled) {
-  background-color: var(--accent-color);
-  transform: scale(1.05);
+.change-password-button:hover,
+.sign-out-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.download-report-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.danger-zone {
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: 8px;
+  padding: 20px;
 }
 
-.loading-state {
+.danger-zone h3 {
+  color: #ff5252;
+  margin: 0 0 15px 0;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.danger-zone p {
+  color: var(--off-white);
+  font-size: 0.9em;
+  opacity: 0.8;
+  margin: 0 0 15px 0;
+  line-height: 1.4;
+}
+
+.delete-account-button {
+  background: none;
+  border: 1px solid #ff5252;
+  color: #ff5252;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
+}
+
+.delete-account-button:hover {
+  background: rgba(255, 82, 82, 0.1);
+}
+
+.reports-column {
+  max-width: 600px;
+}
+
+.reports-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  padding: 40px;
-  color: var(--accent-color);
+  margin-bottom: 30px;
 }
 
-.no-reports {
-  text-align: center;
+.reports-header h2 {
+  font-size: 1.2em;
+  font-weight: normal;
+  color: var(--off-white);
+  margin: 0;
+}
+
+.reports-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.select-all-button,
+.bulk-action-button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+}
+
+.select-all-button:hover,
+.bulk-action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bulk-action-button.delete {
+  color: #ff4444;
+  border-color: rgba(255, 68, 68, 0.2);
+}
+
+.bulk-action-button.delete:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.metric {
+  font-size: 0.85em;
+  color: var(--off-white);
+  opacity: 0.9;
+}
+
+.metric strong {
   color: var(--accent-color);
-  font-style: italic;
-  padding: 40px;
-  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: normal;
+  opacity: 0.8;
+  margin-right: 4px;
+}
+
+.change-password-dialog {
+  background: var(--deep-black);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.change-password-dialog h3 {
+  font-size: 1.1em;
+  font-weight: normal;
+  margin: 0 0 20px 0;
+}
+
+.password-form {
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.form-group input {
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--off-white);
+  font-size: 0.9em;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirmation-buttons button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  min-width: 80px;
+}
+
+.confirmation-buttons .confirm-button {
+  background: var(--accent-color);
+  border: none;
+  color: var(--deep-black);
+}
+
+.confirmation-buttons .cancel-button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 900px) {
@@ -630,26 +661,10 @@ input[type="text"]:focus, input[type="number"]:focus {
   }
 }
 
-.profile-info {
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 10px;
-  margin: 20px 0;
+.profile-page::-webkit-scrollbar {
+  display: none;
 }
 
-.profile-picture {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 20px;
-  background-color: var(--accent-color);
-}
-
-.profile-info p {
-  margin: 10px 0;
-  color: var(--off-white);
-}
 
 .website-input-form {
   width: 100%;
@@ -691,30 +706,6 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .evaluate-submit-button:disabled {
   color: transparent;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.chat-submit-button {
-  background: none;
-  border: none;
-  color: var(--accent-color);
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0 10px;
-  margin-left: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-}
-
-.chat-submit-button:hover {
-  color: var(--off-white);
-}
-
-.chat-submit-button:disabled {
-  color: var(--accent-color);
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -1172,7 +1163,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: 36px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  background: #1a1a1a;
   color: var(--off-white);
   font-size: 14px;
   margin: 0;
@@ -1190,6 +1181,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   border: none;
   color: var(--accent-color);
   font-size: 16px;
+  cursor: pointer;
   padding: 0;
   width: 36px;
   height: 36px;
@@ -1202,13 +1194,13 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .chat-submit-button:hover {
   opacity: 1;
-  transform: translateX(2px);
+  color: var(--off-white);
 }
 
 .chat-submit-button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
-  transform: none;
+  color: var(--accent-color);
 }
 
 .metrics-wrapper {
@@ -1505,81 +1497,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   color: var(--accent-color);
 }
 
-.reports-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.report-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.report-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-}
-
-.report-info {
-  flex-grow: 1;
-}
-
-.report-info h4 {
-  margin: 0 0 10px 0;
-  color: var(--accent-color);
-  font-size: 1.1em;
-}
-
-.report-date {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.9em;
-  margin: 5px 0;
-}
-
-.report-metrics {
-  display: flex;
-  gap: 20px;
-  margin-top: 10px;
-}
-
-.metric {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 0.9em;
-}
-
-.download-report-button {
-  background-color: var(--accent-color);
-  color: var(--deep-black);
-  border: none;
-  border-radius: 5px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.download-report-button:hover:not(:disabled) {
-  background-color: var(--accent-hover-color);
-  transform: scale(1.05);
-}
-
-.download-report-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -1601,6 +1518,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  padding: 0px 40px;
 }
 
 .pre-analysis-content {
@@ -1851,7 +1769,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   align-items: center;
   justify-content: center;
   gap: 15px;
-  padding: 20px 0;
+  padding: 0px;
+  padding-bottom: 20px;
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
@@ -2005,7 +1924,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .floating-action-button {
-  background: #121212;
+  background: #1a1a1a;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
@@ -2018,10 +1937,11 @@ input[type="text"]:focus, input[type="number"]:focus {
   justify-content: center;
   min-width: 120px;
   pointer-events: auto;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
 .floating-action-button:hover {
-  background: #1a1a1a;
+  background: #232323;
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -2102,7 +2022,8 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .danger-zone {
-  margin-top: 2rem;
+  flex-shrink: 0;
+  margin: 5px 0;
   padding: 1.5rem;
   border: 1px solid rgba(255, 82, 82, 0.2);
   border-radius: 8px;
@@ -2234,4 +2155,386 @@ input[type="text"]:focus, input[type="number"]:focus {
 .popular-badge .crown-icon {
   width: 16px;
   height: 16px;
+}
+
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.reports-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.select-all-button,
+.bulk-action-button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.select-all-button:hover,
+.bulk-action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bulk-action-button.delete {
+  color: #ff4444;
+  border-color: rgba(255, 68, 68, 0.2);
+}
+
+.bulk-action-button.delete:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.bulk-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  padding-right: 15px;
+}
+
+.reports-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reports-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.reports-list::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 3px;
+}
+
+.report-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 15px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
+}
+
+.report-item.selected {
+  border-color: rgba(255, 255, 255, 0.592);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.report-item:hover:not(.selected) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.report-item.selected:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.report-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-button {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  padding: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.checkbox-button:hover {
+  color: var(--off-white);
+}
+
+.checkbox-button.selected {
+  color: var(--off-white);
+}
+
+.report-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-info h4 {
+  margin: 0 0 4px 0;
+  color: var(--off-white);
+  font-size: 1em;
+  font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-date {
+  color: var(--accent-color);
+  font-size: 0.85em;
+  margin: 0 0 8px 0;
+  opacity: 0.8;
+}
+
+.report-metrics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.download-report-button,
+.delete-report-button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-report-button:hover:not(:disabled),
+.delete-report-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.delete-report-button {
+  color: #ff4444;
+  border-color: rgba(255, 68, 68, 0.2);
+}
+
+.delete-report-button:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: rgba(255, 68, 68, 0.3);
+}
+
+.download-report-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sign-out-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 5px 0;
+  transition: all 0.3s ease;
+}
+
+.sign-out-button {
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1em;
+}
+
+.sign-out-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.delete-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-confirmation-dialog {
+  background: rgba(24, 24, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.delete-confirmation-dialog p {
+  margin: 0 0 20px 0;
+  color: var(--off-white);
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirmation-buttons button {
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
+  min-width: 100px;
+}
+
+.confirmation-buttons .confirm-button {
+  background: #ff4444;
+  color: white;
+  border: none;
+}
+
+.confirmation-buttons .confirm-button:hover:not(:disabled) {
+  background: #ff6666;
+}
+
+.confirmation-buttons .cancel-button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--off-white);
+}
+
+.confirmation-buttons .cancel-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.confirmation-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-actions {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 5px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.change-password-button,
+.sign-out-button {
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--off-white);
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1em;
+}
+
+.change-password-button:hover,
+.sign-out-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.change-password-dialog {
+  background: rgba(24, 24, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.change-password-dialog h3 {
+  color: var(--off-white);
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: var(--off-white);
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.form-group input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--off-white);
+  font-size: 1em;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }

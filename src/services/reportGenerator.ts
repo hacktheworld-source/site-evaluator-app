@@ -2,6 +2,8 @@ import { TDocumentDefinitions, Content, ContentText } from 'pdfmake/interfaces';
 import axios from 'axios';
 import pdfMake from 'pdfmake/build/pdfmake';
 import { saveAs } from 'file-saver';
+import { auth } from './firebase';
+import { reportStorage } from './reportStorage';
 
 export interface ReportData {
   websiteUrl: string;
@@ -153,9 +155,17 @@ class ReportGenerator {
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
     const pdfMakeLib = pdfMake.default || pdfMake;
     
+    // Initialize VFS with default fonts
     if (!pdfMakeLib.vfs) {
       pdfMakeLib.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.default;
     }
+
+    // Use only normal font style
+    pdfMakeLib.fonts = {
+      Roboto: {
+        normal: 'Roboto-Regular.ttf'
+      }
+    };
     
     return pdfMakeLib;
   }
@@ -588,78 +598,82 @@ class ReportGenerator {
       styles: {
         coverHeader: {
           fontSize: 28,
-          bold: true,
-          color: '#2c3e50'
+          color: '#2c3e50',
+          font: 'Roboto'
         },
         coverUrl: {
           fontSize: 20,
-          color: '#34495e'
+          color: '#34495e',
+          font: 'Roboto'
         },
         coverDate: {
           fontSize: 14,
-          color: '#7f8c8d'
+          color: '#7f8c8d',
+          font: 'Roboto'
         },
         coverScore: {
           fontSize: 24,
-          bold: true,
-          color: '#27ae60'
+          color: '#27ae60',
+          font: 'Roboto'
         },
         disclaimer: {
           fontSize: 12,
-          italics: true,
-          color: '#7f8c8d'
+          color: '#7f8c8d',
+          font: 'Roboto'
         },
         sectionHeader: {
           fontSize: 20,
-          bold: true,
           color: '#2c3e50',
-          margin: [0, 20, 0, 10]
+          margin: [0, 20, 0, 10],
+          font: 'Roboto'
         },
         subheader: {
           fontSize: 16,
-          bold: true,
           color: '#34495e',
-          margin: [0, 15, 0, 5]
+          margin: [0, 15, 0, 5],
+          font: 'Roboto'
         },
         tableHeader: {
           fontSize: 14,
-          bold: true,
           color: '#ffffff',
           fillColor: '#34495e',
-          margin: [0, 5]
+          margin: [0, 5],
+          font: 'Roboto'
         },
         metric: {
           fontSize: 12,
           color: '#2c3e50',
-          margin: [0, 2]
+          margin: [0, 2],
+          font: 'Roboto'
         },
         good: {
-          color: '#27ae60'
+          color: '#27ae60',
+          font: 'Roboto'
         },
         warning: {
-          color: '#f39c12'
+          color: '#f39c12',
+          font: 'Roboto'
         },
         critical: {
-          color: '#c0392b'
+          color: '#c0392b',
+          font: 'Roboto'
         },
         thresholdInfo: {
           fontSize: 11,
           color: '#666666',
-          italics: true
+          font: 'Roboto'
         },
         listItem: {
           fontSize: 11,
-          lineHeight: 1.3
-        },
-        bold: {
-          bold: true,
-          fontSize: 11
+          lineHeight: 1.3,
+          font: 'Roboto'
         }
       },
       defaultStyle: {
         fontSize: 12,
         lineHeight: 1.4,
-        color: '#2c3e50'
+        color: '#2c3e50',
+        font: 'Roboto'
       },
       footer: (currentPage, pageCount) => ({
         text: `Page ${currentPage} of ${pageCount}`,
@@ -782,9 +796,18 @@ class ReportGenerator {
   }
 
   async generatePDF(data: ReportData): Promise<Uint8Array> {
-    const pdfMake = await this.loadPdfMake();
-    
+    // TEST VARIABLE: Set to true to simulate having 100 reports
+    const SIMULATE_REPORT_LIMIT = false;
+
     try {
+      // Check report limit
+      const userReports = await reportStorage.getUserReports(auth.currentUser?.uid || '');
+      const reportCount = SIMULATE_REPORT_LIMIT ? 100 : userReports.length;
+      
+      if (reportCount >= 100) {
+        throw new Error('Report limit reached (100 reports). Please delete some reports from your profile page to generate new ones.');
+      }
+
       // Move professional analysis before PDF creation
       data.professionalAnalysis = await this.generateProfessionalAnalysis(data);
       

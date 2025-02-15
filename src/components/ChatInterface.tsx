@@ -8,6 +8,7 @@ import { saveAs } from 'file-saver';
 import { toast } from 'react-toastify';
 import { reportStorage } from '../services/reportStorage';
 import { auth } from '../services/firebase';
+import { CREDIT_COSTS, checkCreditsAndShowError, decrementUserPoints, getUserPoints } from '../services/points';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -38,6 +39,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   onGenerateReport?: (data: ReportData) => void;
   statusMessage?: string;
+  onPointsUpdated?: (newPoints: number) => void;
 }
 
 const ScreenshotPlaceholder: React.FC = () => (
@@ -50,7 +52,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   evaluationResults, 
   isLoading,
   onGenerateReport,
-  statusMessage
+  statusMessage,
+  onPointsUpdated
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -240,47 +243,80 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const relevantMessages = messages.filter(msg => 
       msg.role === 'system' || 
       (msg.phase === currentPhase) || 
-      (msg.role === 'user' && messages.indexOf(msg) >= messages.length - MAX_USER_MESSAGES)
+      (messages.indexOf(msg) >= messages.length - (MAX_USER_MESSAGES * 2))
     );
     return relevantMessages.slice(-MAX_HISTORY_LENGTH);
   };
 
   const handleSendMessage = async () => {
-    if (userInput.trim()) {
-      const newUserMessage: Message = { 
-        role: 'user' as const, 
-        content: userInput.trim()
-      };
-      addMessage(newUserMessage);
-      setUserInput('');
-      setIsMessageLoading(true);
+    if (!userInput.trim() || !auth.currentUser?.uid) return;
 
-      try {
-        const selectiveHistory = getSelectiveHistory(currentPhase);
-        const historyString = JSON.stringify(selectiveHistory); // Use history directly without compression
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
-          url: websiteUrl,
-          phase: currentPhase || 'Overall',
-          message: newUserMessage.content,
-          history: historyString // Send the history as a JSON string
+    const userId = auth.currentUser.uid;
+    await checkCreditsAndShowError(
+      userId,
+      CREDIT_COSTS.CHAT_MESSAGE,
+      () => {
+        toast.error(`This action requires ${CREDIT_COSTS.CHAT_MESSAGE} credits. Please purchase more credits to continue.`, {
+          onClick: () => window.location.href = '/points'
         });
-
-        const newAssistantMessage: Message = {
-          role: 'assistant' as const,
-          content: response.data.reply
+      },
+      async () => {
+        const newUserMessage: Message = { 
+          role: 'user' as const, 
+          content: userInput.trim()
         };
+        setIsMessageLoading(true);
 
-        addMessage(newAssistantMessage);
-        setIsMessageLoading(false);
-      } catch (error) {
-        console.error('error fetching ai response:', error);
-        addMessage({
-          role: 'assistant' as const,
-          content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
-        });
-        setIsMessageLoading(false);
+        try {
+          // First deduct credits
+          await decrementUserPoints(userId, CREDIT_COSTS.CHAT_MESSAGE);
+          // Update points in parent component
+          if (onPointsUpdated) {
+            const currentPoints = await getUserPoints(userId);
+            onPointsUpdated(currentPoints);
+          }
+          
+          // Then add the message and clear input
+          addMessage(newUserMessage);
+          setUserInput('');
+
+          // Get selective history but strip out unnecessary data
+          const selectiveHistory = getSelectiveHistory(currentPhase).map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            phase: msg.phase,
+            metrics: msg.metrics // Include metrics but exclude screenshots and UI state
+          }));
+
+          // Then make the API call
+          const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/chat`, {
+            url: websiteUrl,
+            phase: currentPhase || 'Overall',
+            message: newUserMessage.content,
+            history: JSON.stringify(selectiveHistory)
+          });
+
+          const newAssistantMessage: Message = {
+            role: 'assistant' as const,
+            content: response.data.reply
+          };
+
+          addMessage(newAssistantMessage);
+        } catch (error) {
+          console.error('error fetching ai response:', error);
+          if (error instanceof Error && error.message.includes('Insufficient points')) {
+            toast.error('Insufficient credits to send message');
+          } else {
+            addMessage({
+              role: 'assistant' as const,
+              content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
+            });
+          }
+        } finally {
+          setIsMessageLoading(false);
+        }
       }
-    }
+    );
   };
 
   const handleContinue = async () => {
@@ -670,117 +706,137 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [messages]);
 
   const handleGenerateReport = async () => {
-    if (!messages.length || !evaluationResults || !auth.currentUser) {
+    if (!messages.length || !evaluationResults || !auth.currentUser?.uid) {
       toast.error('Please sign in to generate a report');
       return;
     }
 
-    setIsGeneratingReport(true);
-    try {
-      // Create a clean version of metrics without HTML content
-      const cleanMetrics = {
-        performance: {
-          loadTime: evaluationResults.loadTime || 0,
-          firstContentfulPaint: evaluationResults.firstContentfulPaint || 0,
-          timeToInteractive: evaluationResults.timeToInteractive || 0,
-          largestContentfulPaint: evaluationResults.largestContentfulPaint || 0,
-          cumulativeLayoutShift: evaluationResults.cumulativeLayoutShift || 0,
-          ttfb: evaluationResults.ttfb || 0,
-          tbt: evaluationResults.tbt || 0,
-          estimatedFid: evaluationResults.estimatedFid || 0,
-          speedIndex: evaluationResults.speedIndex,
-          totalBlockingTime: evaluationResults.totalBlockingTime
-        },
-        seo: {
-          score: evaluationResults.lighthouse?.seo || 0,
-          title: evaluationResults.seo?.title || '',
-          metaDescription: evaluationResults.seo?.metaDescription || '',
-          headings: evaluationResults.seo?.headings,
-          robotsTxt: evaluationResults.seo?.robotsTxt,
-          sitemapXml: evaluationResults.seo?.sitemapXml,
-          canonicalUrl: evaluationResults.seo?.canonicalUrl,
-          mobileResponsive: evaluationResults.seo?.mobileResponsive
-        },
-        accessibility: {
-          score: evaluationResults.lighthouse?.accessibility || 0,
-          imagesWithAltText: evaluationResults.accessibility?.imagesWithAltText || 0,
-          totalImages: evaluationResults.accessibility?.totalImages || 0,
-          ariaAttributesCount: evaluationResults.accessibility?.ariaAttributesCount || 0,
-          keyboardNavigable: evaluationResults.accessibility?.keyboardNavigable || false,
-          contrastRatio: evaluationResults.accessibility?.contrastRatio,
-          formLabels: evaluationResults.accessibility?.formLabels
-        },
-        lighthouse: {
-          performance: evaluationResults.lighthouse?.performance || 0,
-          accessibility: evaluationResults.lighthouse?.accessibility || 0,
-          seo: evaluationResults.lighthouse?.seo || 0,
-          bestPractices: evaluationResults.lighthouse?.bestPractices || 0,
-          pwa: evaluationResults.lighthouse?.pwa
-        },
-        security: {
-          isHttps: evaluationResults.security?.isHttps || false,
-          protocol: evaluationResults.security?.protocol || '',
-          securityHeaders: {
-            'Strict-Transport-Security': evaluationResults.security?.securityHeaders?.['Strict-Transport-Security'] || false,
-            'Content-Security-Policy': evaluationResults.security?.securityHeaders?.['Content-Security-Policy'] || false,
-            'X-Frame-Options': evaluationResults.security?.securityHeaders?.['X-Frame-Options'] || false,
-            'X-Content-Type-Options': evaluationResults.security?.securityHeaders?.['X-Content-Type-Options'] || false,
-            'X-XSS-Protection': evaluationResults.security?.securityHeaders?.['X-XSS-Protection'] || false,
-            'Referrer-Policy': evaluationResults.security?.securityHeaders?.['Referrer-Policy'] || false
-          },
-          tlsVersion: evaluationResults.security?.tlsVersion || '',
-          certificateExpiry: evaluationResults.security?.certificateExpiry,
-          mixedContent: evaluationResults.security?.mixedContent,
-          vulnerabilities: evaluationResults.security?.vulnerabilities
-        },
-        formFunctionality: {
-          totalForms: evaluationResults.formFunctionality?.totalForms || 0,
-          formsWithSubmitButton: evaluationResults.formFunctionality?.formsWithSubmitButton || 0,
-          interactiveElementsCount: evaluationResults.formFunctionality?.interactiveElementsCount || 0,
-          inputFieldsCount: evaluationResults.formFunctionality?.inputFieldsCount || 0,
-          javascriptEnabled: evaluationResults.formFunctionality?.javascriptEnabled || false
-        },
-        brokenLinks: {
-          totalLinks: evaluationResults.brokenLinks?.totalLinks || 0,
-          brokenLinks: evaluationResults.brokenLinks?.brokenLinks || 0
-        },
-        responsiveness: {
-          isResponsive: evaluationResults.responsiveness?.isResponsive || false,
-          viewportWidth: evaluationResults.responsiveness?.viewportWidth || 0,
-          pageWidth: evaluationResults.responsiveness?.pageWidth || 0
-        },
-        bestPractices: {
-          semanticUsage: evaluationResults.bestPractices?.semanticUsage || {},
-          optimizedImages: evaluationResults.bestPractices?.optimizedImages || 0,
-          totalImages: evaluationResults.bestPractices?.totalImages || 0
+    const userId = auth.currentUser.uid;
+    await checkCreditsAndShowError(
+      userId,
+      CREDIT_COSTS.REPORT_GENERATION,
+      () => {
+        toast.error(`Generating a report requires ${CREDIT_COSTS.REPORT_GENERATION} credits. Please purchase more credits to continue.`, {
+          onClick: () => window.location.href = '/points'
+        });
+      },
+      async () => {
+        setIsGeneratingReport(true);
+        try {
+          // First deduct credits
+          await decrementUserPoints(userId, CREDIT_COSTS.REPORT_GENERATION);
+          // Update points in parent component
+          if (onPointsUpdated) {
+            const currentPoints = await getUserPoints(userId);
+            onPointsUpdated(currentPoints);
+          }
+          
+          // Create a clean version of metrics without HTML content
+          const cleanMetrics = {
+            performance: {
+              loadTime: evaluationResults.loadTime || 0,
+              firstContentfulPaint: evaluationResults.firstContentfulPaint || 0,
+              timeToInteractive: evaluationResults.timeToInteractive || 0,
+              largestContentfulPaint: evaluationResults.largestContentfulPaint || 0,
+              cumulativeLayoutShift: evaluationResults.cumulativeLayoutShift || 0,
+              ttfb: evaluationResults.ttfb || 0,
+              tbt: evaluationResults.tbt || 0,
+              estimatedFid: evaluationResults.estimatedFid || 0,
+              speedIndex: evaluationResults.speedIndex,
+              totalBlockingTime: evaluationResults.totalBlockingTime
+            },
+            seo: {
+              score: evaluationResults.lighthouse?.seo || 0,
+              title: evaluationResults.seo?.title || '',
+              metaDescription: evaluationResults.seo?.metaDescription || '',
+              headings: evaluationResults.seo?.headings,
+              robotsTxt: evaluationResults.seo?.robotsTxt,
+              sitemapXml: evaluationResults.seo?.sitemapXml,
+              canonicalUrl: evaluationResults.seo?.canonicalUrl,
+              mobileResponsive: evaluationResults.seo?.mobileResponsive
+            },
+            accessibility: {
+              score: evaluationResults.lighthouse?.accessibility || 0,
+              imagesWithAltText: evaluationResults.accessibility?.imagesWithAltText || 0,
+              totalImages: evaluationResults.accessibility?.totalImages || 0,
+              ariaAttributesCount: evaluationResults.accessibility?.ariaAttributesCount || 0,
+              keyboardNavigable: evaluationResults.accessibility?.keyboardNavigable || false,
+              contrastRatio: evaluationResults.accessibility?.contrastRatio,
+              formLabels: evaluationResults.accessibility?.formLabels
+            },
+            lighthouse: {
+              performance: evaluationResults.lighthouse?.performance || 0,
+              accessibility: evaluationResults.lighthouse?.accessibility || 0,
+              seo: evaluationResults.lighthouse?.seo || 0,
+              bestPractices: evaluationResults.lighthouse?.bestPractices || 0,
+              pwa: evaluationResults.lighthouse?.pwa
+            },
+            security: {
+              isHttps: evaluationResults.security?.isHttps || false,
+              protocol: evaluationResults.security?.protocol || '',
+              securityHeaders: {
+                'Strict-Transport-Security': evaluationResults.security?.securityHeaders?.['Strict-Transport-Security'] || false,
+                'Content-Security-Policy': evaluationResults.security?.securityHeaders?.['Content-Security-Policy'] || false,
+                'X-Frame-Options': evaluationResults.security?.securityHeaders?.['X-Frame-Options'] || false,
+                'X-Content-Type-Options': evaluationResults.security?.securityHeaders?.['X-Content-Type-Options'] || false,
+                'X-XSS-Protection': evaluationResults.security?.securityHeaders?.['X-XSS-Protection'] || false,
+                'Referrer-Policy': evaluationResults.security?.securityHeaders?.['Referrer-Policy'] || false
+              },
+              tlsVersion: evaluationResults.security?.tlsVersion || '',
+              certificateExpiry: evaluationResults.security?.certificateExpiry,
+              mixedContent: evaluationResults.security?.mixedContent,
+              vulnerabilities: evaluationResults.security?.vulnerabilities
+            },
+            formFunctionality: {
+              totalForms: evaluationResults.formFunctionality?.totalForms || 0,
+              formsWithSubmitButton: evaluationResults.formFunctionality?.formsWithSubmitButton || 0,
+              interactiveElementsCount: evaluationResults.formFunctionality?.interactiveElementsCount || 0,
+              inputFieldsCount: evaluationResults.formFunctionality?.inputFieldsCount || 0,
+              javascriptEnabled: evaluationResults.formFunctionality?.javascriptEnabled || false
+            },
+            brokenLinks: {
+              totalLinks: evaluationResults.brokenLinks?.totalLinks || 0,
+              brokenLinks: evaluationResults.brokenLinks?.brokenLinks || 0
+            },
+            responsiveness: {
+              isResponsive: evaluationResults.responsiveness?.isResponsive || false,
+              viewportWidth: evaluationResults.responsiveness?.viewportWidth || 0,
+              pageWidth: evaluationResults.responsiveness?.pageWidth || 0
+            },
+            bestPractices: {
+              semanticUsage: evaluationResults.bestPractices?.semanticUsage || {},
+              optimizedImages: evaluationResults.bestPractices?.optimizedImages || 0,
+              totalImages: evaluationResults.bestPractices?.totalImages || 0
+            }
+          };
+
+          const reportData: ReportData = {
+            websiteUrl,
+            timestamp: new Date(),
+            overallScore: overallScore || 0,
+            phaseScores,
+            metrics: cleanMetrics
+          };
+
+          // Generate PDF
+          const pdfBuffer = await reportGenerator.generatePDF(reportData);
+          
+          // Save metadata to Firestore
+          await reportStorage.saveReport(userId, reportData);
+          
+          // Download locally
+          const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+          saveAs(blob, `${websiteUrl.replace(/[^a-z0-9]/gi, '_')}_report.pdf`);
+
+          toast.success('Report generated and saved successfully!');
+        } catch (error) {
+          console.error('Error generating report:', error);
+          toast.error(error instanceof Error ? error.message : 'Failed to generate report. Please try again.');
+        } finally {
+          setIsGeneratingReport(false);
         }
-      };
-
-      const reportData: ReportData = {
-        websiteUrl,
-        timestamp: new Date(),
-        overallScore: overallScore || 0,
-        phaseScores,
-        metrics: cleanMetrics
-      };
-
-      // Generate PDF
-      const pdfBuffer = await reportGenerator.generatePDF(reportData);
-      
-      // Save metadata to Firestore
-      await reportStorage.saveReport(auth.currentUser.uid, reportData);
-      
-      // Download locally
-      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
-      saveAs(blob, `${websiteUrl.replace(/[^a-z0-9]/gi, '_')}_report.pdf`);
-
-      toast.success('Report generated and saved successfully!');
-    } catch (error) {
-      console.error('Error generating report:', error);
-      toast.error('Failed to generate report. Please try again.');
-    } finally {
-      setIsGeneratingReport(false);
-    }
+      }
+    );
   };
 
   useEffect(() => {

@@ -304,6 +304,40 @@ class ReportStorageService {
       throw new Error('Failed to delete user reports');
     }
   }
+
+  async deleteReport(userId: string, reportId: string): Promise<void> {
+    try {
+      const reportRef = doc(db, 'users', userId, 'reports', reportId);
+      await deleteDoc(reportRef);
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      throw new Error('Failed to delete report');
+    }
+  }
+
+  async deleteMultipleReports(userId: string, reportIds: string[]): Promise<void> {
+    try {
+      const deletePromises = reportIds.map(reportId => 
+        this.deleteReport(userId, reportId)
+      );
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error deleting multiple reports:', error);
+      throw new Error('Failed to delete multiple reports');
+    }
+  }
+
+  async downloadMultipleReports(reports: StoredReport[]): Promise<void> {
+    try {
+      const downloadPromises = reports.map(report => 
+        this.regenerateAndDownloadReport(report)
+      );
+      await Promise.all(downloadPromises);
+    } catch (error) {
+      console.error('Error downloading multiple reports:', error);
+      throw new Error('Failed to download multiple reports');
+    }
+  }
 }
 
 export const reportStorage = new ReportStorageService();
