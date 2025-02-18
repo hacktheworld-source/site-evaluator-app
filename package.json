@@ -65,8 +65,8 @@
     "dev": "concurrently \"redis-server\" \"node server.js\"",
     "dev:windows": "start redis-server & node server.js",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "postdeploy": "node -e \"require('fs').copyFileSync('.env.development', '.env')\""
+    "deploy": "gh-pages -d build --dotfiles",
+    "postdeploy": "echo \"Deployment complete\""
   },
   "eslintConfig": {
     "extends": [

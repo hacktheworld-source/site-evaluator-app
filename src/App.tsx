@@ -427,7 +427,7 @@ const App: React.FC = () => {
   if (authError) return <div>Error: {authError.message}</div>;
 
   return (
-    <Router>
+    <Router basename="/site-evaluator-app">
       <div className="App">
         {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
         <header className="app-header">
