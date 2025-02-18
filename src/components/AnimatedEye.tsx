@@ -34,9 +34,12 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
     return () => clearInterval(interval);
   }, [animationSpeed, currentImage]);
 
+  // Get the base URL from the environment variable, defaulting to '' for local development
+  const baseUrl = process.env.REACT_APP_FRONTEND_URL ? new URL(process.env.REACT_APP_FRONTEND_URL).pathname : '';
+
   return (
     <div className={`animated-eye ${size}`}>
-      <img src={`/eye-graphics/eye${currentImage}.png`} alt="Animated Eye" />
+      <img src={`${baseUrl}/eye-graphics/eye${currentImage}.png`} alt="Animated Eye" />
     </div>
   );
 };
