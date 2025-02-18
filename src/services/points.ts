@@ -1,40 +1,45 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
-export const CREDIT_COSTS = {
-  EVALUATION: 7,
-  CHAT_MESSAGE: 1,
-  REPORT_GENERATION: 3
+export const SERVICE_COSTS = {
+  EVALUATION: 0.70,
+  CHAT_MESSAGE: 0.10,
+  REPORT_GENERATION: 0.30,
+  MINIMUM_PURCHASE: 5.00,
+  INITIAL_CREDIT: 5.00
 };
 
 export const getUserPoints = async (userId: string): Promise<number> => {
-  const response = await axios.get(`${API_URL}/api/points/${userId}`);
-  return response.data.points;
+  const response = await axios.get(`${API_URL}/api/balance/${userId}`);
+  return response.data.balance;
 };
 
-export const updateUserPoints = async (userId: string, points: number): Promise<void> => {
-  await axios.post(`${API_URL}/api/points/${userId}`, { points });
+export const getUserBalance = async (userId: string): Promise<number> => {
+  const response = await axios.get(`${API_URL}/api/balance/${userId}`);
+  return response.data.balance;
 };
 
-export const decrementUserPoints = async (userId: string, amount: number): Promise<void> => {
-  await axios.post(`${API_URL}/api/points/${userId}/decrement`, { amount });
+export const decrementUserBalance = async (userId: string, amount: number): Promise<void> => {
+  await axios.post(`${API_URL}/api/balance/${userId}/deduct`, { amount });
 };
 
-export const hasEnoughCredits = async (userId: string, requiredCredits: number): Promise<boolean> => {
-  const currentPoints = await getUserPoints(userId);
-  return currentPoints >= requiredCredits;
+export const hasEnoughBalance = async (userId: string, requiredAmount: number): Promise<boolean> => {
+  const currentBalance = await getUserBalance(userId);
+  return currentBalance >= requiredAmount;
 };
 
 export const checkCreditsAndShowError = async (
   userId: string, 
-  requiredCredits: number,
-  onInsufficientCredits: () => void,
+  requiredAmount: number,
+  onInsufficientBalance: () => void,
   onSuccess: () => void
 ): Promise<void> => {
-  if (await hasEnoughCredits(userId, requiredCredits)) {
+  if (await hasEnoughBalance(userId, requiredAmount)) {
     onSuccess();
   } else {
-    onInsufficientCredits();
+    onInsufficientBalance();
+    toast.error(`Insufficient balance. You need $${requiredAmount.toFixed(2)} to perform this action.`);
   }
 }; 

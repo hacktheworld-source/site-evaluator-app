@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { auth, deleteUserAccount } from '../services/firebase';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getUserPoints } from '../services/points';
+import { getUserBalance } from '../services/points';
 import { reportStorage, StoredReport } from '../services/reportStorage';
 import defaultUserIcon from '../assets/default-user-icon.png';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faSpinner, faTrash, faSquare, faCheckSquare, faSignOutAlt, faKey } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faSpinner, faTrash, faSquare, faCheckSquare, faSignOutAlt, faKey, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { paymentService } from '../services/paymentService';
+
+interface UserData {
+  balance: number;
+  isPayAsYouGo: boolean;
+  hasAddedPayment: boolean;
+}
 
 const ProfilePage: React.FC = () => {
   const [user, loading] = useAuthState(auth);
   const [userPoints, setUserPoints] = useState<number | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [reports, setReports] = useState<StoredReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingReportId, setDownloadingReportId] = useState<string | null>(null);
@@ -35,8 +43,13 @@ const ProfilePage: React.FC = () => {
       
       setIsLoading(true);
       try {
-        const points = await getUserPoints(user.uid);
+        const [points, userDataResponse] = await Promise.all([
+          getUserBalance(user.uid),
+          paymentService.getUserData(user.uid),
+          reportStorage.getUserReports(user.uid)
+        ]);
         setUserPoints(points);
+        setUserData(userDataResponse);
 
         const userReports = await reportStorage.getUserReports(user.uid);
         setReports(userReports.sort((a, b) => 
@@ -256,7 +269,15 @@ const ProfilePage: React.FC = () => {
             />
             <p><strong>Name:</strong> {user.displayName || 'N/A'}</p>
             <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Points:</strong> {userPoints !== null ? userPoints : 'Loading...'}</p>
+            <p className="balance-info">
+              <strong>Balance:</strong> {userPoints !== null ? `$${userPoints.toFixed(2)}` : 'Loading...'}
+              {userData?.isPayAsYouGo && (
+                <span className="pay-as-you-go-badge">
+                  <FontAwesomeIcon icon={faBolt} className="pay-as-you-go-icon" />
+                  Pay-as-you-go
+                </span>
+              )}
+            </p>
           </div>
 
           <div className="account-actions">

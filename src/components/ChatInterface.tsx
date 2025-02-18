@@ -8,7 +8,7 @@ import { saveAs } from 'file-saver';
 import { toast } from 'react-toastify';
 import { reportStorage } from '../services/reportStorage';
 import { auth } from '../services/firebase';
-import { CREDIT_COSTS, checkCreditsAndShowError, decrementUserPoints, getUserPoints } from '../services/points';
+import { SERVICE_COSTS, checkCreditsAndShowError, decrementUserBalance, getUserBalance } from '../services/points';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -254,9 +254,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const userId = auth.currentUser.uid;
     await checkCreditsAndShowError(
       userId,
-      CREDIT_COSTS.CHAT_MESSAGE,
+      SERVICE_COSTS.CHAT_MESSAGE,
       () => {
-        toast.error(`This action requires ${CREDIT_COSTS.CHAT_MESSAGE} credits. Please purchase more credits to continue.`, {
+        toast.error(`This action requires ${SERVICE_COSTS.CHAT_MESSAGE} credits. Please purchase more credits to continue.`, {
           onClick: () => window.location.href = '/points'
         });
       },
@@ -269,10 +269,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         try {
           // First deduct credits
-          await decrementUserPoints(userId, CREDIT_COSTS.CHAT_MESSAGE);
+          await decrementUserBalance(userId, SERVICE_COSTS.CHAT_MESSAGE);
           // Update points in parent component
           if (onPointsUpdated) {
-            const currentPoints = await getUserPoints(userId);
+            const currentPoints = await getUserBalance(userId);
             onPointsUpdated(currentPoints);
           }
           
@@ -714,9 +714,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const userId = auth.currentUser.uid;
     await checkCreditsAndShowError(
       userId,
-      CREDIT_COSTS.REPORT_GENERATION,
+      SERVICE_COSTS.REPORT_GENERATION,
       () => {
-        toast.error(`Generating a report requires ${CREDIT_COSTS.REPORT_GENERATION} credits. Please purchase more credits to continue.`, {
+        toast.error(`Generating a report requires ${SERVICE_COSTS.REPORT_GENERATION} credits. Please purchase more credits to continue.`, {
           onClick: () => window.location.href = '/points'
         });
       },
@@ -724,10 +724,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setIsGeneratingReport(true);
         try {
           // First deduct credits
-          await decrementUserPoints(userId, CREDIT_COSTS.REPORT_GENERATION);
+          await decrementUserBalance(userId, SERVICE_COSTS.REPORT_GENERATION);
           // Update points in parent component
           if (onPointsUpdated) {
-            const currentPoints = await getUserPoints(userId);
+            const currentPoints = await getUserBalance(userId);
             onPointsUpdated(currentPoints);
           }
           

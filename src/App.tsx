@@ -6,7 +6,7 @@ import { evaluateWebsite } from './services/evaluator';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './services/firebase';
 import { signOut } from 'firebase/auth';
-import { getUserPoints, decrementUserPoints, updateUserPoints, CREDIT_COSTS, checkCreditsAndShowError } from './services/points';
+import { getUserBalance, decrementUserBalance, SERVICE_COSTS, checkCreditsAndShowError } from './services/points';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ProfilePage from './components/ProfilePage';
@@ -17,6 +17,12 @@ import { User } from 'firebase/auth';
 import ChatInterface from './components/ChatInterface';
 import AnimatedEye from './components/AnimatedEye';
 import MetricsSearch from './components/MetricsSearch';
+import PaymentSuccessPage from './components/PaymentSuccessPage';
+import PaymentMethodSuccess from './components/PaymentMethodSuccess';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { paymentService, UserData } from './services/paymentService';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBolt } from '@fortawesome/free-solid-svg-icons';
 
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -35,22 +41,29 @@ const App: React.FC = () => {
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [analysisState, setAnalysisState] = useState<'pre' | 'post'>('pre');
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
+  const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
-      try {
-        if (user && !isOffline) {
-          const points = await getUserPoints(user.uid);
-          setUserPoints(points);
+      if (user) {
+        try {
+          const [balance, userData] = await Promise.all([
+            getUserBalance(user.uid),
+            paymentService.getUserData(user.uid)
+          ]);
+          setUserPoints(balance);
+          setIsPayAsYouGo(!!(userData?.stripeCustomerId && userData?.hasAddedPayment));
+        } catch (error) {
+          console.error('Error initializing app:', error);
+          handleError('Failed to load user data');
         }
-      } catch (error) {
-        console.error('Error initializing app:', error);
-        setError('An error occurred while initializing the app. Please try refreshing the page.');
       }
     };
 
-    initializeApp();
-  }, [user, isOffline]);
+    if (!loading) {
+      initializeApp();
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -89,9 +102,9 @@ const App: React.FC = () => {
 
     await checkCreditsAndShowError(
       user.uid,
-      CREDIT_COSTS.EVALUATION,
+      SERVICE_COSTS.EVALUATION,
       () => {
-        handleError(`Website evaluation requires ${CREDIT_COSTS.EVALUATION} credits (1 credit per phase). Please purchase more credits to continue.`);
+        handleError(`Website evaluation requires ${SERVICE_COSTS.EVALUATION} credits (1 credit per phase). Please purchase more credits to continue.`);
         // Add a slight delay before showing the toast with the clickable message
         setTimeout(() => {
           toast.info('Click here to purchase more credits', {
@@ -108,21 +121,20 @@ const App: React.FC = () => {
         setChatKey(prevKey => prevKey + 1);
 
         const cleanupAndRefund = async () => {
-          setIsLoading(false);
-          setIsGenerating(false);
           if (user) {
             try {
-              await updateUserPoints(user.uid, (userPoints || 0) + CREDIT_COSTS.EVALUATION);
-              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + CREDIT_COSTS.EVALUATION : null));
+              await decrementUserBalance(user.uid, SERVICE_COSTS.EVALUATION);
+              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + SERVICE_COSTS.EVALUATION : null));
+              toast.info('Credits have been refunded.');
             } catch (error) {
-              console.error('Error refunding points:', error);
+              console.error('Error refunding credits:', error);
             }
           }
         };
 
         try {
-          await decrementUserPoints(user.uid, CREDIT_COSTS.EVALUATION);
-          setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - CREDIT_COSTS.EVALUATION : null));
+          await decrementUserBalance(user.uid, SERVICE_COSTS.EVALUATION);
+          setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - SERVICE_COSTS.EVALUATION : null));
 
           const eventSource = new EventSource(
             `${process.env.REACT_APP_API_URL}/api/evaluate?url=${encodeURIComponent(website)}&userId=${encodeURIComponent(user.uid)}`
@@ -247,8 +259,8 @@ const App: React.FC = () => {
     );
   };
 
-  const handlePurchase = (points: number) => {
-    setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + points : points));
+  const handlePurchase = (amount: number) => {
+    setUserPoints(prevBalance => (prevBalance !== null ? prevBalance + amount : amount));
   };
 
   const handleSignOut = async () => {
@@ -415,61 +427,79 @@ const App: React.FC = () => {
   if (authError) return <div>Error: {authError.message}</div>;
 
   return (
-    <div className="App">
-      {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
-      <header className="app-header">
-        <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
-        {user ? (
-          <div className="user-menu-container">
-            <div
-              className="points-counter"
-              onClick={() => { setCurrentPage('points'); }}
-            >
-              {userPoints !== null ? `${userPoints} pts` : 'Loading...'}
+    <Router>
+      <div className="App">
+        {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
+        <header className="app-header">
+          <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
+          {user ? (
+            <div className="user-menu-container">
+              <div
+                className="points-counter"
+                onClick={() => { setCurrentPage('points'); }}
+              >
+                {userPoints !== null ? (
+                  <>
+                    ${userPoints.toFixed(2)}
+                    {isPayAsYouGo && (
+                      <FontAwesomeIcon 
+                        icon={faBolt} 
+                        className="pay-as-you-go-icon" 
+                        title="Pay-as-you-go enabled"
+                      />
+                    )}
+                  </>
+                ) : 'Loading...'}
+              </div>
+              <button 
+                className="user-menu-button" 
+                onClick={() => setCurrentPage('profile')}
+                title="View Profile"
+              >
+                <img
+                  src={getProfilePicture(user)}
+                  alt="User Avatar"
+                  className="user-avatar"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = defaultUserIcon;
+                  }}
+                />
+              </button>
             </div>
-            <button 
-              className="user-menu-button" 
-              onClick={() => setCurrentPage('profile')}
-              title="View Profile"
-            >
-              <img
-                src={getProfilePicture(user)}
-                alt="User Avatar"
-                className="user-avatar"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null;
-                  target.src = defaultUserIcon;
-                }}
-              />
-            </button>
-          </div>
-        ) : (
-          <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
-        )}
-      </header>
-      <div className={`content-wrapper`}>
-        <main className="main-content">
-          {renderPage()}
-        </main>
+          ) : (
+            <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
+          )}
+        </header>
+        <div className={`content-wrapper`}>
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={renderPage()} />
+              <Route path="/points" element={<PointsManagementPage />} />
+              <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
+              <Route path="/payment-success" element={<PaymentSuccessPage />} />
+            </Routes>
+          </main>
+        </div>
+        {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
+        <ToastContainer
+          position="bottom-right"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable={false}
+          pauseOnHover
+          theme="dark"
+          style={{
+            zIndex: 9999
+          }}
+        />
       </div>
-      {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
-      <ToastContainer
-        position="bottom-right"
-        autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable={false}
-        pauseOnHover
-        theme="dark"
-        style={{
-          zIndex: 9999
-        }}
-      />
-    </div>
+    </Router>
   );
 };
 
