@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/site-evaluator-app/static/css/main.ee86f104.css",
-    "main.js": "/site-evaluator-app/static/js/main.7342525a.js",
+    "main.js": "/site-evaluator-app/static/js/main.70966840.js",
     "static/js/947.7c498e6d.chunk.js": "/site-evaluator-app/static/js/947.7c498e6d.chunk.js",
     "index.html": "/site-evaluator-app/index.html",
     "main.ee86f104.css.map": "/site-evaluator-app/static/css/main.ee86f104.css.map",
-    "main.7342525a.js.map": "/site-evaluator-app/static/js/main.7342525a.js.map",
+    "main.70966840.js.map": "/site-evaluator-app/static/js/main.70966840.js.map",
     "947.7c498e6d.chunk.js.map": "/site-evaluator-app/static/js/947.7c498e6d.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.ee86f104.css",
-    "static/js/main.7342525a.js"
+    "static/js/main.70966840.js"
   ]
 }
