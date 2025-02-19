@@ -65,7 +65,7 @@
     "dev": "concurrently \"redis-server\" \"node server.js\"",
     "dev:windows": "start redis-server & node server.js",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build --dotfiles",
+    "deploy": "npm run build && cp -r build/* /home/username/public_html/olivesays.com/",
     "postdeploy": "echo \"Deployment complete\""
   },
   "eslintConfig": {
