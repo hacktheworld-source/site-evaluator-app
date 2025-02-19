@@ -64,8 +64,9 @@
     "start-server": "node server.js",
     "dev": "concurrently \"redis-server\" \"node server.js\"",
     "dev:windows": "start redis-server & node server.js",
-    "predeploy": "npm run build",
-    "deploy": "npm run build && cp -r build/* /home/username/public_html/olivesays.com/",
+    "build:prod": "node -e \"require('fs').copyFileSync('.env.production', '.env')\" && react-scripts build",
+    "predeploy": "npm run build:prod",
+    "deploy": "echo \"Build complete! Now upload the 'build' folder contents to /public_html/olivesays.com/ via cPanel File Manager\"",
     "postdeploy": "echo \"Deployment complete\""
   },
   "eslintConfig": {

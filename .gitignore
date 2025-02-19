@@ -17,8 +17,9 @@
 /backend/coverage
 
 # production
-/build
-/backend/dist
+.env
+.env.local
+.env.*.local
 
 # logs
 npm-debug.log*
