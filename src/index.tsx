@@ -17,8 +17,13 @@ window.ReactDOM = ReactDOM;
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
+console.log('Root created');
+
 root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
+
+console.log('Render called');

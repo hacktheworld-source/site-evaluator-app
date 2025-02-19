@@ -24,6 +24,8 @@ import { paymentService, UserData } from './services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBolt } from '@fortawesome/free-solid-svg-icons';
 
+console.log('App loaded');
+
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
