@@ -32,7 +32,23 @@
       window.addEventListener('load', function() {
         console.log('Window loaded');
         console.log('Root element:', document.getElementById('root'));
-        console.log('Scripts loaded:', document.scripts);
+        console.log('Scripts:', Array.from(document.scripts).map(s => s.src));
+        
+        // Check React initialization
+        setTimeout(() => {
+          console.log('After timeout:');
+          console.log('React available:', typeof window.React);
+          console.log('ReactDOM available:', typeof window.ReactDOM);
+          console.log('Root content:', document.getElementById('root').innerHTML);
+        }, 1000);
+      });
+
+      window.addEventListener('error', function(e) {
+        console.log('Global error:', e.message);
+        console.log('Script:', e.filename);
+        console.log('Line:', e.lineno);
+        console.log('Column:', e.colno);
+        console.log('Error object:', e.error);
       });
     </script>
   </head>
