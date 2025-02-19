@@ -3,16 +3,25 @@
     RewriteEngine On
     RewriteBase /
 
-    # Serve static files directly
+    # Handle static files first
     RewriteCond %{REQUEST_URI} ^/static/
-    RewriteRule ^(.*)$ $1 [L]
+    RewriteRule ^(.*)$ $1 [L,QSA]
 
-    # React routing
+    # Handle React routing
     RewriteRule ^index\.html$ - [L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-l
     RewriteRule . /index.html [L]
+</IfModule>
+
+# Set MIME types for files
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/javascript .js
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType application/json .json
 </IfModule>
 
 # Security headers
@@ -21,57 +30,30 @@
     Header set X-XSS-Protection "1; mode=block"
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
-    
-    # CORS Headers
-    Header set Access-Control-Allow-Origin "https://olivesays.com"
-    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
-# Proper MIME types
-AddType application/javascript .js
-AddType text/javascript .js
-AddType text/css .css
-AddType image/svg+xml .svg
-AddType image/x-icon .ico
-AddType image/png .png
-AddType image/jpeg .jpg .jpeg
-AddType image/gif .gif
-AddType application/json .json
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json
+</IfModule>
 
-# Caching
+# Cache control
 <IfModule mod_expires.c>
     ExpiresActive On
     
-    # Images
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType image/x-icon "access plus 1 year"
-    
-    # CSS, JavaScript
+    # Cache static files
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
     
-    # Others
-    ExpiresByType application/json "access plus 0 seconds"
+    # No cache for HTML and JSON
     ExpiresByType text/html "access plus 0 seconds"
-</IfModule>
-
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/json
-    AddOutputFilterByType DEFLATE image/svg+xml
+    ExpiresByType application/json "access plus 0 seconds"
 </IfModule>
 
 # Prevent directory listing
 Options -Indexes
 
-# Default character set
+# Set default character set
 AddDefaultCharset utf-8 
