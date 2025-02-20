@@ -61,14 +61,6 @@
           const root = document.getElementById('root');
           console.log('Root properties:', Object.getOwnPropertyNames(root));
           console.log('Root _reactRootContainer:', root._reactRootContainer);
-
-          // Debug CSS
-          console.log('Root computed style:', window.getComputedStyle(root));
-          console.log('Body computed style:', window.getComputedStyle(document.body));
-          
-          // Check if root is actually rendering outside viewport
-          const rootRect = root.getBoundingClientRect();
-          console.log('Root position:', rootRect);
         }, 1000);
 
         // Check server info
@@ -117,36 +109,6 @@
         });
       });
     </script>
-    
-    <!-- Temporary debugging styles -->
-    <style>
-      /* Force visibility and basic styling */
-      #root {
-        min-height: 100vh;
-        background: white !important;
-        color: black !important;
-        visibility: visible !important;
-        display: block !important;
-        opacity: 1 !important;
-        position: static !important;
-        transform: none !important;
-        border: 5px solid red;
-      }
-      
-      body {
-        margin: 0;
-        background: white !important;
-        min-height: 100vh;
-        visibility: visible !important;
-        display: block !important;
-        opacity: 1 !important;
-      }
-
-      /* Debug outline all elements */
-      * {
-        outline: 1px solid rgba(255, 0, 0, 0.1);
-      }
-    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
