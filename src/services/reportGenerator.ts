@@ -153,7 +153,7 @@ interface Vulnerability {
 class ReportGenerator {
   private async loadPdfMake() {
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
-    const pdfMakeLib = pdfMake.default || pdfMake;
+    const pdfMakeLib = pdfMake;
     pdfMakeLib.vfs = pdfFonts.pdfMake.vfs;
     return pdfMakeLib;
   }
@@ -584,88 +584,73 @@ class ReportGenerator {
     return {
       content,
       defaultStyle: {
-        font: 'Helvetica'  // Use Helvetica as default
+        font: undefined  // Let pdfmake use its default font
       },
       styles: {
         coverHeader: {
           fontSize: 28,
-          color: '#2c3e50',
-          font: 'Helvetica'
+          color: '#2c3e50'
         },
         coverUrl: {
           fontSize: 20,
-          color: '#34495e',
-          font: 'Helvetica'
+          color: '#34495e'
         },
         coverDate: {
           fontSize: 14,
-          color: '#7f8c8d',
-          font: 'Helvetica'
+          color: '#7f8c8d'
         },
         coverScore: {
           fontSize: 24,
-          color: '#27ae60',
-          font: 'Helvetica'
+          color: '#27ae60'
         },
         disclaimer: {
           fontSize: 12,
-          color: '#7f8c8d',
-          font: 'Helvetica'
+          color: '#7f8c8d'
         },
         sectionHeader: {
           fontSize: 20,
           color: '#2c3e50',
-          margin: [0, 20, 0, 10],
-          font: 'Helvetica'
+          margin: [0, 20, 0, 10]
         },
         subheader: {
           fontSize: 16,
           color: '#34495e',
-          margin: [0, 15, 0, 5],
-          font: 'Helvetica'
+          margin: [0, 15, 0, 5]
         },
         tableHeader: {
           fontSize: 14,
           color: '#ffffff',
           fillColor: '#34495e',
-          margin: [0, 5],
-          font: 'Helvetica'
+          margin: [0, 5]
         },
         metric: {
           fontSize: 12,
           color: '#2c3e50',
-          margin: [0, 2],
-          font: 'Helvetica'
+          margin: [0, 2]
         },
         good: {
-          color: '#27ae60',
-          font: 'Helvetica'
+          color: '#27ae60'
         },
         warning: {
-          color: '#f39c12',
-          font: 'Helvetica'
+          color: '#f39c12'
         },
         critical: {
-          color: '#c0392b',
-          font: 'Helvetica'
+          color: '#c0392b'
         },
         thresholdInfo: {
           fontSize: 11,
-          color: '#666666',
-          font: 'Helvetica'
+          color: '#666666'
         },
         listItem: {
           fontSize: 11,
-          lineHeight: 1.3,
-          font: 'Helvetica'
+          lineHeight: 1.3
         }
       },
       footer: (currentPage, pageCount) => ({
         text: `Page ${currentPage} of ${pageCount}`,
         alignment: 'center',
         margin: [0, 20],
-        color: '#95a5a6',
-        font: 'Helvetica'
+        color: '#95a5a6'
       }),
       pageMargins: [40, 60, 40, 60],
       pageSize: 'A4'
@@ -972,17 +957,14 @@ class ReportGenerator {
     return {
       header: {
         fontSize: 24,
-        bold: true,
         margin: [0, 0, 0, 20]
       },
       subheader: {
         fontSize: 16,
-        bold: true,
         margin: [0, 10, 0, 5]
       },
       tableHeader: {
         fontSize: 12,
-        bold: true,
         color: '#ffffff',
         fillColor: '#34495e'
       },
@@ -990,16 +972,13 @@ class ReportGenerator {
         fontSize: 11
       },
       good: {
-        color: '#2e7d32',
-        bold: true
+        color: '#2e7d32'
       },
       warning: {
-        color: '#ed6c02',
-        bold: true
+        color: '#ed6c02'
       },
       critical: {
-        color: '#d32f2f',
-        bold: true
+        color: '#d32f2f'
       },
       recommendation: {
         fontSize: 11,
@@ -1007,7 +986,6 @@ class ReportGenerator {
       },
       recommendationHeader: {
         fontSize: 12,
-        bold: true,
         margin: [0, 10, 0, 5]
       }
     };
