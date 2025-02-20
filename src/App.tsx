@@ -500,13 +500,6 @@ const App: React.FC = () => {
         <div className="App">
           {/* Log the render state */}
           {(() => {
-            console.log('App rendering with state:', { 
-              user, 
-              loading, 
-              error,
-              currentPage,
-              isOffline 
-            });
             return null;
           })()}
           {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}

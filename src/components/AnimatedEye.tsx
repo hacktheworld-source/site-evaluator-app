@@ -42,7 +42,6 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
   };
 
   const baseUrl = getBaseUrl();
-  console.log('Eye animation using base URL:', baseUrl);
 
   return (
     <div className={`animated-eye ${size}`}>
