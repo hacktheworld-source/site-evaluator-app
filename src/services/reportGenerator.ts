@@ -2,10 +2,13 @@ import { TDocumentDefinitions, Content, ContentText } from 'pdfmake/interfaces';
 import axios from 'axios';
 // Import the bundled version that includes fonts
 import pdfMake from 'pdfmake/build/pdfmake';
-import 'pdfmake/build/vfs_fonts';  // Side-effect import only
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { saveAs } from 'file-saver';
 import { auth } from './firebase';
 import { reportStorage } from './reportStorage';
+
+// Initialize pdfMake with fonts
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 // Configure fonts - just use Times-Roman
 pdfMake.fonts = {
