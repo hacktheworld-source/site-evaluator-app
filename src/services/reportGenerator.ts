@@ -159,13 +159,6 @@ class ReportGenerator {
     if (!pdfMakeLib.vfs) {
       pdfMakeLib.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.default;
     }
-
-    // Use only normal font style
-    pdfMakeLib.fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf'
-      }
-    };
     
     return pdfMakeLib;
   }
@@ -598,82 +591,67 @@ class ReportGenerator {
       styles: {
         coverHeader: {
           fontSize: 28,
-          color: '#2c3e50',
-          font: 'Roboto'
+          color: '#2c3e50'
         },
         coverUrl: {
           fontSize: 20,
-          color: '#34495e',
-          font: 'Roboto'
+          color: '#34495e'
         },
         coverDate: {
           fontSize: 14,
-          color: '#7f8c8d',
-          font: 'Roboto'
+          color: '#7f8c8d'
         },
         coverScore: {
           fontSize: 24,
-          color: '#27ae60',
-          font: 'Roboto'
+          color: '#27ae60'
         },
         disclaimer: {
           fontSize: 12,
-          color: '#7f8c8d',
-          font: 'Roboto'
+          color: '#7f8c8d'
         },
         sectionHeader: {
           fontSize: 20,
           color: '#2c3e50',
-          margin: [0, 20, 0, 10],
-          font: 'Roboto'
+          margin: [0, 20, 0, 10]
         },
         subheader: {
           fontSize: 16,
           color: '#34495e',
-          margin: [0, 15, 0, 5],
-          font: 'Roboto'
+          margin: [0, 15, 0, 5]
         },
         tableHeader: {
           fontSize: 14,
           color: '#ffffff',
           fillColor: '#34495e',
-          margin: [0, 5],
-          font: 'Roboto'
+          margin: [0, 5]
         },
         metric: {
           fontSize: 12,
           color: '#2c3e50',
-          margin: [0, 2],
-          font: 'Roboto'
+          margin: [0, 2]
         },
         good: {
-          color: '#27ae60',
-          font: 'Roboto'
+          color: '#27ae60'
         },
         warning: {
-          color: '#f39c12',
-          font: 'Roboto'
+          color: '#f39c12'
         },
         critical: {
-          color: '#c0392b',
-          font: 'Roboto'
+          color: '#c0392b'
         },
         thresholdInfo: {
           fontSize: 11,
-          color: '#666666',
-          font: 'Roboto'
+          color: '#666666'
         },
         listItem: {
           fontSize: 11,
-          lineHeight: 1.3,
-          font: 'Roboto'
+          lineHeight: 1.3
         }
       },
       defaultStyle: {
         fontSize: 12,
         lineHeight: 1.4,
-        color: '#2c3e50',
-        font: 'Roboto'
+        color: '#2c3e50'
       },
       footer: (currentPage, pageCount) => ({
         text: `Page ${currentPage} of ${pageCount}`,

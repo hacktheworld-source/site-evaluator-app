@@ -759,9 +759,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       },
       async () => {
         setIsGeneratingReport(true);
+        let creditsDeducted = false;
+
         try {
           // First deduct credits
           await decrementUserBalance(userId, SERVICE_COSTS.REPORT_GENERATION);
+          creditsDeducted = true;
+          
           // Update points in parent component
           if (onPointsUpdated) {
             const currentPoints = await getUserBalance(userId);
@@ -868,7 +872,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           toast.success('Report generated and saved successfully!');
         } catch (error) {
           console.error('Error generating report:', error);
-          toast.error(error instanceof Error ? error.message : 'Failed to generate report. Please try again.');
+          
+          // If credits were deducted but report failed, refund them
+          if (creditsDeducted) {
+            try {
+              await decrementUserBalance(userId, -SERVICE_COSTS.REPORT_GENERATION); // Negative amount for refund
+              if (onPointsUpdated) {
+                const currentPoints = await getUserBalance(userId);
+                onPointsUpdated(currentPoints);
+              }
+              toast.info('Credits have been refunded due to the error');
+            } catch (refundError) {
+              console.error('Error refunding credits:', refundError);
+            }
+          }
+
+          // Show error message
+          if (error instanceof Error) {
+            if (error.message.includes('Roboto')) {
+              toast.error('Failed to generate PDF with custom fonts. Please try again.');
+            } else {
+              toast.error(error.message);
+            }
+          } else {
+            toast.error('Failed to generate report. Please try again.');
+          }
         } finally {
           setIsGeneratingReport(false);
         }
