@@ -26,6 +26,53 @@ import { faBolt } from '@fortawesome/free-solid-svg-icons';
 
 console.log('App loaded');
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+// Add this new Error Boundary component
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 20, background: 'white' }}>
+          <h1>Something went wrong.</h1>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo && this.state.errorInfo.componentStack}
+          </details>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const App: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
@@ -46,6 +93,8 @@ const App: React.FC = () => {
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
 
   useEffect(() => {
+    console.log('App component mounted');
+    
     const initializeApp = async () => {
       if (user) {
         try {
@@ -65,7 +114,20 @@ const App: React.FC = () => {
     if (!loading) {
       initializeApp();
     }
-  }, [user, loading]);
+
+    return () => {
+      console.log('App component unmounting', {
+        auth: !!auth,
+        user: !!user,
+        loading,
+        error
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('Auth state changed:', { user, loading, error });
+  }, [user, loading, error]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -429,8 +491,19 @@ const App: React.FC = () => {
   if (authError) return <div>Error: {authError.message}</div>;
 
   return (
-    <Router basename="/site-evaluator-app">
+    <ErrorBoundary>
       <div className="App">
+        {/* Log the render state */}
+        {(() => {
+          console.log('App rendering with state:', { 
+            user, 
+            loading, 
+            error,
+            currentPage,
+            isOffline 
+          });
+          return null;
+        })()}
         {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
         <header className="app-header">
           <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
@@ -501,7 +574,7 @@ const App: React.FC = () => {
           }}
         />
       </div>
-    </Router>
+    </ErrorBoundary>
   );
 };
 
