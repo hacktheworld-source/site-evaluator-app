@@ -2,18 +2,10 @@ import { TDocumentDefinitions, Content, ContentText } from 'pdfmake/interfaces';
 import axios from 'axios';
 // Import the bundled version that includes fonts
 import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+import 'pdfmake/build/vfs_fonts';  // Side-effect import only
 import { saveAs } from 'file-saver';
 import { auth } from './firebase';
 import { reportStorage } from './reportStorage';
-
-// Initialize pdfmake with fonts
-if (!pdfFonts.pdfMake || !pdfFonts.pdfMake.vfs) {
-  throw new Error('PDF fonts failed to load');
-}
-
-// Set up virtual file system
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 // Configure fonts - just use Times-Roman
 pdfMake.fonts = {
@@ -169,8 +161,8 @@ interface Vulnerability {
 
 class ReportGenerator {
   private loadPdfMake() {
-    // Just return the already-initialized pdfMake instance
-    if (!pdfMake.vfs) {
+    // Check if pdfMake is properly initialized
+    if (!pdfMake.vfs || !pdfMake.fonts) {
       throw new Error('PDF system not properly initialized');
     }
     return pdfMake;

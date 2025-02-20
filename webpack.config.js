@@ -17,11 +17,20 @@ module.exports = {
       "child_process": false,
     }
   },
+  module: {
+    rules: [
+      {
+        test: /vfs_fonts.*\.js$/,
+        use: ["script-loader"]
+      }
+    ]
+  },
   plugins: [
     new webpack.ProvidePlugin({
         process: 'process/browser',
         Buffer: ['buffer', 'Buffer'],
     }),
+    new webpack.NoParse(/vfs_fonts/)
   ],
   // ... other configurations
 };
