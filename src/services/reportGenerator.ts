@@ -154,12 +154,7 @@ class ReportGenerator {
   private async loadPdfMake() {
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
     const pdfMakeLib = pdfMake.default || pdfMake;
-    
-    // Initialize VFS with default fonts
-    if (!pdfMakeLib.vfs) {
-      pdfMakeLib.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.default;
-    }
-    
+    pdfMakeLib.vfs = pdfFonts.pdfMake.vfs;
     return pdfMakeLib;
   }
 
@@ -588,76 +583,89 @@ class ReportGenerator {
 
     return {
       content,
+      defaultStyle: {
+        font: 'Helvetica'  // Use Helvetica as default
+      },
       styles: {
         coverHeader: {
           fontSize: 28,
-          color: '#2c3e50'
+          color: '#2c3e50',
+          font: 'Helvetica'
         },
         coverUrl: {
           fontSize: 20,
-          color: '#34495e'
+          color: '#34495e',
+          font: 'Helvetica'
         },
         coverDate: {
           fontSize: 14,
-          color: '#7f8c8d'
+          color: '#7f8c8d',
+          font: 'Helvetica'
         },
         coverScore: {
           fontSize: 24,
-          color: '#27ae60'
+          color: '#27ae60',
+          font: 'Helvetica'
         },
         disclaimer: {
           fontSize: 12,
-          color: '#7f8c8d'
+          color: '#7f8c8d',
+          font: 'Helvetica'
         },
         sectionHeader: {
           fontSize: 20,
           color: '#2c3e50',
-          margin: [0, 20, 0, 10]
+          margin: [0, 20, 0, 10],
+          font: 'Helvetica'
         },
         subheader: {
           fontSize: 16,
           color: '#34495e',
-          margin: [0, 15, 0, 5]
+          margin: [0, 15, 0, 5],
+          font: 'Helvetica'
         },
         tableHeader: {
           fontSize: 14,
           color: '#ffffff',
           fillColor: '#34495e',
-          margin: [0, 5]
+          margin: [0, 5],
+          font: 'Helvetica'
         },
         metric: {
           fontSize: 12,
           color: '#2c3e50',
-          margin: [0, 2]
+          margin: [0, 2],
+          font: 'Helvetica'
         },
         good: {
-          color: '#27ae60'
+          color: '#27ae60',
+          font: 'Helvetica'
         },
         warning: {
-          color: '#f39c12'
+          color: '#f39c12',
+          font: 'Helvetica'
         },
         critical: {
-          color: '#c0392b'
+          color: '#c0392b',
+          font: 'Helvetica'
         },
         thresholdInfo: {
           fontSize: 11,
-          color: '#666666'
+          color: '#666666',
+          font: 'Helvetica'
         },
         listItem: {
           fontSize: 11,
-          lineHeight: 1.3
+          lineHeight: 1.3,
+          font: 'Helvetica'
         }
-      },
-      defaultStyle: {
-        fontSize: 12,
-        lineHeight: 1.4,
-        color: '#2c3e50'
       },
       footer: (currentPage, pageCount) => ({
         text: `Page ${currentPage} of ${pageCount}`,
         alignment: 'center',
         margin: [0, 20],
-        color: '#95a5a6'
+        color: '#95a5a6',
+        font: 'Helvetica'
       }),
       pageMargins: [40, 60, 40, 60],
       pageSize: 'A4'
@@ -792,8 +800,18 @@ class ReportGenerator {
       const docDefinition = await this.createDocumentDefinition(data);
       
       return new Promise((resolve, reject) => {
-        const pdfDoc = pdfMake.createPdf(docDefinition);
-        pdfDoc.getBuffer(resolve);
+        try {
+          const pdfDoc = pdfMake.createPdf(docDefinition);
+          pdfDoc.getBuffer((buffer: Uint8Array) => {
+            if (buffer) {
+              resolve(buffer);
+            } else {
+              reject(new Error('Failed to generate PDF buffer'));
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
       });
     } catch (error) {
       console.error('PDF generation failed:', error);
