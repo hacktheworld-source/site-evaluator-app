@@ -1,9 +1,26 @@
 import { TDocumentDefinitions, Content, ContentText } from 'pdfmake/interfaces';
 import axios from 'axios';
+// Import the bundled version that includes fonts
 import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { saveAs } from 'file-saver';
 import { auth } from './firebase';
 import { reportStorage } from './reportStorage';
+
+// Initialize pdfmake with fonts
+if (!pdfFonts.pdfMake || !pdfFonts.pdfMake.vfs) {
+  throw new Error('PDF fonts failed to load');
+}
+
+// Set up virtual file system
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
+// Configure fonts - just use Times-Roman
+pdfMake.fonts = {
+  Times: {
+    normal: 'Times-Roman'
+  }
+};
 
 export interface ReportData {
   websiteUrl: string;
@@ -151,29 +168,12 @@ interface Vulnerability {
 }
 
 class ReportGenerator {
-  private async loadPdfMake() {
-    try {
-      // Import both pdfmake and its fonts
-      const pdfFonts = await import('pdfmake/build/vfs_fonts.js');
-      
-      // Set up virtual file system - pdfFonts.default contains the VFS data
-      pdfMake.vfs = pdfFonts.default.pdfMake.vfs;
-
-      // Define fonts - use Times as it's one of pdfmake's core fonts
-      pdfMake.fonts = {
-        Times: {
-          normal: 'Times-Roman',
-          bold: 'Times-Bold',
-          italics: 'Times-Italic',
-          bolditalics: 'Times-BoldItalic'
-        }
-      };
-
-      return pdfMake;
-    } catch (error) {
-      console.error('Error loading pdfMake:', error);
-      throw new Error('Failed to initialize PDF generator');
+  private loadPdfMake() {
+    // Just return the already-initialized pdfMake instance
+    if (!pdfMake.vfs) {
+      throw new Error('PDF system not properly initialized');
     }
+    return pdfMake;
   }
 
   private createPerformanceChart(metrics: any) {
@@ -800,8 +800,8 @@ class ReportGenerator {
       // Move professional analysis before PDF creation
       data.professionalAnalysis = await this.generateProfessionalAnalysis(data);
       
-      // Load pdfMake first
-      await this.loadPdfMake();
+      // Get initialized pdfMake instance
+      const pdfMake = this.loadPdfMake();
       
       const docDefinition = await this.createDocumentDefinition(data);
       
@@ -1013,7 +1013,8 @@ class ReportGenerator {
   }
 
   async generatePDFFromStored(data: ReportData): Promise<Uint8Array> {
-    const pdfMake = await this.loadPdfMake();
+    // Get initialized pdfMake instance
+    const pdfMake = this.loadPdfMake();
     
     try {
       // Skip analysis generation and use existing data
