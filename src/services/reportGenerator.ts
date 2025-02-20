@@ -152,23 +152,28 @@ interface Vulnerability {
 
 class ReportGenerator {
   private async loadPdfMake() {
-    // Import pdfmake fonts
-    const pdfFonts = await import('pdfmake/build/vfs_fonts');
-    
-    // Set up virtual file system
-    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    try {
+      // Import both pdfmake and its fonts
+      const pdfFonts = await import('pdfmake/build/vfs_fonts.js');
+      
+      // Set up virtual file system - pdfFonts.default contains the VFS data
+      pdfMake.vfs = pdfFonts.default.pdfMake.vfs;
 
-    // Define fonts - use Times as it's one of pdfmake's core fonts
-    pdfMake.fonts = {
-      Times: {
-        normal: 'Times-Roman',
-        bold: 'Times-Bold',
-        italics: 'Times-Italic',
-        bolditalics: 'Times-BoldItalic'
-      }
-    };
+      // Define fonts - use Times as it's one of pdfmake's core fonts
+      pdfMake.fonts = {
+        Times: {
+          normal: 'Times-Roman',
+          bold: 'Times-Bold',
+          italics: 'Times-Italic',
+          bolditalics: 'Times-BoldItalic'
+        }
+      };
 
-    return pdfMake;
+      return pdfMake;
+    } catch (error) {
+      console.error('Error loading pdfMake:', error);
+      throw new Error('Failed to initialize PDF generator');
+    }
   }
 
   private createPerformanceChart(metrics: any) {
