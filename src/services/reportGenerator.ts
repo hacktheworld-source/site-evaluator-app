@@ -152,19 +152,19 @@ interface Vulnerability {
 
 class ReportGenerator {
   private async loadPdfMake() {
-    // Import both pdfMake and the fonts
+    // Import pdfmake fonts
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
     
-    // Set up the virtual file system with the fonts
+    // Set up virtual file system
     pdfMake.vfs = pdfFonts.pdfMake.vfs;
-    
-    // Define the default fonts
+
+    // Define fonts - use Times as it's one of pdfmake's core fonts
     pdfMake.fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italic.ttf',
-        bolditalics: 'Roboto-MediumItalic.ttf'
+      Times: {
+        normal: 'Times-Roman',
+        bold: 'Times-Bold',
+        italics: 'Times-Italic',
+        bolditalics: 'Times-BoldItalic'
       }
     };
 
@@ -597,7 +597,7 @@ class ReportGenerator {
     return {
       content,
       defaultStyle: {
-        font: 'Roboto'  // Use the default Roboto font we defined
+        font: 'Times'  // Use Times font
       },
       styles: {
         coverHeader: {
@@ -794,6 +794,9 @@ class ReportGenerator {
 
       // Move professional analysis before PDF creation
       data.professionalAnalysis = await this.generateProfessionalAnalysis(data);
+      
+      // Load pdfMake first
+      await this.loadPdfMake();
       
       const docDefinition = await this.createDocumentDefinition(data);
       
