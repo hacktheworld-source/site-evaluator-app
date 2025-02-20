@@ -15,6 +15,14 @@ const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
 
 const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])|(\b(?:[a-z\d]+\.){1,2}[a-z]{2,}\b)/gi;
 
+const API_DEBUG = true;
+
+const debugLog = (message: string, data?: any) => {
+  if (API_DEBUG) {
+    console.log(`[ChatInterface] ${message}`, data || '');
+  }
+};
+
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -267,6 +275,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         };
         setIsMessageLoading(true);
 
+        debugLog('Attempting to send message', {
+          userId: auth.currentUser?.uid,
+          message: userInput.trim()
+        });
+
         try {
           // First deduct credits
           await decrementUserBalance(userId, SERVICE_COSTS.CHAT_MESSAGE);
@@ -343,67 +356,91 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           // Create EventSource for SSE using the job ID from the response
           const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/api/analyze/stream/${response.data.jobId}`);
 
-          eventSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'analysis') {
-              const newMessage: Message = {
-                role: 'assistant' as const,
-                content: data.analysis,
-                phase: 'Recommendations',
-                competitorScreenshots: data.competitorScreenshots
-              };
-              setIsThinking(false);
-              setIsMessageLoading(false);
-              addMessage(newMessage);
-            } else if (data.type === 'screenshot') {
-              setMessages(prevMessages => 
-                prevMessages.map(msg => {
-                  if (msg.phase === 'Recommendations') {
-                    const updatedScreenshots = {
-                      ...msg.competitorScreenshots,
-                      [data.url]: {
-                        status: 'loaded',
-                        data: data.screenshot
-                      }
-                    };
-                    return { ...msg, competitorScreenshots: updatedScreenshots };
-                  }
-                  return msg;
-                })
-              );
-            } else if (data.type === 'screenshot_error') {
-              setMessages(prevMessages => 
-                prevMessages.map(msg => {
-                  if (msg.phase === 'Recommendations') {
-                    const updatedScreenshots = {
-                      ...msg.competitorScreenshots,
-                      [data.url]: {
-                        status: 'error',
-                        error: data.error
-                      }
-                    };
-                    return { ...msg, competitorScreenshots: updatedScreenshots };
-                  }
-                  return msg;
-                })
-              );
-            } else if (data.type === 'complete') {
-              eventSource.close();
-            } else if (data.type === 'error') {
-              console.error('Error in recommendations phase:', data.error);
+          eventSource.onmessage = async (event) => {
+            debugLog('Received EventSource message:', event.data);
+            try {
+              const data = JSON.parse(event.data);
+              
+              if (data.type === 'analysis') {
+                const newMessage: Message = {
+                  role: 'assistant' as const,
+                  content: data.analysis,
+                  phase: 'Recommendations',
+                  competitorScreenshots: data.competitorScreenshots
+                };
+                setIsThinking(false);
+                setIsMessageLoading(false);
+                addMessage(newMessage);
+              } else if (data.type === 'screenshot') {
+                setMessages(prevMessages => 
+                  prevMessages.map(msg => {
+                    if (msg.phase === 'Recommendations') {
+                      const updatedScreenshots = {
+                        ...msg.competitorScreenshots,
+                        [data.url]: {
+                          status: 'loaded',
+                          data: data.screenshot
+                        }
+                      };
+                      return { ...msg, competitorScreenshots: updatedScreenshots };
+                    }
+                    return msg;
+                  })
+                );
+              } else if (data.type === 'screenshot_error') {
+                setMessages(prevMessages => 
+                  prevMessages.map(msg => {
+                    if (msg.phase === 'Recommendations') {
+                      const updatedScreenshots = {
+                        ...msg.competitorScreenshots,
+                        [data.url]: {
+                          status: 'error',
+                          error: data.error
+                        }
+                      };
+                      return { ...msg, competitorScreenshots: updatedScreenshots };
+                    }
+                    return msg;
+                  })
+                );
+              } else if (data.type === 'complete') {
+                eventSource.close();
+              } else if (data.type === 'error') {
+                console.error('Error in recommendations phase:', data.error);
+                eventSource.close();
+                setIsThinking(false);
+                setIsMessageLoading(false);
+                addMessage({
+                  role: 'assistant' as const,
+                  content: `An error occurred during the recommendations phase: ${data.error}`,
+                  phase: 'Recommendations'
+                });
+              }
+            } catch (error) {
+              debugLog('Error processing message:', {
+                error,
+                rawData: event.data
+              });
               eventSource.close();
               setIsThinking(false);
               setIsMessageLoading(false);
               addMessage({
                 role: 'assistant' as const,
-                content: `An error occurred during the recommendations phase: ${data.error}`,
+                content: `An error occurred during the recommendations phase. Please try again.`,
                 phase: 'Recommendations'
               });
             }
           };
 
-          eventSource.onerror = (error) => {
+          eventSource.onerror = async (error) => {
+            debugLog('EventSource error:', {
+              error,
+              readyState: eventSource.readyState,
+              CONNECTING: EventSource.CONNECTING,
+              OPEN: EventSource.OPEN,
+              CLOSED: EventSource.CLOSED
+            });
+
             console.error('EventSource error:', error);
             eventSource.close();
             setIsThinking(false);
