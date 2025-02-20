@@ -15,12 +15,6 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
   const [animationSpeed, setAnimationSpeed] = useState(5000);
 
   useEffect(() => {
-    console.log('AnimatedEye state change:', {
-      isGenerating,
-      isWaitingForResponse,
-      currentSpeed: animationSpeed
-    });
-
     if (isGenerating || isWaitingForResponse) {
       setAnimationSpeed(200);
     } else {
@@ -29,8 +23,6 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
   }, [isGenerating, isWaitingForResponse]);
 
   useEffect(() => {
-    console.log('Setting up eye animation interval with speed:', animationSpeed);
-    
     const interval = setInterval(() => {
       let newImage;
       do {
@@ -39,10 +31,7 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
       setCurrentImage(newImage);
     }, animationSpeed);
 
-    return () => {
-      console.log('Cleaning up eye animation interval');
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [animationSpeed, currentImage]);
 
   // Get the base URL from the environment variable, defaulting to '' for local development
@@ -61,7 +50,6 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
         src={`eye-graphics/eye${currentImage}.png`} 
         alt="Animated Eye"
         onError={(e) => {
-          console.error('Failed to load eye image:', e);
           const target = e.target as HTMLImageElement;
           target.onerror = null; // Prevent infinite error loop
           target.src = `eye-graphics/eye1.png`; // Relative to site root
