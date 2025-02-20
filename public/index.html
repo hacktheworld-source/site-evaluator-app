@@ -29,32 +29,97 @@
     <title>Site Evaluator</title>
     
     <script>
-      window.addEventListener('load', function() {
-        console.log('Window loaded');
-        console.log('Root element:', document.getElementById('root'));
-        console.log('Scripts:', Array.from(document.scripts).map(s => s.src));
-        
-        // Check React initialization
-        setTimeout(() => {
-          console.log('After timeout:');
-          console.log('React available:', typeof window.React);
-          console.log('ReactDOM available:', typeof window.ReactDOM);
-          console.log('Root content:', document.getElementById('root').innerHTML);
-        }, 1000);
+      console.log('Debug script loaded');
+      
+      // Log when DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOMContentLoaded fired');
+        console.log('Root element at DOMContentLoaded:', document.getElementById('root'));
       });
 
+      // Log when window loads
+      window.addEventListener('load', function() {
+        console.log('Window loaded');
+        console.log('Root element at window.load:', document.getElementById('root'));
+        console.log('All scripts:', Array.from(document.scripts).map(s => ({src: s.src, async: s.async, defer: s.defer})));
+        
+        // Check React initialization
+        console.log('Initial React check:');
+        console.log('React available:', typeof window.React);
+        console.log('ReactDOM available:', typeof window.ReactDOM);
+        console.log('Root innerHTML:', document.getElementById('root')?.innerHTML);
+        
+        // Check again after a delay
+        setTimeout(() => {
+          console.log('Delayed check (1s):');
+          console.log('React available:', typeof window.React);
+          console.log('ReactDOM available:', typeof window.ReactDOM);
+          console.log('Root innerHTML:', document.getElementById('root')?.innerHTML);
+          console.log('Root children:', document.getElementById('root')?.children?.length);
+          
+          // Check if any React properties are attached to root
+          const root = document.getElementById('root');
+          console.log('Root properties:', Object.getOwnPropertyNames(root));
+          console.log('Root _reactRootContainer:', root._reactRootContainer);
+        }, 1000);
+
+        // Check server info
+        fetch('/server-info.txt')
+          .then(response => response.text())
+          .then(text => console.log('Server info:', text))
+          .catch(err => console.log('Error fetching server info:', err));
+
+        // Log main bundle load status
+        const mainScript = document.querySelector('script[src*="static/js/main"]');
+        if (mainScript) {
+          console.log('Main bundle found:', mainScript.src);
+          console.log('Main bundle status:', mainScript.readyState);
+        } else {
+          console.error('Main bundle not found in document!');
+        }
+      });
+
+      // Log all script load events
+      document.addEventListener('DOMContentLoaded', function() {
+        Array.from(document.scripts).forEach(script => {
+          if (script.src) {
+            script.addEventListener('load', () => console.log('Script loaded:', script.src));
+            script.addEventListener('error', () => console.log('Script failed to load:', script.src));
+          }
+        });
+      });
+
+      // Catch all errors
       window.addEventListener('error', function(e) {
-        console.log('Global error:', e.message);
-        console.log('Script:', e.filename);
-        console.log('Line:', e.lineno);
-        console.log('Column:', e.colno);
-        console.log('Error object:', e.error);
+        console.log('Global error:', {
+          message: e.message,
+          script: e.filename,
+          line: e.lineno,
+          column: e.colno,
+          error: e.error,
+          stack: e.error?.stack
+        });
+      });
+
+      // Catch unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(e) {
+        console.log('Unhandled promise rejection:', {
+          reason: e.reason,
+          stack: e.reason?.stack
+        });
       });
     </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+      // Add this right before closing body tag
+      document.write('<div id="server-info" style="display:none">Server: ' + 
+        (typeof window.SERVER_SOFTWARE !== 'undefined' ? window.SERVER_SOFTWARE : 'Unknown') + 
+        ' PHP: ' + (typeof window.PHP_VERSION !== 'undefined' ? window.PHP_VERSION : 'Not detected') +
+        '</div>');
+    </script>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

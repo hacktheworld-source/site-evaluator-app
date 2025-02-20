@@ -1,0 +1,4 @@
+Server software: Apache
+Document root: /public_html/olivesays.com
+PHP enabled: Yes
+Timestamp: Generated at page load 
