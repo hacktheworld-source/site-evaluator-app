@@ -492,88 +492,90 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="App">
-        {/* Log the render state */}
-        {(() => {
-          console.log('App rendering with state:', { 
-            user, 
-            loading, 
-            error,
-            currentPage,
-            isOffline 
-          });
-          return null;
-        })()}
-        {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
-        <header className="app-header">
-          <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
-          {user ? (
-            <div className="user-menu-container">
-              <div
-                className="points-counter"
-                onClick={() => { setCurrentPage('points'); }}
-              >
-                {userPoints !== null ? (
-                  <>
-                    ${userPoints.toFixed(2)}
-                    {isPayAsYouGo && (
-                      <FontAwesomeIcon 
-                        icon={faBolt} 
-                        className="pay-as-you-go-icon" 
-                        title="Pay-as-you-go enabled"
-                      />
-                    )}
-                  </>
-                ) : 'Loading...'}
+      <Router>
+        <div className="App">
+          {/* Log the render state */}
+          {(() => {
+            console.log('App rendering with state:', { 
+              user, 
+              loading, 
+              error,
+              currentPage,
+              isOffline 
+            });
+            return null;
+          })()}
+          {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
+          <header className="app-header">
+            <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
+            {user ? (
+              <div className="user-menu-container">
+                <div
+                  className="points-counter"
+                  onClick={() => { setCurrentPage('points'); }}
+                >
+                  {userPoints !== null ? (
+                    <>
+                      ${userPoints.toFixed(2)}
+                      {isPayAsYouGo && (
+                        <FontAwesomeIcon 
+                          icon={faBolt} 
+                          className="pay-as-you-go-icon" 
+                          title="Pay-as-you-go enabled"
+                        />
+                      )}
+                    </>
+                  ) : 'Loading...'}
+                </div>
+                <button 
+                  className="user-menu-button" 
+                  onClick={() => setCurrentPage('profile')}
+                  title="View Profile"
+                >
+                  <img
+                    src={getProfilePicture(user)}
+                    alt="User Avatar"
+                    className="user-avatar"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = defaultUserIcon;
+                    }}
+                  />
+                </button>
               </div>
-              <button 
-                className="user-menu-button" 
-                onClick={() => setCurrentPage('profile')}
-                title="View Profile"
-              >
-                <img
-                  src={getProfilePicture(user)}
-                  alt="User Avatar"
-                  className="user-avatar"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = defaultUserIcon;
-                  }}
-                />
-              </button>
-            </div>
-          ) : (
-            <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
-          )}
-        </header>
-        <div className={`content-wrapper`}>
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={renderPage()} />
-              <Route path="/points" element={<PointsManagementPage />} />
-              <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
-              <Route path="/payment-success" element={<PaymentSuccessPage />} />
-            </Routes>
-          </main>
+            ) : (
+              <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
+            )}
+          </header>
+          <div className={`content-wrapper`}>
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={renderPage()} />
+                <Route path="/points" element={<PointsManagementPage />} />
+                <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
+                <Route path="/payment-success" element={<PaymentSuccessPage />} />
+              </Routes>
+            </main>
+          </div>
+          {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
+          <ToastContainer
+            position="bottom-right"
+            autoClose={4000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable={false}
+            pauseOnHover
+            theme="dark"
+            style={{
+              zIndex: 9999
+            }}
+          />
         </div>
-        {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
-        <ToastContainer
-          position="bottom-right"
-          autoClose={4000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable={false}
-          pauseOnHover
-          theme="dark"
-          style={{
-            zIndex: 9999
-          }}
-        />
-      </div>
+      </Router>
     </ErrorBoundary>
   );
 };
