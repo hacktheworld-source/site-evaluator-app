@@ -47,20 +47,9 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
 
   // Get the base URL from the environment variable, defaulting to '' for local development
   const getBaseUrl = () => {
-    if (!process.env.REACT_APP_FRONTEND_URL) return '';
-    
-    try {
-      const url = new URL(process.env.REACT_APP_FRONTEND_URL);
-      // If we're on the production domain, just use a relative path
-      if (url.hostname === 'olivesays.com') {
-        return '';
-      }
-      // Otherwise, use the full URL's pathname
-      return url.pathname;
-    } catch (e) {
-      console.error('Failed to parse FRONTEND_URL:', e);
-      return '';
-    }
+    // In production, all assets are served from the site root
+    // In development, we use the default public folder
+    return '';
   };
 
   const baseUrl = getBaseUrl();
@@ -69,13 +58,13 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
   return (
     <div className={`animated-eye ${size}`}>
       <img 
-        src={`${baseUrl}/eye-graphics/eye${currentImage}.png`} 
+        src={`eye-graphics/eye${currentImage}.png`} 
         alt="Animated Eye"
         onError={(e) => {
           console.error('Failed to load eye image:', e);
           const target = e.target as HTMLImageElement;
           target.onerror = null; // Prevent infinite error loop
-          target.src = `/eye-graphics/eye1.png`; // Use absolute path for fallback
+          target.src = `eye-graphics/eye1.png`; // Relative to site root
         }}
       />
     </div>
