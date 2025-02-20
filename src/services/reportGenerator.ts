@@ -152,10 +152,23 @@ interface Vulnerability {
 
 class ReportGenerator {
   private async loadPdfMake() {
+    // Import both pdfMake and the fonts
     const pdfFonts = await import('pdfmake/build/vfs_fonts');
-    const pdfMakeLib = pdfMake;
-    pdfMakeLib.vfs = pdfFonts.pdfMake.vfs;
-    return pdfMakeLib;
+    
+    // Set up the virtual file system with the fonts
+    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    
+    // Define the default fonts
+    pdfMake.fonts = {
+      Roboto: {
+        normal: 'Roboto-Regular.ttf',
+        bold: 'Roboto-Medium.ttf',
+        italics: 'Roboto-Italic.ttf',
+        bolditalics: 'Roboto-MediumItalic.ttf'
+      }
+    };
+
+    return pdfMake;
   }
 
   private createPerformanceChart(metrics: any) {
@@ -584,7 +597,7 @@ class ReportGenerator {
     return {
       content,
       defaultStyle: {
-        font: undefined  // Let pdfmake use its default font
+        font: 'Roboto'  // Use the default Roboto font we defined
       },
       styles: {
         coverHeader: {
