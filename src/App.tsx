@@ -108,6 +108,10 @@ const App: React.FC = () => {
           console.error('Error initializing app:', error);
           handleError('Failed to load user data');
         }
+      } else {
+        // Reset points when user logs out
+        setUserPoints(null);
+        setIsPayAsYouGo(false);
       }
     };
 
@@ -123,7 +127,7 @@ const App: React.FC = () => {
         error
       });
     };
-  }, []);
+  }, [user, loading]);
 
   useEffect(() => {
     console.log('Auth state changed:', { user, loading, error });
