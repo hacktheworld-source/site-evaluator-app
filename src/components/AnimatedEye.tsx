@@ -46,7 +46,24 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
   }, [animationSpeed, currentImage]);
 
   // Get the base URL from the environment variable, defaulting to '' for local development
-  const baseUrl = process.env.REACT_APP_FRONTEND_URL ? new URL(process.env.REACT_APP_FRONTEND_URL).pathname : '';
+  const getBaseUrl = () => {
+    if (!process.env.REACT_APP_FRONTEND_URL) return '';
+    
+    try {
+      const url = new URL(process.env.REACT_APP_FRONTEND_URL);
+      // If we're on the production domain, just use a relative path
+      if (url.hostname === 'olivesays.com') {
+        return '';
+      }
+      // Otherwise, use the full URL's pathname
+      return url.pathname;
+    } catch (e) {
+      console.error('Failed to parse FRONTEND_URL:', e);
+      return '';
+    }
+  };
+
+  const baseUrl = getBaseUrl();
   console.log('Eye animation using base URL:', baseUrl);
 
   return (
@@ -58,7 +75,7 @@ const AnimatedEye: React.FC<AnimatedEyeProps> = ({
           console.error('Failed to load eye image:', e);
           const target = e.target as HTMLImageElement;
           target.onerror = null; // Prevent infinite error loop
-          target.src = `${baseUrl}/eye-graphics/eye1.png`; // Fallback to first image
+          target.src = `/eye-graphics/eye1.png`; // Use absolute path for fallback
         }}
       />
     </div>
