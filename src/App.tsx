@@ -119,6 +119,14 @@ const App: React.FC = () => {
       initializeApp();
     }
 
+    // Add event listener for payment status changes
+    const handlePaymentStatusChange = () => {
+      console.log('Payment status change detected, refreshing app data');
+      initializeApp();
+    };
+
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChange);
+
     return () => {
       console.log('App component unmounting', {
         auth: !!auth,
@@ -126,6 +134,7 @@ const App: React.FC = () => {
         loading,
         error
       });
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange);
     };
   }, [user, loading]);
 

@@ -47,48 +47,10 @@ const PointsManagementPage: React.FC = () => {
     fetchUserData();
   }, []);
 
-  // Add polling for payment method status after portal return
-  useEffect(() => {
-    const checkPaymentMethodStatus = async () => {
-      if (!auth.currentUser) return;
-
-      console.log('Checking payment method status...'); // Debug log
-      try {
-        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
-        console.log('Payment method status result:', hasPaymentMethod); // Debug log
-        if (hasPaymentMethod) {
-          console.log('Payment method found, refreshing user data...'); // Debug log
-          await fetchUserData();
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-      }
-    };
-
-    // Check if we're returning from the portal
-    const returnPath = localStorage.getItem('returnPath');
-    console.log('Return path from localStorage:', returnPath); // Debug log
-    if (returnPath !== null) { // If there's any return path, we're coming back from portal
-      console.log('Detected return from portal, starting polling...'); // Debug log
-      localStorage.removeItem('returnPath');
-      
-      // Poll for payment method status a few times
-      let attempts = 0;
-      const maxAttempts = 3;
-      const interval = setInterval(async () => {
-        console.log(`Polling attempt ${attempts + 1} of ${maxAttempts}`); // Debug log
-        if (attempts >= maxAttempts) {
-          console.log('Max polling attempts reached, stopping...'); // Debug log
-          clearInterval(interval);
-          return;
-        }
-        await checkPaymentMethodStatus();
-        attempts++;
-      }, 2000);
-
-      return () => clearInterval(interval);
-    }
-  }, []);
+  const refreshAppUserData = () => {
+    // Dispatch a custom event that App.tsx will listen for
+    window.dispatchEvent(new Event('paymentStatusChanged'));
+  };
 
   const handlePayAsYouGoSignup = async () => {
     if (!auth.currentUser) {
@@ -125,6 +87,7 @@ const PointsManagementPage: React.FC = () => {
       await paymentService.unenrollFromPayAsYouGo(auth.currentUser.uid);
       const userDataResponse = await paymentService.getUserData(auth.currentUser.uid);
       setUserData(userDataResponse);
+      refreshAppUserData();
       toast.success('Successfully unenrolled from pay-as-you-go');
     } catch (error) {
       console.error('Unenroll error:', error);
@@ -165,6 +128,53 @@ const PointsManagementPage: React.FC = () => {
       minute: '2-digit'
     });
   };
+
+  // Add polling for payment method status after portal return
+  useEffect(() => {
+    const checkPaymentMethodStatus = async () => {
+      if (!auth.currentUser) return;
+
+      console.log('Checking payment method status...'); // Debug log
+      try {
+        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
+        console.log('Payment method status result:', hasPaymentMethod); // Debug log
+        if (hasPaymentMethod) {
+          console.log('Payment method found, refreshing user data...'); // Debug log
+          await fetchUserData();
+          refreshAppUserData();
+        } else {
+          // If no payment methods found, treat as unenrolled
+          await handleUnenroll();
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    };
+
+    // Check if we're returning from the portal
+    const returnPath = localStorage.getItem('returnPath');
+    console.log('Return path from localStorage:', returnPath); // Debug log
+    if (returnPath !== null) { // If there's any return path, we're coming back from portal
+      console.log('Detected return from portal, starting polling...'); // Debug log
+      localStorage.removeItem('returnPath');
+      
+      // Poll for payment method status a few times
+      let attempts = 0;
+      const maxAttempts = 3;
+      const interval = setInterval(async () => {
+        console.log(`Polling attempt ${attempts + 1} of ${maxAttempts}`); // Debug log
+        if (attempts >= maxAttempts) {
+          console.log('Max polling attempts reached, stopping...'); // Debug log
+          clearInterval(interval);
+          return;
+        }
+        await checkPaymentMethodStatus();
+        attempts++;
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, []);
 
   if (isLoading) {
     return (
