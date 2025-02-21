@@ -47,11 +47,6 @@ const PointsManagementPage: React.FC = () => {
     fetchUserData();
   }, []);
 
-  const refreshAppUserData = () => {
-    // Dispatch a custom event that App.tsx will listen for
-    window.dispatchEvent(new Event('paymentStatusChanged'));
-  };
-
   const handlePayAsYouGoSignup = async () => {
     if (!auth.currentUser) {
       toast.error('Please sign in to continue');
@@ -87,7 +82,7 @@ const PointsManagementPage: React.FC = () => {
       await paymentService.unenrollFromPayAsYouGo(auth.currentUser.uid);
       const userDataResponse = await paymentService.getUserData(auth.currentUser.uid);
       setUserData(userDataResponse);
-      refreshAppUserData();
+      fetchUserData();
       toast.success('Successfully unenrolled from pay-as-you-go');
     } catch (error) {
       console.error('Unenroll error:', error);
@@ -106,10 +101,6 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
-      // Store returnPath just like with signup
-      console.log('Current pathname:', window.location.pathname);
-      localStorage.setItem('returnPath', window.location.pathname);
-      console.log('Stored returnPath:', localStorage.getItem('returnPath'));
       window.location.href = portalUrl;
     } catch (error) {
       console.error('Portal access error:', error);
@@ -132,58 +123,18 @@ const PointsManagementPage: React.FC = () => {
     });
   };
 
-  // Add polling for payment method status after portal return
+  // Add listener for real-time updates
   useEffect(() => {
-    const checkPaymentMethodStatus = async () => {
-      if (!auth.currentUser) return;
-
-      console.log('Checking payment method status...'); // Debug log
-      try {
-        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
-        console.log('Payment method status result:', hasPaymentMethod); // Debug log
-        
-        // If no payment methods found, treat as unenrolled
-        if (!hasPaymentMethod) {
-          console.log('No payment methods found, unenrolling...'); // Debug log
-          await handleUnenroll();
-          return;
-        }
-        
-        // If payment method found, refresh data
-        console.log('Payment method found, refreshing user data...'); // Debug log
-        await fetchUserData();
-        refreshAppUserData();
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-      }
+    // Listen for payment status changes from App.tsx
+    const handlePaymentStatusChange = () => {
+      console.log('Payment status changed, refreshing data...');
+      fetchUserData();
     };
 
-    // Check if we're returning from the portal
-    const returnPath = localStorage.getItem('returnPath');
-    console.log('Return path from localStorage:', returnPath); // Debug log
-    if (returnPath !== null) { // If there's any return path, we're coming back from portal
-      console.log('Detected return from portal, starting polling...'); // Debug log
-      localStorage.removeItem('returnPath');
-      
-      // Start immediate check
-      checkPaymentMethodStatus();
-      
-      // Then poll a few more times to ensure we catch any delayed updates
-      let attempts = 0;
-      const maxAttempts = 3;
-      const interval = setInterval(async () => {
-        console.log(`Polling attempt ${attempts + 1} of ${maxAttempts}`); // Debug log
-        if (attempts >= maxAttempts) {
-          console.log('Max polling attempts reached, stopping...'); // Debug log
-          clearInterval(interval);
-          return;
-        }
-        await checkPaymentMethodStatus();
-        attempts++;
-      }, 2000);
-
-      return () => clearInterval(interval);
-    }
+    window.addEventListener('paymentStatusChanged', handlePaymentStatusChange);
+    return () => {
+      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange);
+    };
   }, []);
 
   if (isLoading) {
