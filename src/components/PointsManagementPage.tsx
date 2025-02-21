@@ -3,7 +3,7 @@ import { auth } from '../services/firebase';
 import { getUserBalance, SERVICE_COSTS } from '../services/points';
 import { paymentService } from '../services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDollarSign, faInfoCircle, faHistory, faCreditCard, faCheckCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faDollarSign, faInfoCircle, faHistory, faCreditCard, faCheckCircle, faSpinner, faCog } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 
 interface UserData {
@@ -23,6 +23,11 @@ const PointsManagementPage: React.FC = () => {
   const fetchUserData = async () => {
     if (auth.currentUser) {
       try {
+        // First check payment method status
+        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
+        console.log('Initial payment method status check:', hasPaymentMethod);
+
+        // Then get user data and history
         const [userDataResponse, history] = await Promise.all([
           paymentService.getUserData(auth.currentUser.uid),
           paymentService.getPaymentHistory(auth.currentUser.uid)
@@ -129,6 +134,24 @@ const PointsManagementPage: React.FC = () => {
     }
   };
 
+  const handleManagePaymentMethods = async () => {
+    if (!auth.currentUser) {
+      toast.error('Please sign in to continue');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
+      // Don't store returnPath since we're just managing payment methods
+      window.location.href = portalUrl;
+    } catch (error) {
+      console.error('Portal access error:', error);
+      toast.error('Failed to access payment settings. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
   const formatPrice = (price: number) => {
     return `$${price.toFixed(2)}`;
   };
@@ -189,14 +212,24 @@ const PointsManagementPage: React.FC = () => {
             <h3>Start with ${SERVICE_COSTS.INITIAL_CREDIT} Free Credit</h3>
             <p>New users receive ${SERVICE_COSTS.INITIAL_CREDIT} in credit to try our services. Set up pay-as-you-go now to ensure uninterrupted service when your credit runs out.</p>
           </div>
-          <button 
-            className="signup-button"
-            onClick={handlePayAsYouGoSignup}
-            disabled={isProcessing}
-          >
-            <FontAwesomeIcon icon={faCreditCard} />
-            Set Up Pay-as-you-go
-          </button>
+          <div className="payment-buttons">
+            <button 
+              className="signup-button"
+              onClick={handlePayAsYouGoSignup}
+              disabled={isProcessing}
+            >
+              <FontAwesomeIcon icon={faCreditCard} />
+              Set Up Pay-as-you-go
+            </button>
+            <button 
+              className="manage-payment-button"
+              onClick={handleManagePaymentMethods}
+              disabled={isProcessing}
+            >
+              <FontAwesomeIcon icon={faCog} />
+              Manage Payment Methods
+            </button>
+          </div>
         </div>
       ) : (
         <div className="status-section">
@@ -205,14 +238,24 @@ const PointsManagementPage: React.FC = () => {
             <h3>Pay-as-you-go Active</h3>
             <p>Your account is set up for automatic payments. You'll be charged only for what you use, when your credit runs low.</p>
           </div>
-          <button 
-            className="unenroll-button"
-            onClick={handleUnenroll}
-            disabled={isProcessing}
-          >
-            <FontAwesomeIcon icon={faCreditCard} />
-            Unenroll from Pay-as-you-go
-          </button>
+          <div className="payment-buttons">
+            <button 
+              className="unenroll-button"
+              onClick={handleUnenroll}
+              disabled={isProcessing}
+            >
+              <FontAwesomeIcon icon={faCreditCard} />
+              Unenroll from Pay-as-you-go
+            </button>
+            <button 
+              className="manage-payment-button"
+              onClick={handleManagePaymentMethods}
+              disabled={isProcessing}
+            >
+              <FontAwesomeIcon icon={faCog} />
+              Manage Payment Methods
+            </button>
+          </div>
         </div>
       )}
 
