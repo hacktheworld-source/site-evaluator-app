@@ -22,7 +22,10 @@ import PaymentMethodSuccess from './components/PaymentMethodSuccess';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { paymentService, UserData } from './services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faBolt, faDollarSign, faCreditCard } from '@fortawesome/free-solid-svg-icons';
+import { Link, useNavigate } from 'react-router-dom';
+import { db } from './services/firebase';
+import { getFirestore, doc, onSnapshot, DocumentSnapshot } from 'firebase/firestore';
 
 console.log('App loaded');
 
@@ -91,6 +94,8 @@ const App: React.FC = () => {
   const [analysisState, setAnalysisState] = useState<'pre' | 'post'>('pre');
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('App component mounted');
@@ -154,6 +159,30 @@ const App: React.FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      // Set up real-time listener for user data
+      const userRef = doc(db, 'users', user.uid);
+      const unsubscribe = onSnapshot(userRef, 
+        (docSnapshot: DocumentSnapshot) => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data() as UserData;
+            setUserData(data);
+            // Dispatch event for legacy components that still rely on it
+            window.dispatchEvent(new Event('paymentStatusChanged'));
+          }
+        }, 
+        (error: Error) => {
+          console.error('Error listening to user data:', error);
+        }
+      );
+
+      return () => unsubscribe();
+    } else {
+      setUserData(null);
+    }
+  }, [user]);
 
   const handleError = (message: string) => {
     toast.error(message);
@@ -513,25 +542,17 @@ const App: React.FC = () => {
           })()}
           {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
           <header className="app-header">
-            <div className="app-title" onClick={() => setCurrentPage('home')}>Olive</div>
+            <Link to="/" className="app-title">
+              <h1>Site Evaluator</h1>
+            </Link>
             {user ? (
               <div className="user-menu-container">
-                <div
-                  className="points-counter"
-                  onClick={() => { setCurrentPage('points'); }}
-                >
-                  {userPoints !== null ? (
-                    <>
-                      ${userPoints.toFixed(2)}
-                      {isPayAsYouGo && (
-                        <FontAwesomeIcon 
-                          icon={faBolt} 
-                          className="pay-as-you-go-icon" 
-                          title="Pay-as-you-go enabled"
-                        />
-                      )}
-                    </>
-                  ) : 'Loading...'}
+                <div className="points-counter" onClick={() => navigate('/points')}>
+                  <FontAwesomeIcon icon={faDollarSign} />
+                  <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
+                  {userData?.isPayAsYouGo && (
+                    <FontAwesomeIcon icon={faCreditCard} className="pay-as-you-go-icon" />
+                  )}
                 </div>
                 <button 
                   className="user-menu-button" 
