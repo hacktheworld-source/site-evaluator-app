@@ -46,15 +46,23 @@ body {
 }
 
 .app-title {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: bold;
+  color: #fff;
+  text-decoration: none;
   cursor: pointer;
-  transition: color 0.3s ease;
-  color: var(--off-white);
+  margin-right: 20px;
+}
+
+.app-title h1 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .app-title:hover {
-  color: var(--accent-color);
+  color: #ddd;
+  text-decoration: none;
 }
 
 .user-menu-container {

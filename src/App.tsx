@@ -529,6 +529,29 @@ const AppContent: React.FC = () => {
     );
   };
 
+  // Replace navigate with direct state changes
+  const goToPage = (page: string) => {
+    setCurrentPage(page);
+    // Clear evaluation results when going home
+    if (page === 'home') {
+      setEvaluationResults(null);
+      setWebsiteUrl('');
+      setRawInput('');
+    }
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'points':
+        return <PointsManagementPage />;
+      case 'profile':
+        return <ProfilePage />;
+      case 'home':
+      default:
+        return renderPage();
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (authError) return <div>Error: {authError.message}</div>;
 
@@ -536,12 +559,12 @@ const AppContent: React.FC = () => {
     <div className="App">
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
-        <Link to="/" className="app-title">
+        <div className="app-title" onClick={() => goToPage('home')}>
           <h1>Olive</h1>
-        </Link>
+        </div>
         {user ? (
           <div className="user-menu-container">
-            <div className="points-counter" onClick={() => navigate('/points')}>
+            <div className="points-counter" onClick={() => goToPage('points')}>
               <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
               {userData?.isPayAsYouGo && (
                 <FontAwesomeIcon 
@@ -553,7 +576,7 @@ const AppContent: React.FC = () => {
             </div>
             <button 
               className="user-menu-button" 
-              onClick={() => setCurrentPage('profile')}
+              onClick={() => goToPage('profile')}
               title="View Profile"
             >
               <img
@@ -574,12 +597,7 @@ const AppContent: React.FC = () => {
       </header>
       <div className={`content-wrapper`}>
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={renderPage()} />
-            <Route path="/points" element={<PointsManagementPage />} />
-            <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
-            <Route path="/payment-success" element={<PaymentSuccessPage />} />
-          </Routes>
+          {renderCurrentPage()}
         </main>
       </div>
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
