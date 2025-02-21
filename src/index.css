@@ -46,9 +46,8 @@ body {
 }
 
 .app-title {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
-  color: #fff;
   text-decoration: none;
   cursor: pointer;
   margin-right: 20px;
@@ -58,9 +57,10 @@ body {
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
+  color: #fff;
 }
 
-.app-title:hover {
+.app-title h1:hover {
   color: #ddd;
   text-decoration: none;
 }

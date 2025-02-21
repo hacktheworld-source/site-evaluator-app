@@ -601,7 +601,21 @@ const AppContent: React.FC = () => {
         </main>
       </div>
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
-      <ToastContainer position="bottom-right" />
+      <ToastContainer 
+        position="bottom-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable={false}
+        pauseOnHover
+        theme="dark"
+        style={{
+          zIndex: 9999
+        }}
+      />
     </div>
   );
 };
