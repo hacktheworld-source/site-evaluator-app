@@ -537,15 +537,18 @@ const AppContent: React.FC = () => {
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
         <Link to="/" className="app-title">
-          <h1>Site Evaluator</h1>
+          <h1>Olive</h1>
         </Link>
         {user ? (
           <div className="user-menu-container">
             <div className="points-counter" onClick={() => navigate('/points')}>
-              <FontAwesomeIcon icon={faDollarSign} />
               <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
               {userData?.isPayAsYouGo && (
-                <FontAwesomeIcon icon={faCreditCard} className="pay-as-you-go-icon" />
+                <FontAwesomeIcon 
+                  icon={faBolt} 
+                  className="pay-as-you-go-icon" 
+                  title="Pay-as-you-go enabled"
+                />
               )}
             </div>
             <button 
