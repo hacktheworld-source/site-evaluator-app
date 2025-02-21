@@ -76,7 +76,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -533,75 +533,63 @@ const App: React.FC = () => {
   if (authError) return <div>Error: {authError.message}</div>;
 
   return (
+    <div className="App">
+      {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
+      <header className="app-header">
+        <Link to="/" className="app-title">
+          <h1>Site Evaluator</h1>
+        </Link>
+        {user ? (
+          <div className="user-menu-container">
+            <div className="points-counter" onClick={() => navigate('/points')}>
+              <FontAwesomeIcon icon={faDollarSign} />
+              <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
+              {userData?.isPayAsYouGo && (
+                <FontAwesomeIcon icon={faCreditCard} className="pay-as-you-go-icon" />
+              )}
+            </div>
+            <button 
+              className="user-menu-button" 
+              onClick={() => setCurrentPage('profile')}
+              title="View Profile"
+            >
+              <img
+                src={getProfilePicture(user)}
+                alt="User Avatar"
+                className="user-avatar"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = defaultUserIcon;
+                }}
+              />
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
+        )}
+      </header>
+      <div className={`content-wrapper`}>
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={renderPage()} />
+            <Route path="/points" element={<PointsManagementPage />} />
+            <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
+            <Route path="/payment-success" element={<PaymentSuccessPage />} />
+          </Routes>
+        </main>
+      </div>
+      {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
+      <ToastContainer position="bottom-right" />
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <ErrorBoundary>
       <Router>
-        <div className="App">
-          {/* Log the render state */}
-          {(() => {
-            return null;
-          })()}
-          {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
-          <header className="app-header">
-            <Link to="/" className="app-title">
-              <h1>Site Evaluator</h1>
-            </Link>
-            {user ? (
-              <div className="user-menu-container">
-                <div className="points-counter" onClick={() => navigate('/points')}>
-                  <FontAwesomeIcon icon={faDollarSign} />
-                  <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
-                  {userData?.isPayAsYouGo && (
-                    <FontAwesomeIcon icon={faCreditCard} className="pay-as-you-go-icon" />
-                  )}
-                </div>
-                <button 
-                  className="user-menu-button" 
-                  onClick={() => setCurrentPage('profile')}
-                  title="View Profile"
-                >
-                  <img
-                    src={getProfilePicture(user)}
-                    alt="User Avatar"
-                    className="user-avatar"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = defaultUserIcon;
-                    }}
-                  />
-                </button>
-              </div>
-            ) : (
-              <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
-            )}
-          </header>
-          <div className={`content-wrapper`}>
-            <main className="main-content">
-              <Routes>
-                <Route path="/" element={renderPage()} />
-                <Route path="/points" element={<PointsManagementPage />} />
-                <Route path="/payment-method-success" element={<PaymentMethodSuccess />} />
-                <Route path="/payment-success" element={<PaymentSuccessPage />} />
-              </Routes>
-            </main>
-          </div>
-          {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
-          <ToastContainer
-            position="bottom-right"
-            autoClose={4000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable={false}
-            pauseOnHover
-            theme="dark"
-            style={{
-              zIndex: 9999
-            }}
-          />
-        </div>
+        <AppContent />
       </Router>
     </ErrorBoundary>
   );
