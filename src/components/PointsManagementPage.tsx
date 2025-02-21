@@ -20,26 +20,63 @@ const PointsManagementPage: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const fetchUserData = async () => {
+    if (auth.currentUser) {
+      try {
+        const [userDataResponse, history] = await Promise.all([
+          paymentService.getUserData(auth.currentUser.uid),
+          paymentService.getPaymentHistory(auth.currentUser.uid)
+        ]);
+        setUserData(userDataResponse);
+        setBalance(userDataResponse.balance);
+        setPaymentHistory(history);
+      } catch (error) {
+        toast.error('Failed to load user data');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (auth.currentUser) {
-        try {
-          const [userDataResponse, history] = await Promise.all([
-            paymentService.getUserData(auth.currentUser.uid),
-            paymentService.getPaymentHistory(auth.currentUser.uid)
-          ]);
-          setUserData(userDataResponse);
-          setBalance(userDataResponse.balance);
-          setPaymentHistory(history);
-        } catch (error) {
-          toast.error('Failed to load user data');
-        } finally {
-          setIsLoading(false);
+    fetchUserData();
+  }, []);
+
+  // Add polling for payment method status after portal return
+  useEffect(() => {
+    const checkPaymentMethodStatus = async () => {
+      if (!auth.currentUser) return;
+
+      try {
+        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
+        if (hasPaymentMethod) {
+          // Refresh user data if payment method is found
+          await fetchUserData();
         }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
       }
     };
 
-    fetchUserData();
+    // Check if we're returning from the portal
+    const returnPath = localStorage.getItem('returnPath');
+    if (returnPath === '/points') {
+      localStorage.removeItem('returnPath');
+      
+      // Poll for payment method status a few times
+      let attempts = 0;
+      const maxAttempts = 3;
+      const interval = setInterval(async () => {
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          return;
+        }
+        await checkPaymentMethodStatus();
+        attempts++;
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const handlePayAsYouGoSignup = async () => {
@@ -51,13 +88,13 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
-      // Store current URL in localStorage to handle GitHub Pages base path
+      // Store current URL in localStorage to handle return
       localStorage.setItem('returnPath', window.location.pathname);
+      // Use window.location.href for external URL navigation
       window.location.href = portalUrl;
     } catch (error) {
       console.error('Setup error:', error);
       toast.error('Failed to initialize setup. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
   };

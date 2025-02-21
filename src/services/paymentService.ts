@@ -38,6 +38,11 @@ class PaymentService {
         }));
     }
 
+    async checkPaymentMethodStatus(userId: string): Promise<boolean> {
+        const response = await axios.get(`${API_URL}/api/payment/payment-status/${userId}`);
+        return response.data.hasPaymentMethod;
+    }
+
     async unenrollFromPayAsYouGo(userId: string): Promise<void> {
         await axios.post(`${API_URL}/api/payment/unenroll`, {
             userId
