@@ -47,10 +47,12 @@ const PointsManagementPage: React.FC = () => {
     const checkPaymentMethodStatus = async () => {
       if (!auth.currentUser) return;
 
+      console.log('Checking payment method status...'); // Debug log
       try {
         const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
+        console.log('Payment method status result:', hasPaymentMethod); // Debug log
         if (hasPaymentMethod) {
-          // Refresh user data if payment method is found
+          console.log('Payment method found, refreshing user data...'); // Debug log
           await fetchUserData();
         }
       } catch (error) {
@@ -60,14 +62,18 @@ const PointsManagementPage: React.FC = () => {
 
     // Check if we're returning from the portal
     const returnPath = localStorage.getItem('returnPath');
-    if (returnPath === '/points') {
+    console.log('Return path from localStorage:', returnPath); // Debug log
+    if (returnPath !== null) { // If there's any return path, we're coming back from portal
+      console.log('Detected return from portal, starting polling...'); // Debug log
       localStorage.removeItem('returnPath');
       
       // Poll for payment method status a few times
       let attempts = 0;
       const maxAttempts = 3;
       const interval = setInterval(async () => {
+        console.log(`Polling attempt ${attempts + 1} of ${maxAttempts}`); // Debug log
         if (attempts >= maxAttempts) {
+          console.log('Max polling attempts reached, stopping...'); // Debug log
           clearInterval(interval);
           return;
         }
@@ -88,8 +94,12 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
+      // Log the actual pathname
+      console.log('Current pathname:', window.location.pathname);
       // Store current URL in localStorage to handle return
       localStorage.setItem('returnPath', window.location.pathname);
+      // Log what was actually stored
+      console.log('Stored returnPath:', localStorage.getItem('returnPath'));
       // Use window.location.href for external URL navigation
       window.location.href = portalUrl;
     } catch (error) {
