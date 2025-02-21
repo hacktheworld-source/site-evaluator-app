@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 import { getUserBalance, SERVICE_COSTS } from '../services/points';
 import { paymentService } from '../services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDollarSign, faInfoCircle, faHistory, faCreditCard, faCheckCircle, faSpinner, faCog } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
+import { onSnapshot, doc } from 'firebase/firestore';
 
 interface UserData {
   balance: number;
@@ -45,42 +46,47 @@ const PointsManagementPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUserData();
-  }, [user]);
-
-  useEffect(() => {
     if (!user) return;
+
+    // Set up real-time listener for user data
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setUserData({
+            balance: data.balance || 0,
+            isPayAsYouGo: data.isPayAsYouGo || false,
+            hasAddedPayment: data.hasAddedPayment || false
+          });
+          setBalance(data.balance || 0);
+        }
+      },
+      (error) => {
+        console.error('Error in Firestore listener:', error);
+      }
+    );
 
     // Check if we're returning from Stripe portal
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath === window.location.pathname) {
       localStorage.removeItem('returnPath');
-      // Single check for payment method status after return
       checkPaymentMethodStatus();
     }
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, [user]);
 
   const checkPaymentMethodStatus = async () => {
     if (!user) return;
     
     try {
-      const response = await fetch('/api/check-payment-method', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to check payment method status');
-      }
-
-      const data = await response.json();
-      if (!data.hasPaymentMethod) {
-        // If no payment method is found, ensure user is unenrolled
+      const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
+      if (!hasPaymentMethod) {
         await handleUnenroll();
       }
+      await fetchUserData();
     } catch (error) {
       console.error('Error checking payment method status:', error);
       toast.error('Failed to verify payment status');
@@ -138,25 +144,16 @@ const PointsManagementPage: React.FC = () => {
       return;
     }
 
+    setIsProcessing(true);
     try {
       localStorage.setItem('returnPath', window.location.pathname);
-      const response = await fetch('/api/create-customer-portal-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create portal session');
-      }
-
-      const { url } = await response.json();
-      window.location.href = url;
+      const portalUrl = await paymentService.createSetupSession(user.uid);
+      window.location.href = portalUrl;
     } catch (error) {
       console.error('Error creating customer portal session:', error);
       toast.error('Failed to open payment management');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
