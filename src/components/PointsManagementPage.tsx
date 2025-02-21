@@ -106,7 +106,10 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
-      // Don't store returnPath since we're just managing payment methods
+      // Store returnPath just like with signup
+      console.log('Current pathname:', window.location.pathname);
+      localStorage.setItem('returnPath', window.location.pathname);
+      console.log('Stored returnPath:', localStorage.getItem('returnPath'));
       window.location.href = portalUrl;
     } catch (error) {
       console.error('Portal access error:', error);
@@ -138,14 +141,18 @@ const PointsManagementPage: React.FC = () => {
       try {
         const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
         console.log('Payment method status result:', hasPaymentMethod); // Debug log
-        if (hasPaymentMethod) {
-          console.log('Payment method found, refreshing user data...'); // Debug log
-          await fetchUserData();
-          refreshAppUserData();
-        } else {
-          // If no payment methods found, treat as unenrolled
+        
+        // If no payment methods found, treat as unenrolled
+        if (!hasPaymentMethod) {
+          console.log('No payment methods found, unenrolling...'); // Debug log
           await handleUnenroll();
+          return;
         }
+        
+        // If payment method found, refresh data
+        console.log('Payment method found, refreshing user data...'); // Debug log
+        await fetchUserData();
+        refreshAppUserData();
       } catch (error) {
         console.error('Error checking payment status:', error);
       }
@@ -158,7 +165,10 @@ const PointsManagementPage: React.FC = () => {
       console.log('Detected return from portal, starting polling...'); // Debug log
       localStorage.removeItem('returnPath');
       
-      // Poll for payment method status a few times
+      // Start immediate check
+      checkPaymentMethodStatus();
+      
+      // Then poll a few more times to ensure we catch any delayed updates
       let attempts = 0;
       const maxAttempts = 3;
       const interval = setInterval(async () => {
