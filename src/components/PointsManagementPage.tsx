@@ -19,18 +19,19 @@ const PointsManagementPage: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [user] = useState(auth.currentUser);
 
   const fetchUserData = async () => {
-    if (auth.currentUser) {
+    if (user) {
       try {
         // First check payment method status
-        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
+        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
         console.log('Initial payment method status check:', hasPaymentMethod);
 
         // Then get user data and history
         const [userDataResponse, history] = await Promise.all([
-          paymentService.getUserData(auth.currentUser.uid),
-          paymentService.getPaymentHistory(auth.currentUser.uid)
+          paymentService.getUserData(user.uid),
+          paymentService.getPaymentHistory(user.uid)
         ]);
         setUserData(userDataResponse);
         setBalance(userDataResponse.balance);
@@ -45,17 +46,56 @@ const PointsManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Check if we're returning from Stripe portal
+    const returnPath = localStorage.getItem('returnPath');
+    if (returnPath === window.location.pathname) {
+      localStorage.removeItem('returnPath');
+      // Single check for payment method status after return
+      checkPaymentMethodStatus();
+    }
+  }, [user]);
+
+  const checkPaymentMethodStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch('/api/check-payment-method', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check payment method status');
+      }
+
+      const data = await response.json();
+      if (!data.hasPaymentMethod) {
+        // If no payment method is found, ensure user is unenrolled
+        await handleUnenroll();
+      }
+    } catch (error) {
+      console.error('Error checking payment method status:', error);
+      toast.error('Failed to verify payment status');
+    }
+  };
 
   const handlePayAsYouGoSignup = async () => {
-    if (!auth.currentUser) {
+    if (!user) {
       toast.error('Please sign in to continue');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
+      const portalUrl = await paymentService.createSetupSession(user.uid);
       // Log the actual pathname
       console.log('Current pathname:', window.location.pathname);
       // Store current URL in localStorage to handle return
@@ -72,15 +112,15 @@ const PointsManagementPage: React.FC = () => {
   };
 
   const handleUnenroll = async () => {
-    if (!auth.currentUser) {
+    if (!user) {
       toast.error('Please sign in to continue');
       return;
     }
 
     setIsProcessing(true);
     try {
-      await paymentService.unenrollFromPayAsYouGo(auth.currentUser.uid);
-      const userDataResponse = await paymentService.getUserData(auth.currentUser.uid);
+      await paymentService.unenrollFromPayAsYouGo(user.uid);
+      const userDataResponse = await paymentService.getUserData(user.uid);
       setUserData(userDataResponse);
       fetchUserData();
       toast.success('Successfully unenrolled from pay-as-you-go');
@@ -93,19 +133,30 @@ const PointsManagementPage: React.FC = () => {
   };
 
   const handleManagePaymentMethods = async () => {
-    if (!auth.currentUser) {
+    if (!user) {
       toast.error('Please sign in to continue');
       return;
     }
 
-    setIsProcessing(true);
     try {
-      const portalUrl = await paymentService.createSetupSession(auth.currentUser.uid);
-      window.location.href = portalUrl;
+      localStorage.setItem('returnPath', window.location.pathname);
+      const response = await fetch('/api/create-customer-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create portal session');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url;
     } catch (error) {
-      console.error('Portal access error:', error);
-      toast.error('Failed to access payment settings. Please try again.');
-      setIsProcessing(false);
+      console.error('Error creating customer portal session:', error);
+      toast.error('Failed to open payment management');
     }
   };
 
@@ -122,20 +173,6 @@ const PointsManagementPage: React.FC = () => {
       minute: '2-digit'
     });
   };
-
-  // Add listener for real-time updates
-  useEffect(() => {
-    // Listen for payment status changes from App.tsx
-    const handlePaymentStatusChange = () => {
-      console.log('Payment status changed, refreshing data...');
-      fetchUserData();
-    };
-
-    window.addEventListener('paymentStatusChanged', handlePaymentStatusChange);
-    return () => {
-      window.removeEventListener('paymentStatusChanged', handlePaymentStatusChange);
-    };
-  }, []);
 
   if (isLoading) {
     return (
