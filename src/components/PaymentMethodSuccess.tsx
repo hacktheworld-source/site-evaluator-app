@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { auth } from '../services/firebase';
 import { paymentService } from '../services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 
-const PaymentMethodSuccess: React.FC = () => {
-    const navigate = useNavigate();
+interface PaymentMethodSuccessProps {
+    onNavigateToPoints: () => void;
+}
+
+const PaymentMethodSuccess: React.FC<PaymentMethodSuccessProps> = ({ onNavigateToPoints }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -15,7 +17,7 @@ const PaymentMethodSuccess: React.FC = () => {
         
         const checkPaymentStatus = async () => {
             if (!auth.currentUser) {
-                navigate('/');
+                onNavigateToPoints();
                 return;
             }
 
@@ -31,13 +33,13 @@ const PaymentMethodSuccess: React.FC = () => {
                 
                 // Redirect after a short delay
                 timeoutId = setTimeout(() => {
-                    navigate('/points');
+                    onNavigateToPoints();
                 }, 3000);
             } catch (error) {
                 console.error('Error checking payment status:', error);
                 toast.error('Error verifying payment method. Please check your account settings.');
                 timeoutId = setTimeout(() => {
-                    navigate('/points');
+                    onNavigateToPoints();
                 }, 3000);
             } finally {
                 setIsLoading(false);
@@ -51,7 +53,7 @@ const PaymentMethodSuccess: React.FC = () => {
                 clearTimeout(timeoutId);
             }
         };
-    }, [navigate]);
+    }, [onNavigateToPoints]);
 
     return (
         <div className="payment-success-page">

@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auth } from '../services/firebase';
 import { getUserBalance } from '../services/points';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
 
-const PaymentSuccessPage: React.FC = () => {
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+interface PaymentSuccessPageProps {
+    onNavigateToPoints: () => void;
+}
+
+const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({ onNavigateToPoints }) => {
     const [balance, setBalance] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        
         const checkPaymentStatus = async () => {
             if (!auth.currentUser) {
-                navigate('/');
+                onNavigateToPoints();
                 return;
             }
 
@@ -28,8 +31,8 @@ const PaymentSuccessPage: React.FC = () => {
                 toast.success('Payment successful! Your balance has been updated.');
                 
                 // Redirect after a short delay
-                setTimeout(() => {
-                    navigate('/points');
+                timeoutId = setTimeout(() => {
+                    onNavigateToPoints();
                 }, 3000);
             } catch (error) {
                 console.error('Error checking payment status:', error);
@@ -40,7 +43,13 @@ const PaymentSuccessPage: React.FC = () => {
         };
 
         checkPaymentStatus();
-    }, [navigate]);
+
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [onNavigateToPoints]);
 
     return (
         <div className="payment-success-page">

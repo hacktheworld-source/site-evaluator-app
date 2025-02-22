@@ -163,6 +163,23 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Check if we're returning from Stripe portal
+    const returnPath = localStorage.getItem('returnPath');
+    if (returnPath === window.location.pathname) {
+      localStorage.removeItem('returnPath');
+      // Check payment status
+      paymentService.checkPaymentMethodStatus(user.uid)
+        .then(hasPaymentMethod => {
+          if (!hasPaymentMethod && userData?.hasAddedPayment) {
+            return paymentService.unenrollFromPayAsYouGo(user.uid);
+          }
+        })
+        .catch(error => {
+          console.error('Error checking payment status:', error);
+          toast.error('Failed to verify payment status');
+        });
+    }
+
     // Set up real-time listener for user data
     const unsubscribe = onSnapshot(
       doc(db, 'users', user.uid),
@@ -605,7 +622,13 @@ const AppContent: React.FC = () => {
       </header>
       <div className={`content-wrapper`}>
         <main className="main-content">
-          {renderCurrentPage()}
+          {currentPage === 'payment-success' ? (
+            <PaymentMethodSuccess onNavigateToPoints={() => goToPage('points')} />
+          ) : currentPage === 'payment-success-page' ? (
+            <PaymentSuccessPage onNavigateToPoints={() => goToPage('points')} />
+          ) : (
+            renderCurrentPage()
+          )}
         </main>
       </div>
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
