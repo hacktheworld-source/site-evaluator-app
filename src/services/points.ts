@@ -44,6 +44,7 @@ export const checkCreditsAndShowError = async (
     ]);
 
     if (hasEnough) {
+      await decrementUserBalance(userId, requiredAmount);
       onSuccess();
       return;
     }
@@ -61,8 +62,9 @@ export const checkCreditsAndShowError = async (
 
     // User is enrolled in pay-as-you-go
     try {
-      // Use deductUserBalance which will handle the payment processing
-      await decrementUserBalance(userId, requiredAmount);
+      // Create payment intent first, webhook will handle adding balance
+      await paymentService.createPaymentIntent(userId, requiredAmount);
+      // The webhook will add the balance, then we can proceed with the action
       onSuccess();
     } catch (error) {
       // Payment failed
@@ -70,7 +72,7 @@ export const checkCreditsAndShowError = async (
       onInsufficientBalance();
     }
   } catch (error) {
-    console.error('Error checking credits:', error);
+    console.error('Error checking balance:', error);
     toast.error('Error checking balance. Please try again.');
     onInsufficientBalance();
   }
