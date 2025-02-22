@@ -566,12 +566,6 @@ const AppContent: React.FC = () => {
   // Replace navigate with direct state changes
   const goToPage = (page: string) => {
     setCurrentPage(page);
-    // Clear evaluation results when going home
-    if (page === 'home') {
-      setEvaluationResults(null);
-      setWebsiteUrl('');
-      setRawInput('');
-    }
   };
 
   const renderCurrentPage = () => {
