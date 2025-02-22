@@ -19,7 +19,7 @@ export interface PaymentHistory {
 
 class PaymentService {
     async getUserData(userId: string): Promise<UserData> {
-        const response = await axios.get(`${API_URL}/api/users/${userId}`);
+        const response = await axios.get(`${API_URL}/api/balance/users/${userId}`);
         return response.data;
     }
 
@@ -47,14 +47,6 @@ class PaymentService {
         await axios.post(`${API_URL}/api/payment/unenroll`, {
             userId
         });
-    }
-
-    async createPaymentIntent(userId: string, amount: number) {
-        const response = await axios.post(`${API_URL}/api/payment/intent`, {
-            userId,
-            amount
-        });
-        return response.data;
     }
 }
 
