@@ -660,16 +660,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   margin-top: 10px;
 }
 
-.info-card {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 15px 30px;
-  background: rgba(18, 18, 18, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  text-align: center;
-}
-
 @media (max-width: 1024px) {
   .pricing-tiers {
     grid-template-columns: repeat(2, 1fr);
@@ -2629,10 +2619,13 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .info-card {
-  background: rgba(18, 18, 18, 0.9);
-  border-radius: 12px;
-  padding: 25px;
+  max-width: 1200px;
+  margin: 20px auto;
   margin-bottom: 20px;
+  padding: 25px;
+  background: rgba(18, 18, 18, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -2848,17 +2841,17 @@ input[type="text"]:focus, input[type="number"]:focus {
   cursor: pointer;
   transition: all 0.3s ease;
   border: none;
-  background-color: #343434;
+  background: rgba(255, 255, 255, 0.05);
   color: white;
   margin: 20px 0px 0px 0px;
 }
 
 .manage-payment-button:hover {
-  background-color: #555;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .manage-payment-button:disabled {
-  background-color: #666;
+  background: rgba(255, 255, 255, 0.03);
   cursor: not-allowed;
   opacity: 0.7;
 }
