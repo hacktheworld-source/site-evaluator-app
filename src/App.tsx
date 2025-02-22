@@ -171,14 +171,14 @@ const AppContent: React.FC = () => {
           const data = doc.data();
           setUserData({
             balance: data.balance || 0,
-            isPayAsYouGo: data.isPayAsYouGo || false,
+            isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment),
             hasAddedPayment: data.hasAddedPayment || false
           });
           // Dispatch event for components that need to know about payment status changes
           window.dispatchEvent(new CustomEvent('userDataUpdated', { 
             detail: { 
               hasAddedPayment: data.hasAddedPayment || false,
-              isPayAsYouGo: data.isPayAsYouGo || false,
+              isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment),
               balance: data.balance || 0
             }
           }));

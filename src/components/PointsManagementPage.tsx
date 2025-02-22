@@ -187,7 +187,6 @@ const PointsManagementPage: React.FC = () => {
       <div className="balance-header">
         <h2>Account Balance</h2>
         <div className="current-balance">
-          <FontAwesomeIcon icon={faDollarSign} className="balance-icon" />
           <span>{formatPrice(balance || 0)}</span>
         </div>
       </div>
