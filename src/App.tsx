@@ -25,7 +25,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBolt, faDollarSign, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from './services/firebase';
-import { getFirestore, doc, onSnapshot, DocumentSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, doc, onSnapshot, DocumentSnapshot, updateDoc } from 'firebase/firestore';
 
 console.log('App loaded');
 
@@ -170,15 +170,19 @@ const AppContent: React.FC = () => {
       // Check payment status and unenroll if no payment methods remain
       paymentService.checkPaymentMethodStatus(user.uid)
         .then(hasPaymentMethod => {
-          if (!hasPaymentMethod && userData?.hasAddedPayment) {
-            // If we had a payment method before but don't anymore, unenroll
-            paymentService.unenrollFromPayAsYouGo(user.uid)
+          if (!hasPaymentMethod) {
+            // If we don't have any payment methods, update Firestore
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, {
+              hasAddedPayment: false,
+              isPayAsYouGo: false
+            })
               .then(() => {
                 toast.info('Payment method removed. Unenrolled from pay-as-you-go.');
               })
-              .catch(error => {
-                console.error('Error unenrolling:', error);
-                toast.error('Failed to unenroll from pay-as-you-go');
+              .catch((error: Error) => {
+                console.error('Error updating payment status:', error);
+                toast.error('Failed to update payment status');
               });
           }
         })
