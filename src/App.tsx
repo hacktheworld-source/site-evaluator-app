@@ -95,8 +95,6 @@ const AppContent: React.FC = () => {
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [currentPhase, setCurrentPhase] = useState<string | null>('Vision');
-  const [isThinking, setIsThinking] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -249,17 +247,10 @@ const AppContent: React.FC = () => {
       user.uid,
       SERVICE_COSTS.EVALUATION,
       () => {
-        if (!userData?.isPayAsYouGo) {
-          handleError('Insufficient balance. Please enroll in pay-as-you-go to continue.');
-          // Add a slight delay before showing the toast with the clickable message
-          setTimeout(() => {
-            toast.info('Click here to enroll in pay-as-you-go', {
-              onClick: () => setCurrentPage('points')
-            });
-          }, 1000);
-        } else {
-          handleError(`Insufficient balance. You need $${SERVICE_COSTS.EVALUATION.toFixed(2)} to perform this action.`);
-        }
+        // If we get here, it means either:
+        // 1. User is not enrolled in pay-as-you-go
+        // 2. User is enrolled but payment failed in production mode
+        // We don't need to show any additional messages as they are handled in checkCreditsAndShowError
       },
       async () => {
         setIsGenerating(true);
@@ -557,14 +548,7 @@ const AppContent: React.FC = () => {
                       evaluationResults={evaluationResults}
                       isLoading={isLoading}
                       statusMessage={statusMessage}
-                      onPointsUpdated={setUserPoints}
-                      currentPhase={currentPhase}
-                      onPhaseChange={setCurrentPhase}
-                      phases={['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations']}
-                      rawInput={rawInput}
-                      onRawInputChange={setRawInput}
-                      isThinking={isThinking}
-                      setIsThinking={setIsThinking}
+                      onPointsUpdated={(points) => setUserPoints(points)}
                     />
                   )}
                 </div>

@@ -37,18 +37,51 @@ export const checkCreditsAndShowError = async (
   onInsufficientBalance: () => void,
   onSuccess: () => void
 ): Promise<void> => {
-  const currentBalance = await getUserBalance(userId);
-  const isTestMode = process.env.REACT_APP_STRIPE_TEST_MODE === 'true';
-  
-  if (currentBalance >= requiredAmount) {
-    onSuccess();
-  } else {
-    // In test mode with pay-as-you-go, allow the action
-    const userData = await paymentService.getUserData(userId);
-    if (isTestMode && userData.isPayAsYouGo) {
+  try {
+    const [hasEnough, userData] = await Promise.all([
+      hasEnoughBalance(userId, requiredAmount),
+      paymentService.getUserData(userId)
+    ]);
+
+    if (hasEnough) {
       onSuccess();
-    } else {
+      return;
+    }
+
+    // If we don't have enough balance, check pay-as-you-go status
+    if (!userData.isPayAsYouGo) {
+      // Not enrolled in pay-as-you-go
+      toast.error(`Insufficient balance. You need $${requiredAmount.toFixed(2)} to perform this action.`);
+      toast.info('Click here to enroll in pay-as-you-go', {
+        onClick: () => window.location.href = '/points'
+      });
+      onInsufficientBalance();
+      return;
+    }
+
+    // User is enrolled in pay-as-you-go
+    if (process.env.REACT_APP_STRIPE_MODE === 'test') {
+      // In test mode, let the action proceed
+      onSuccess();
+      return;
+    }
+
+    // In production mode with pay-as-you-go
+    try {
+      await axios.post(`${API_URL}/api/payment/charge`, { 
+        userId,
+        amount: requiredAmount
+      });
+      // If charge succeeds, proceed with action
+      onSuccess();
+    } catch (error) {
+      // Payment failed
+      toast.error('Unable to process payment. Please check your payment method.');
       onInsufficientBalance();
     }
+  } catch (error) {
+    console.error('Error checking credits:', error);
+    toast.error('Error checking credits. Please try again.');
+    onInsufficientBalance();
   }
 }; 
