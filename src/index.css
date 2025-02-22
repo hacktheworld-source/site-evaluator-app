@@ -2618,6 +2618,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 20px;
 }
 
+.status-section {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
 .info-card {
   max-width: 1200px;
   margin: 20px auto;
