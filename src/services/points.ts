@@ -43,32 +43,19 @@ export const checkCreditsAndShowError = async (
       paymentService.getUserData(userId)
     ]);
 
-    if (hasEnough) {
+    if (hasEnough || (userData.isPayAsYouGo && userData.hasAddedPayment)) {
+      // If user has enough balance OR is enrolled in pay-as-you-go,
+      // let the onSuccess callback handle the balance deduction
       onSuccess();
       return;
     }
 
-    // If we don't have enough balance, check pay-as-you-go status
-    if (!userData.isPayAsYouGo) {
-      // Not enrolled in pay-as-you-go
-      toast.error(`This action requires $${requiredAmount.toFixed(2)}`);
-      toast.info('Click here to enroll in pay-as-you-go', {
-        onClick: () => window.location.href = '/points'
-      });
-      onInsufficientBalance();
-      return;
-    }
-
-    // User is enrolled in pay-as-you-go
-    try {
-      // Use deductUserBalance which will handle the payment processing
-      await decrementUserBalance(userId, requiredAmount);
-      onSuccess();
-    } catch (error) {
-      // Payment failed
-      toast.error('Unable to process payment. Please check your payment method.');
-      onInsufficientBalance();
-    }
+    // Not enough balance and not on pay-as-you-go
+    toast.error(`This action requires $${requiredAmount.toFixed(2)}`);
+    toast.info('Click here to enroll in pay-as-you-go', {
+      onClick: () => window.location.href = '/points'
+    });
+    onInsufficientBalance();
   } catch (error) {
     console.error('Error checking credits:', error);
     toast.error('Error checking balance. Please try again.');
