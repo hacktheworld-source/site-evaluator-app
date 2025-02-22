@@ -88,7 +88,6 @@ const AppContent: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
   const [rawInput, setRawInput] = useState<string>('');
-  const [chatKey, setChatKey] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [analysisState, setAnalysisState] = useState<'pre' | 'post'>('pre');
@@ -272,7 +271,6 @@ const AppContent: React.FC = () => {
         setError(null);
         setStatusMessage('Job in queue...');
         setEvaluationResults(null);
-        setChatKey(prevKey => prevKey + 1);
 
         try {
           // Deduct credits only once
@@ -545,7 +543,6 @@ const AppContent: React.FC = () => {
                 <div className="chat-container">
                   {websiteUrl && (
                     <ChatInterface
-                      key={chatKey}
                       websiteUrl={websiteUrl}
                       onStartEvaluation={handleEvaluation}
                       evaluationResults={evaluationResults}
