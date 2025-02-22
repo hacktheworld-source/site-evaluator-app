@@ -1022,16 +1022,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
       {currentPhase && (
         <div className="floating-action-container">
-          {currentPhase !== 'Recommendations' ? (
+          {currentPhase !== 'Recommendations' && phases.indexOf(currentPhase) < phases.length - 1 ? (
             <button 
               type="button" 
               onClick={handleContinue} 
-              disabled={isLoading || isMessageLoading} 
+              disabled={isLoading || isMessageLoading || isThinking} 
               className="floating-action-button"
             >
               Next
             </button>
-          ) : (
+          ) : currentPhase === 'Recommendations' ? (
             <button
               type="button"
               onClick={handleGenerateReport}
@@ -1040,7 +1040,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               {isGeneratingReport ? 'Generating...' : 'Download Report'}
             </button>
-          )}
+          ) : null}
         </div>
       )}
       <div className="chat-messages">
