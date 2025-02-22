@@ -60,19 +60,9 @@ export const checkCreditsAndShowError = async (
     }
 
     // User is enrolled in pay-as-you-go
-    if (process.env.REACT_APP_STRIPE_MODE === 'test') {
-      // In test mode, let the action proceed
-      onSuccess();
-      return;
-    }
-
-    // In production mode with pay-as-you-go
     try {
-      await axios.post(`${API_URL}/api/payment/charge`, { 
-        userId,
-        amount: requiredAmount
-      });
-      // If charge succeeds, proceed with action
+      // Use deductUserBalance which will handle the payment processing
+      await decrementUserBalance(userId, requiredAmount);
       onSuccess();
     } catch (error) {
       // Payment failed
