@@ -9,6 +9,8 @@ import { toast } from 'react-toastify';
 import { reportStorage } from '../services/reportStorage';
 import { auth } from '../services/firebase';
 import { SERVICE_COSTS, checkCreditsAndShowError, decrementUserBalance, getUserBalance } from '../services/points';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 const MAX_HISTORY_LENGTH = 50;
 const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
@@ -48,6 +50,13 @@ interface ChatInterfaceProps {
   onGenerateReport?: (data: ReportData) => void;
   statusMessage?: string;
   onPointsUpdated?: (newPoints: number) => void;
+  currentPhase: string | null;
+  onPhaseChange: (phase: string | null) => void;
+  phases: string[];
+  rawInput: string;
+  onRawInputChange: (value: string) => void;
+  isThinking: boolean;
+  setIsThinking: (value: boolean) => void;
 }
 
 const ScreenshotPlaceholder: React.FC = () => (
@@ -61,20 +70,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading,
   onGenerateReport,
   statusMessage,
-  onPointsUpdated
+  onPointsUpdated,
+  currentPhase,
+  onPhaseChange,
+  phases,
+  rawInput,
+  onRawInputChange,
+  isThinking,
+  setIsThinking
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
-  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [userData, setUserData] = useState<{ isPayAsYouGo: boolean } | null>(null);
   const SCREENSHOT_TIMEOUT = 45000; // 45 seconds
-
-  const phases = ['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations'];
 
   const roundMetrics = (metrics: any) => {
     if (!metrics) return {};
@@ -108,10 +121,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     setMessages([]);
     setUserInput('');
-    setCurrentPhase(null);
     setPhaseScores({});
     setOverallScore(null);
   }, [websiteUrl]);
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', auth.currentUser.uid),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setUserData({
+            isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment)
+          });
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   const updateOverallScore = (newPhaseScores: { [key: string]: number }) => {
     const scores = Object.values(newPhaseScores);
@@ -157,7 +187,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           metrics: {}
         };
         addMessage(initialMessage);
-        setCurrentPhase('Vision');
+        onPhaseChange('Vision');
 
         const newPhaseScores = { ...phaseScores, Vision: score };
         setPhaseScores(newPhaseScores);
@@ -264,9 +294,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       userId,
       SERVICE_COSTS.CHAT_MESSAGE,
       () => {
-        toast.error(`This action requires ${SERVICE_COSTS.CHAT_MESSAGE} credits. Please purchase more credits to continue.`, {
-          onClick: () => window.location.href = '/points'
-        });
+        if (!userData?.isPayAsYouGo) {
+          toast.error('Insufficient balance. Please enroll in pay-as-you-go to continue.', {
+            onClick: () => window.location.href = '/points'
+          });
+        } else {
+          toast.error(`Insufficient balance. You need $${SERVICE_COSTS.CHAT_MESSAGE.toFixed(2)} to perform this action.`);
+        }
       },
       async () => {
         const newUserMessage: Message = { 
@@ -336,7 +370,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const currentIndex = phases.indexOf(currentPhase!);
     if (currentIndex < phases.length - 1) {
       const nextPhase = phases[currentIndex + 1];
-      setCurrentPhase(nextPhase);
+      onPhaseChange(nextPhase);
       setIsThinking(true);
       setIsMessageLoading(true);
 
@@ -493,7 +527,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
       }
     } else {
-      setCurrentPhase(null); // evaluation complete
+      onPhaseChange(null); // evaluation complete
     }
   };
 
@@ -753,9 +787,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       userId,
       SERVICE_COSTS.REPORT_GENERATION,
       () => {
-        toast.error(`Generating a report requires ${SERVICE_COSTS.REPORT_GENERATION} credits. Please purchase more credits to continue.`, {
-          onClick: () => window.location.href = '/points'
-        });
+        if (!userData?.isPayAsYouGo) {
+          toast.error('Insufficient balance. Please enroll in pay-as-you-go to continue.', {
+            onClick: () => window.location.href = '/points'
+          });
+        } else {
+          toast.error(`Insufficient balance. You need $${SERVICE_COSTS.REPORT_GENERATION.toFixed(2)} to perform this action.`);
+        }
       },
       async () => {
         setIsGeneratingReport(true);

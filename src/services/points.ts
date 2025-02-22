@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { paymentService } from './paymentService';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -36,10 +37,18 @@ export const checkCreditsAndShowError = async (
   onInsufficientBalance: () => void,
   onSuccess: () => void
 ): Promise<void> => {
-  if (await hasEnoughBalance(userId, requiredAmount)) {
+  const currentBalance = await getUserBalance(userId);
+  const isTestMode = process.env.REACT_APP_STRIPE_TEST_MODE === 'true';
+  
+  if (currentBalance >= requiredAmount) {
     onSuccess();
   } else {
-    onInsufficientBalance();
-    toast.error(`Insufficient balance. You need $${requiredAmount.toFixed(2)} to perform this action.`);
+    // In test mode with pay-as-you-go, allow the action
+    const userData = await paymentService.getUserData(userId);
+    if (isTestMode && userData.isPayAsYouGo) {
+      onSuccess();
+    } else {
+      onInsufficientBalance();
+    }
   }
 }; 

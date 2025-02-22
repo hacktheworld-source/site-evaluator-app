@@ -194,7 +194,7 @@ const ProfilePage: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      toast.success('Signed out successfully');
+      window.location.reload();
     } catch (error) {
       console.error('Sign-out error:', error);
       toast.error('Failed to sign out');

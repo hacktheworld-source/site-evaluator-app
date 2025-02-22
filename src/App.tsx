@@ -95,6 +95,8 @@ const AppContent: React.FC = () => {
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<string | null>('Vision');
+  const [isThinking, setIsThinking] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -247,13 +249,17 @@ const AppContent: React.FC = () => {
       user.uid,
       SERVICE_COSTS.EVALUATION,
       () => {
-        handleError(`Website evaluation requires ${SERVICE_COSTS.EVALUATION} credits (1 credit per phase). Please purchase more credits to continue.`);
-        // Add a slight delay before showing the toast with the clickable message
-        setTimeout(() => {
-          toast.info('Click here to purchase more credits', {
-            onClick: () => setCurrentPage('points')
-          });
-        }, 1000);
+        if (!userData?.isPayAsYouGo) {
+          handleError('Insufficient balance. Please enroll in pay-as-you-go to continue.');
+          // Add a slight delay before showing the toast with the clickable message
+          setTimeout(() => {
+            toast.info('Click here to enroll in pay-as-you-go', {
+              onClick: () => setCurrentPage('points')
+            });
+          }, 1000);
+        } else {
+          handleError(`Insufficient balance. You need $${SERVICE_COSTS.EVALUATION.toFixed(2)} to perform this action.`);
+        }
       },
       async () => {
         setIsGenerating(true);
@@ -551,7 +557,14 @@ const AppContent: React.FC = () => {
                       evaluationResults={evaluationResults}
                       isLoading={isLoading}
                       statusMessage={statusMessage}
-                      onPointsUpdated={(points) => setUserPoints(points)}
+                      onPointsUpdated={setUserPoints}
+                      currentPhase={currentPhase}
+                      onPhaseChange={setCurrentPhase}
+                      phases={['Vision', 'UI', 'Functionality', 'Performance', 'SEO', 'Overall', 'Recommendations']}
+                      rawInput={rawInput}
+                      onRawInputChange={setRawInput}
+                      isThinking={isThinking}
+                      setIsThinking={setIsThinking}
                     />
                   )}
                 </div>
