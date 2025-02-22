@@ -243,6 +243,20 @@ const AppContent: React.FC = () => {
       return;
     }
 
+    // Define cleanup function outside the success callback
+    const cleanupAndRefund = async () => {
+      if (user) {
+        try {
+          // Add credits back to user's balance
+          await decrementUserBalance(user.uid, -SERVICE_COSTS.EVALUATION);
+          setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + SERVICE_COSTS.EVALUATION : null));
+          toast.info('Credits have been refunded.');
+        } catch (error) {
+          console.error('Error refunding credits:', error);
+        }
+      }
+    };
+
     await checkCreditsAndShowError(
       user.uid,
       SERVICE_COSTS.EVALUATION,
@@ -260,19 +274,8 @@ const AppContent: React.FC = () => {
         setEvaluationResults(null);
         setChatKey(prevKey => prevKey + 1);
 
-        const cleanupAndRefund = async () => {
-          if (user) {
-            try {
-              await decrementUserBalance(user.uid, SERVICE_COSTS.EVALUATION);
-              setUserPoints(prevPoints => (prevPoints !== null ? prevPoints + SERVICE_COSTS.EVALUATION : null));
-              toast.info('Credits have been refunded.');
-            } catch (error) {
-              console.error('Error refunding credits:', error);
-            }
-          }
-        };
-
         try {
+          // Deduct credits only once
           await decrementUserBalance(user.uid, SERVICE_COSTS.EVALUATION);
           setUserPoints(prevPoints => (prevPoints !== null ? prevPoints - SERVICE_COSTS.EVALUATION : null));
 
