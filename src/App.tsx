@@ -167,11 +167,19 @@ const AppContent: React.FC = () => {
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath === window.location.pathname) {
       localStorage.removeItem('returnPath');
-      // Check payment status
+      // Check payment status and unenroll if no payment methods remain
       paymentService.checkPaymentMethodStatus(user.uid)
         .then(hasPaymentMethod => {
           if (!hasPaymentMethod && userData?.hasAddedPayment) {
-            return paymentService.unenrollFromPayAsYouGo(user.uid);
+            // If we had a payment method before but don't anymore, unenroll
+            paymentService.unenrollFromPayAsYouGo(user.uid)
+              .then(() => {
+                toast.info('Payment method removed. Unenrolled from pay-as-you-go.');
+              })
+              .catch(error => {
+                console.error('Error unenrolling:', error);
+                toast.error('Failed to unenroll from pay-as-you-go');
+              });
           }
         })
         .catch(error => {
