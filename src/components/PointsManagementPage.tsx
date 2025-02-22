@@ -22,51 +22,39 @@ const PointsManagementPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [user] = useState(auth.currentUser);
 
-  const fetchUserData = async () => {
-    if (user) {
-      try {
-        // First check payment method status
-        const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
-        console.log('Initial payment method status check:', hasPaymentMethod);
+  // Initial data fetch
+  useEffect(() => {
+    const loadInitialData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
-        // Then get user data and history
-        const [userDataResponse, history] = await Promise.all([
-          paymentService.getUserData(user.uid),
+      try {
+        const [history] = await Promise.all([
           paymentService.getPaymentHistory(user.uid)
         ]);
-        setUserData(userDataResponse);
-        setBalance(userDataResponse.balance);
         setPaymentHistory(history);
       } catch (error) {
-        toast.error('Failed to load user data');
+        console.error('Error loading initial data:', error);
+        toast.error('Failed to load payment history');
       } finally {
         setIsLoading(false);
       }
-    }
-  };
+    };
 
+    loadInitialData();
+  }, [user]);
+
+  // Listen for user data updates
   useEffect(() => {
-    if (!user) return;
+    const handleUserDataUpdate = (event: CustomEvent<UserData>) => {
+      setUserData(event.detail);
+      setBalance(event.detail.balance);
+    };
 
-    // Set up real-time listener for user data
-    const unsubscribe = onSnapshot(
-      doc(db, 'users', user.uid),
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          setUserData({
-            balance: data.balance || 0,
-            isPayAsYouGo: data.isPayAsYouGo || false,
-            hasAddedPayment: data.hasAddedPayment || false
-          });
-          setBalance(data.balance || 0);
-        }
-      },
-      (error) => {
-        console.error('Error in Firestore listener:', error);
-      }
-    );
-
+    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    
     // Check if we're returning from Stripe portal
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath === window.location.pathname) {
@@ -74,9 +62,10 @@ const PointsManagementPage: React.FC = () => {
       checkPaymentMethodStatus();
     }
 
-    // Cleanup listener on unmount
-    return () => unsubscribe();
-  }, [user]);
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
+    };
+  }, []);
 
   const checkPaymentMethodStatus = async () => {
     if (!user) return;
@@ -86,7 +75,7 @@ const PointsManagementPage: React.FC = () => {
       if (!hasPaymentMethod) {
         await handleUnenroll();
       }
-      await fetchUserData();
+      // User data will update automatically via the real-time listener
     } catch (error) {
       console.error('Error checking payment method status:', error);
       toast.error('Failed to verify payment status');
@@ -128,7 +117,6 @@ const PointsManagementPage: React.FC = () => {
       await paymentService.unenrollFromPayAsYouGo(user.uid);
       const userDataResponse = await paymentService.getUserData(user.uid);
       setUserData(userDataResponse);
-      fetchUserData();
       toast.success('Successfully unenrolled from pay-as-you-go');
     } catch (error) {
       console.error('Unenroll error:', error);

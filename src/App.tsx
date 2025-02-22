@@ -161,27 +161,35 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      // Set up real-time listener for user data
-      const userRef = doc(db, 'users', user.uid);
-      const unsubscribe = onSnapshot(userRef, 
-        (docSnapshot: DocumentSnapshot) => {
-          if (docSnapshot.exists()) {
-            const data = docSnapshot.data() as UserData;
-            setUserData(data);
-            // Dispatch event for legacy components that still rely on it
-            window.dispatchEvent(new Event('paymentStatusChanged'));
-          }
-        }, 
-        (error: Error) => {
-          console.error('Error listening to user data:', error);
-        }
-      );
+    if (!user) return;
 
-      return () => unsubscribe();
-    } else {
-      setUserData(null);
-    }
+    // Set up real-time listener for user data
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setUserData({
+            balance: data.balance || 0,
+            isPayAsYouGo: data.isPayAsYouGo || false,
+            hasAddedPayment: data.hasAddedPayment || false
+          });
+          // Dispatch event for components that need to know about payment status changes
+          window.dispatchEvent(new CustomEvent('userDataUpdated', { 
+            detail: { 
+              hasAddedPayment: data.hasAddedPayment || false,
+              isPayAsYouGo: data.isPayAsYouGo || false,
+              balance: data.balance || 0
+            }
+          }));
+        }
+      },
+      (error) => {
+        console.error('Error in Firestore listener:', error);
+      }
+    );
+
+    return () => unsubscribe();
   }, [user]);
 
   const handleError = (message: string) => {
