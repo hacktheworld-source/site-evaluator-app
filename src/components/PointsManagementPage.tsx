@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../services/firebase';
 import { getUserBalance, SERVICE_COSTS } from '../services/points';
-import { paymentService } from '../services/paymentService';
+import { paymentService, PaymentHistory } from '../services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDollarSign, faInfoCircle, faHistory, faCreditCard, faCheckCircle, faSpinner, faCog } from '@fortawesome/free-solid-svg-icons';
 import { toast } from 'react-toastify';
@@ -11,12 +11,13 @@ interface UserData {
   balance: number;
   isPayAsYouGo: boolean;
   hasAddedPayment: boolean;
+  stripeCustomerId?: string;
 }
 
 const PointsManagementPage: React.FC = () => {
   const [balance, setBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -24,6 +25,8 @@ const PointsManagementPage: React.FC = () => {
 
   // Initial data fetch
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
     const loadInitialData = async () => {
       if (!user) {
         setIsLoading(false);
@@ -31,6 +34,21 @@ const PointsManagementPage: React.FC = () => {
       }
 
       try {
+        // Set up Firestore listener for user data
+        unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            const userData: UserData = {
+              balance: data.balance || 0,
+              isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment),
+              hasAddedPayment: data.hasAddedPayment || false,
+              stripeCustomerId: data.stripeCustomerId
+            };
+            setUserData(userData);
+            setBalance(userData.balance);
+          }
+        });
+
         const [history] = await Promise.all([
           paymentService.getPaymentHistory(user.uid)
         ]);
@@ -44,27 +62,22 @@ const PointsManagementPage: React.FC = () => {
     };
 
     loadInitialData();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [user]);
 
   // Listen for user data updates
   useEffect(() => {
-    const handleUserDataUpdate = (event: CustomEvent<UserData>) => {
-      setUserData(event.detail);
-      setBalance(event.detail.balance);
-    };
-
-    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
-    
     // Check if we're returning from Stripe portal
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath === window.location.pathname) {
       localStorage.removeItem('returnPath');
       checkPaymentMethodStatus();
     }
-
-    return () => {
-      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
-    };
   }, []);
 
   const checkPaymentMethodStatus = async () => {
@@ -72,10 +85,10 @@ const PointsManagementPage: React.FC = () => {
     
     try {
       const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
-      if (!hasPaymentMethod) {
-        await handleUnenroll();
+      if (!hasPaymentMethod && userData?.hasAddedPayment) {
+        await paymentService.unenrollFromPayAsYouGo(user.uid);
+        toast.success('Successfully unenrolled from pay-as-you-go');
       }
-      // User data will update automatically via the real-time listener
     } catch (error) {
       console.error('Error checking payment method status:', error);
       toast.error('Failed to verify payment status');
@@ -91,17 +104,12 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const portalUrl = await paymentService.createSetupSession(user.uid);
-      // Log the actual pathname
-      console.log('Current pathname:', window.location.pathname);
-      // Store current URL in localStorage to handle return
       localStorage.setItem('returnPath', window.location.pathname);
-      // Log what was actually stored
-      console.log('Stored returnPath:', localStorage.getItem('returnPath'));
-      // Use window.location.href for external URL navigation
       window.location.href = portalUrl;
     } catch (error) {
       console.error('Setup error:', error);
-      toast.error('Failed to initialize setup. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to initialize setup. Please try again.');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -112,15 +120,19 @@ const PointsManagementPage: React.FC = () => {
       return;
     }
 
+    if (!userData?.hasAddedPayment) {
+      toast.error('No payment method to unenroll from');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await paymentService.unenrollFromPayAsYouGo(user.uid);
-      const userDataResponse = await paymentService.getUserData(user.uid);
-      setUserData(userDataResponse);
+      // No need to fetch user data manually, Firestore listener will handle it
       toast.success('Successfully unenrolled from pay-as-you-go');
     } catch (error) {
       console.error('Unenroll error:', error);
-      toast.error('Failed to unenroll. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to unenroll. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -138,8 +150,8 @@ const PointsManagementPage: React.FC = () => {
       const portalUrl = await paymentService.createSetupSession(user.uid);
       window.location.href = portalUrl;
     } catch (error) {
-      console.error('Error creating customer portal session:', error);
-      toast.error('Failed to open payment management');
+      console.error('Portal session error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to open payment management');
     } finally {
       setIsProcessing(false);
     }

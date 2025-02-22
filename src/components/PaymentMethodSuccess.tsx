@@ -11,6 +11,8 @@ const PaymentMethodSuccess: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        let timeoutId: NodeJS.Timeout;
+        
         const checkPaymentStatus = async () => {
             if (!auth.currentUser) {
                 navigate('/');
@@ -28,13 +30,13 @@ const PaymentMethodSuccess: React.FC = () => {
                 }
                 
                 // Redirect after a short delay
-                setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     navigate('/points');
                 }, 3000);
             } catch (error) {
                 console.error('Error checking payment status:', error);
                 toast.error('Error verifying payment method. Please check your account settings.');
-                setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     navigate('/points');
                 }, 3000);
             } finally {
@@ -43,6 +45,12 @@ const PaymentMethodSuccess: React.FC = () => {
         };
 
         checkPaymentStatus();
+
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
     }, [navigate]);
 
     return (
