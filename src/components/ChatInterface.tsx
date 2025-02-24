@@ -697,20 +697,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
             <ReactMarkdown components={{
-              a: ({ node, ...props }) => (
-                <a 
-                  {...props} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              ),
+              text: ({ children }) => {
+                if (typeof children === 'string') {
+                  return <>{makeUrlsClickable(children)}</>;
+                }
+                return <>{children}</>;
+              },
               p: ({ children }) => (
-                <p className="message-paragraph">
-                  {typeof children === 'string' ? makeUrlsClickable(children) : children}
-                </p>
+                <p className="message-paragraph">{children}</p>
               ),
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
@@ -1057,7 +1051,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="button"
               onClick={handleGenerateReport}
               disabled={isLoading || isMessageLoading || isGeneratingReport}
-              className="floating-action-button"
+              className={`floating-action-button ${isGeneratingReport ? 'generating' : ''}`}
             >
               {isGeneratingReport ? 'Generating...' : 'Download Report'}
             </button>
