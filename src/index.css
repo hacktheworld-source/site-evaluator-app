@@ -231,9 +231,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   width: 100%;
   height: calc(100vh - var(--header-height));
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
   max-width: none;
-  padding: 0;
+  padding: 0 0 100px 0;
 }
 
 .app-description {
@@ -1538,7 +1538,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding: 0px 40px;
+  padding: 0px 40px 100px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .pre-analysis-content {
@@ -1570,6 +1575,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
+  padding-bottom: 100px;
 }
 
 .post-analysis-content.fade-in {
