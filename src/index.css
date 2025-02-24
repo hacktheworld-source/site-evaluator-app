@@ -231,7 +231,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   width: 100%;
   height: calc(100vh - var(--header-height));
   position: relative;
-  overflow-y: auto;
+  overflow: hidden;
   max-width: none;
   padding: 0 0 100px 0;
 }
@@ -278,6 +278,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
+  margin-bottom: 100px;
   padding: 40px 20px 100px 20px;
   box-sizing: border-box;
   overflow-y: auto;
