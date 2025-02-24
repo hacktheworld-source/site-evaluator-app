@@ -668,10 +668,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 />
               ),
-              // Convert URLs in text to links while preserving list structure
+              // Convert URLs in regular text to links
               text: ({ children }) => {
                 const text = children as string;
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const urlRegex = /(https?:\/\/[^\s:,)"']+)/g;
                 const parts = text.split(urlRegex);
                 return (
                   <>
@@ -683,8 +683,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </>
                 );
               },
-              // Handle list items with competitor screenshots
-              li: ({ node, ...props }) => {
+              // Handle list items with competitor screenshots and make URLs clickable
+              li: ({ node, ...props }): JSX.Element => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
                 }
@@ -700,14 +700,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 };
 
                 const content = node.children.map(getNodeContent).join('');
-                const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
+                const urlRegex = /(https?:\/\/[^\s:,)"']+)/g;
+                const parts = content.split(urlRegex);
+                const urlMatch = content.match(urlRegex);
                 
                 if (urlMatch) {
-                  const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
+                  const cleanUrl = urlMatch[0].replace(/[:,.]+$/, '');
                   
                   return (
                     <li {...props}>
-                      {content}
+                      {parts.map((part, i) => 
+                        part.match(urlRegex) ? 
+                          <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : 
+                          part
+                      )}
                       {message.phase === 'Recommendations' && (
                         <div className="competitor-screenshot-wrapper">
                           {message.competitorScreenshots?.[cleanUrl] ? (
