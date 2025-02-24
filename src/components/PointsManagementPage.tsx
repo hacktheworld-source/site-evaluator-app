@@ -12,6 +12,7 @@ interface UserData {
   isPayAsYouGo: boolean;
   hasAddedPayment: boolean;
   stripeCustomerId?: string;
+  lastPaymentMethodUpdate?: Date;
 }
 
 const PointsManagementPage: React.FC = () => {
@@ -42,7 +43,8 @@ const PointsManagementPage: React.FC = () => {
               balance: data.balance || 0,
               isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment),
               hasAddedPayment: data.hasAddedPayment || false,
-              stripeCustomerId: data.stripeCustomerId
+              stripeCustomerId: data.stripeCustomerId,
+              lastPaymentMethodUpdate: data.lastPaymentMethodUpdate?.toDate()
             };
             setUserData(userData);
             setBalance(userData.balance);
@@ -70,12 +72,12 @@ const PointsManagementPage: React.FC = () => {
     };
   }, [user]);
 
-  // Listen for user data updates
+  // Check payment method status when returning from Stripe portal
   useEffect(() => {
-    // Check if we're returning from Stripe portal
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath === window.location.pathname) {
       localStorage.removeItem('returnPath');
+      // Always check with Stripe when returning from portal
       checkPaymentMethodStatus();
     }
   }, []);
@@ -85,12 +87,15 @@ const PointsManagementPage: React.FC = () => {
     
     try {
       const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
-      if (!hasPaymentMethod && userData?.hasAddedPayment) {
-        await paymentService.unenrollFromPayAsYouGo(user.uid);
-        toast.success('Successfully unenrolled from pay-as-you-go');
+      
+      // Only show messages if the status has changed
+      if (hasPaymentMethod && !userData?.hasAddedPayment) {
+        toast.success('Payment method successfully added!');
+      } else if (!hasPaymentMethod && userData?.hasAddedPayment) {
+        toast.info('Payment methods have been removed. You have been unenrolled from pay-as-you-go.');
       }
     } catch (error) {
-      console.error('Error checking payment method status:', error);
+      console.error('Error checking payment status:', error);
       toast.error('Failed to verify payment status');
     }
   };
