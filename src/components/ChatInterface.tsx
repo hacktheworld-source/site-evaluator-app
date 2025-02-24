@@ -657,25 +657,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="message-content">
           {message.isLoading ? (
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
-          ) : (
+          ) : message.phase === 'Recommendations' ? (
             <ReactMarkdown components={{
+              // Only convert URLs to links, leave rest as plain text
               a: ({ node, ...props }) => (
                 <a 
                   {...props} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={(e) => e.stopPropagation()}
                 />
               ),
-              p: ({ children }) => <p className="message-paragraph">{children}</p>,
+              // Convert URLs in text to links while preserving list structure
+              text: ({ children }) => {
+                const text = children as string;
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const parts = text.split(urlRegex);
+                return (
+                  <>
+                    {parts.map((part, i) => 
+                      part.match(urlRegex) ? 
+                        <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : 
+                        part
+                    )}
+                  </>
+                );
+              },
+              // Handle list items with competitor screenshots
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
                 }
 
-                // Get the content by recursively processing all child nodes
                 const getNodeContent = (node: any): string => {
                   if (node.type === 'text') {
                     return node.value || '';
@@ -690,7 +703,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
                 
                 if (urlMatch) {
-                  // Clean the URL by removing trailing punctuation
                   const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
                   
                   return (
@@ -723,14 +735,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </li>
                   );
                 }
-                return (
-                  <li {...props}>
-                    {content}
-                  </li>
-                );
-              },
+                return <li {...props}>{content}</li>;
+              }
             }}>
-              {DOMPurify.sanitize(message.content)}
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            <ReactMarkdown components={{
+              a: ({ node, ...props }) => (
+                <a 
+                  {...props} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ),
+              p: ({ children }) => <p className="message-paragraph">{children}</p>,
+            }}>
+              {message.content}
             </ReactMarkdown>
           )}
         </div>
