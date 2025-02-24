@@ -82,12 +82,18 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 // Add this new component
 const LegalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  
+  const handleHomeClick = () => {
+    navigate('/');
+  };
+
   return (
     <div className="App">
       <header className="app-header">
-        <Link to="/" className="app-title">
+        <div className="app-title" onClick={handleHomeClick}>
           <h1>Olive</h1>
-        </Link>
+        </div>
       </header>
       {children}
       <Footer />
@@ -633,9 +639,9 @@ const AppContent: React.FC = () => {
     <div className="App">
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
-        <Link to="/" className="app-title">
+        <div className="app-title" onClick={() => goToPage('home')}>
           <h1>Olive</h1>
-        </Link>
+        </div>
         {user ? (
           <div className="user-menu-container">
             <div className="points-counter" onClick={() => goToPage('points')}>
