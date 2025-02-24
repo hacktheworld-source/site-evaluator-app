@@ -26,6 +26,7 @@ import { faBolt, faDollarSign, faCreditCard } from '@fortawesome/free-solid-svg-
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from './services/firebase';
 import { getFirestore, collection, doc, onSnapshot, DocumentSnapshot, updateDoc } from 'firebase/firestore';
+import { Message } from './components/ChatInterface';
 
 console.log('App loaded');
 
@@ -95,6 +96,23 @@ const AppContent: React.FC = () => {
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const navigate = useNavigate();
+
+  // Add chat state
+  const [chatState, setChatState] = useState<{
+    messages: Message[];
+    currentPhase: string | null;
+    phaseScores: { [key: string]: number };
+    overallScore: number | null;
+    userInput: string;
+    isThinking: boolean;
+  }>({
+    messages: [],
+    currentPhase: null,
+    phaseScores: {},
+    overallScore: null,
+    userInput: '',
+    isThinking: false
+  });
 
   useEffect(() => {
     console.log('App component mounted');
@@ -542,6 +560,8 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="chat-container">
                   <ChatInterface
+                    chatState={chatState}
+                    setChatState={setChatState}
                     websiteUrl={websiteUrl}
                     onStartEvaluation={handleEvaluation}
                     evaluationResults={evaluationResults}

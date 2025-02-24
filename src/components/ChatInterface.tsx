@@ -23,7 +23,7 @@ const debugLog = (message: string, data?: any) => {
   }
 };
 
-interface Message {
+export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   metrics?: { [key: string]: any };
@@ -48,6 +48,22 @@ interface ChatInterfaceProps {
   onGenerateReport?: (data: ReportData) => void;
   statusMessage?: string;
   onPointsUpdated?: (newPoints: number) => void;
+  chatState: {
+    messages: Message[];
+    currentPhase: string | null;
+    phaseScores: { [key: string]: number };
+    overallScore: number | null;
+    userInput: string;
+    isThinking: boolean;
+  };
+  setChatState: React.Dispatch<React.SetStateAction<{
+    messages: Message[];
+    currentPhase: string | null;
+    phaseScores: { [key: string]: number };
+    overallScore: number | null;
+    userInput: string;
+    isThinking: boolean;
+  }>>;
 }
 
 const ScreenshotPlaceholder: React.FC = () => (
@@ -61,15 +77,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading,
   onGenerateReport,
   statusMessage,
-  onPointsUpdated
+  onPointsUpdated,
+  chatState,
+  setChatState
 }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [userInput, setUserInput] = useState('');
-  const [currentPhase, setCurrentPhase] = useState<string | null>(null);
+  const { messages, currentPhase, phaseScores, overallScore, userInput, isThinking } = chatState;
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
-  const [overallScore, setOverallScore] = useState<number | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
+
+  const updateChatState = (updates: Partial<typeof chatState>) => {
+    setChatState(prev => ({ ...prev, ...updates }));
+  };
+
+  const setMessages = (newMessages: Message[] | ((prev: Message[]) => Message[])) => {
+    if (typeof newMessages === 'function') {
+      setChatState(prev => ({ ...prev, messages: newMessages(prev.messages) }));
+    } else {
+      setChatState(prev => ({ ...prev, messages: newMessages }));
+    }
+  };
+
+  const setCurrentPhase = (phase: string | null) => {
+    updateChatState({ currentPhase: phase });
+  };
+
+  const setPhaseScores = (scores: typeof chatState.phaseScores) => {
+    updateChatState({ phaseScores: scores });
+  };
+
+  const setOverallScore = (score: number | null) => {
+    updateChatState({ overallScore: score });
+  };
+
+  const setUserInput = (input: string) => {
+    updateChatState({ userInput: input });
+  };
+
+  const setIsThinking = (thinking: boolean) => {
+    updateChatState({ isThinking: thinking });
+  };
+
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const SCREENSHOT_TIMEOUT = 45000; // 45 seconds
@@ -104,7 +150,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Add this useEffect to reset the state when the component receives a new key
   useEffect(() => {
     setMessages([]);
     setUserInput('');
@@ -697,8 +742,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </ReactMarkdown>
           )}
         </div>
-        {message.phase === 'Overall' && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
-        {(message.phase === 'Overall' || message.phase === 'Vision') && renderScreenshot(evaluationResults.screenshot)}
+        {message.phase === 'Overall' && evaluationResults && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
+        {(message.phase === 'Overall' || message.phase === 'Vision') && evaluationResults?.screenshot && renderScreenshot(evaluationResults.screenshot)}
         {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && 
           renderMetrics(message.metrics, index, message.metricsCollapsed ?? true)}
       </div>
