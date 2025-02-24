@@ -67,7 +67,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [userInput, setUserInput] = useState('');
   const [currentPhase, setCurrentPhase] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const hasStartedAnalysis = useRef(false);
   const [phaseScores, setPhaseScores] = useState<{ [key: string]: number }>({});
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [isThinking, setIsThinking] = useState(false);
@@ -93,8 +92,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   useEffect(() => {
-    if (evaluationResults && !messages.length && !hasStartedAnalysis.current) {
-      hasStartedAnalysis.current = true;
+    if (evaluationResults && !messages.length) {
       setIsThinking(true);
       startVisionAnalysis();
     }

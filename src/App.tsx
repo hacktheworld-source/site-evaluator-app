@@ -541,16 +541,14 @@ const AppContent: React.FC = () => {
                   />
                 </div>
                 <div className="chat-container">
-                  {websiteUrl && (
-                    <ChatInterface
-                      websiteUrl={websiteUrl}
-                      onStartEvaluation={handleEvaluation}
-                      evaluationResults={evaluationResults}
-                      isLoading={isLoading}
-                      statusMessage={statusMessage}
-                      onPointsUpdated={(points) => setUserPoints(points)}
-                    />
-                  )}
+                  <ChatInterface
+                    websiteUrl={websiteUrl}
+                    onStartEvaluation={handleEvaluation}
+                    evaluationResults={evaluationResults}
+                    isLoading={isLoading}
+                    statusMessage={statusMessage}
+                    onPointsUpdated={(points) => setUserPoints(points)}
+                  />
                 </div>
               </div>
             </div>
