@@ -262,6 +262,28 @@ const AppContent: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
+  // Check for Stripe portal return anywhere in the app
+  useEffect(() => {
+    const returnPath = localStorage.getItem('returnPath');
+    if (returnPath && user) {
+      localStorage.removeItem('returnPath');
+      
+      const verifyPaymentStatus = async () => {
+        try {
+          const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
+          if (hasPaymentMethod) {
+            toast.success('Payment method successfully added!');
+          }
+        } catch (error) {
+          console.error('Error checking payment status:', error);
+          toast.error('Failed to verify payment status');
+        }
+      };
+
+      verifyPaymentStatus();
+    }
+  }, [user]);
+
   const handleError = (message: string) => {
     toast.error(message);
     setError(message);

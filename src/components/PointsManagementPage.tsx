@@ -12,7 +12,6 @@ interface UserData {
   isPayAsYouGo: boolean;
   hasAddedPayment: boolean;
   stripeCustomerId?: string;
-  lastPaymentMethodUpdate?: Date;
 }
 
 const PointsManagementPage: React.FC = () => {
@@ -43,8 +42,7 @@ const PointsManagementPage: React.FC = () => {
               balance: data.balance || 0,
               isPayAsYouGo: !!(data.stripeCustomerId && data.hasAddedPayment),
               hasAddedPayment: data.hasAddedPayment || false,
-              stripeCustomerId: data.stripeCustomerId,
-              lastPaymentMethodUpdate: data.lastPaymentMethodUpdate?.toDate()
+              stripeCustomerId: data.stripeCustomerId
             };
             setUserData(userData);
             setBalance(userData.balance);
@@ -71,34 +69,6 @@ const PointsManagementPage: React.FC = () => {
       }
     };
   }, [user]);
-
-  // Check payment method status when returning from Stripe portal
-  useEffect(() => {
-    const returnPath = localStorage.getItem('returnPath');
-    if (returnPath === window.location.pathname) {
-      localStorage.removeItem('returnPath');
-      // Always check with Stripe when returning from portal
-      checkPaymentMethodStatus();
-    }
-  }, []);
-
-  const checkPaymentMethodStatus = async () => {
-    if (!user) return;
-    
-    try {
-      const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
-      
-      // Only show messages if the status has changed
-      if (hasPaymentMethod && !userData?.hasAddedPayment) {
-        toast.success('Payment method successfully added!');
-      } else if (!hasPaymentMethod && userData?.hasAddedPayment) {
-        toast.info('Payment methods have been removed. You have been unenrolled from pay-as-you-go.');
-      }
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-      toast.error('Failed to verify payment status');
-    }
-  };
 
   const handlePayAsYouGoSignup = async () => {
     if (!user) {
@@ -133,7 +103,6 @@ const PointsManagementPage: React.FC = () => {
     setIsProcessing(true);
     try {
       await paymentService.unenrollFromPayAsYouGo(user.uid);
-      // No need to fetch user data manually, Firestore listener will handle it
       toast.success('Successfully unenrolled from pay-as-you-go');
     } catch (error) {
       console.error('Unenroll error:', error);
@@ -151,8 +120,8 @@ const PointsManagementPage: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      localStorage.setItem('returnPath', window.location.pathname);
       const portalUrl = await paymentService.createSetupSession(user.uid);
+      localStorage.setItem('returnPath', window.location.pathname);
       window.location.href = portalUrl;
     } catch (error) {
       console.error('Portal session error:', error);
