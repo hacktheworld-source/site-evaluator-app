@@ -695,45 +695,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="message-content">
           {message.isLoading ? (
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
-          ) : message.phase === 'Recommendations' ? (
-            <div className="message-paragraph">
-              {message.content.split('\n').map((line, i) => {
-                if (line.match(/(https?:\/\/[^\s:,)"'\]]+)/)) {
-                  // This is a line containing a URL - handle it specially
-                  const urlMatch = line.match(/(https?:\/\/[^\s:,)"']+)/);
-                  if (urlMatch) {
-                    const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
-                    return (
-                      <div key={i}>
-                        {makeUrlsClickable(line)}
-                        {message.competitorScreenshots?.[cleanUrl] && (
-                          <div className="competitor-screenshot-wrapper">
-                            {message.competitorScreenshots[cleanUrl].status === 'loading' ? (
-                              <div className="screenshot-placeholder pulse"></div>
-                            ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
-                              <img 
-                                src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
-                                alt={`Screenshot of ${cleanUrl}`} 
-                                className="competitor-screenshot"
-                                onError={(e) => {
-                                  console.error(`Error loading screenshot for ${cleanUrl}`);
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="screenshot-error">Failed to load screenshot</div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                }
-                // Regular line without URL
-                return <div key={i}>{line}</div>;
-              })}
-            </div>
           ) : (
             <ReactMarkdown components={{
               a: ({ node, ...props }) => (
@@ -766,45 +727,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 const content = node.children.map(getNodeContent).join('');
                 const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
                 
-                if (urlMatch) {
+                if (urlMatch && message.phase === 'Recommendations') {
                   // Clean the URL by removing trailing punctuation
                   const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
                   
+                  // Split content into parts and make URLs clickable
+                  const parts = makeUrlsClickable(content);
+                  
                   return (
                     <li {...props}>
-                      {content}
-                      {message.phase === 'Recommendations' && (
+                      {parts}
+                      {message.competitorScreenshots?.[cleanUrl] && (
                         <div className="competitor-screenshot-wrapper">
-                          {message.competitorScreenshots?.[cleanUrl] ? (
-                            message.competitorScreenshots[cleanUrl].status === 'loading' ? (
-                              <div className="screenshot-placeholder pulse"></div>
-                            ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
-                              <img 
-                                src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
-                                alt={`Screenshot of ${cleanUrl}`} 
-                                className="competitor-screenshot"
-                                onError={(e) => {
-                                  console.error(`Error loading screenshot for ${cleanUrl}`);
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="screenshot-error">Failed to load screenshot</div>
-                            )
-                          ) : (
+                          {message.competitorScreenshots[cleanUrl].status === 'loading' ? (
                             <div className="screenshot-placeholder pulse"></div>
+                          ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
+                            <img 
+                              src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
+                              alt={`Screenshot of ${cleanUrl}`} 
+                              className="competitor-screenshot"
+                              onError={(e) => {
+                                console.error(`Error loading screenshot for ${cleanUrl}`);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="screenshot-error">Failed to load screenshot</div>
                           )}
                         </div>
                       )}
                     </li>
                   );
                 }
-                return (
-                  <li {...props}>
-                    {content}
-                  </li>
-                );
+                return <li {...props}>{content}</li>;
               },
             }}>
               {DOMPurify.sanitize(message.content)}
