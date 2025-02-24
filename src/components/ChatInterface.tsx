@@ -150,14 +150,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    setMessages([]);
-    setUserInput('');
-    setCurrentPhase(null);
-    setPhaseScores({});
-    setOverallScore(null);
-  }, [websiteUrl]);
-
   const updateOverallScore = (newPhaseScores: { [key: string]: number }) => {
     const scores = Object.values(newPhaseScores);
     if (scores.length > 0) {
