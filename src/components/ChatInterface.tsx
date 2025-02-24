@@ -704,7 +704,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 return <>{children}</>;
               },
               p: ({ children }) => (
-                <p className="message-paragraph">{children}</p>
+                <p className="message-paragraph">
+                  {typeof children === 'string' ? makeUrlsClickable(children) : children}
+                </p>
               ),
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
