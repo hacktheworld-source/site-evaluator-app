@@ -404,7 +404,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               if (data.type === 'analysis') {
                 const newMessage: Message = {
                   role: 'assistant' as const,
-                  content: convertUrlsToMarkdown(data.analysis),
+                  content: data.analysis,
                   phase: 'Recommendations',
                   competitorScreenshots: data.competitorScreenshots
                 };
@@ -641,6 +641,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     />
   ), []);
 
+  const makeUrlsClickable = (text: string): React.ReactNode[] => {
+    const urlRegex = /(https?:\/\/[^\s:,)"'\]]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = urlRegex.exec(text)) !== null) {
+      // Add text before the URL
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      const url = match[0].replace(/[:,.]+$/, '');
+      
+      // Add the URL as a clickable link
+      parts.push(
+        <a
+          key={`link-${match.index}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {url}
+        </a>
+      );
+
+      lastIndex = urlRegex.lastIndex;
+    }
+
+    // Add remaining text after the last URL
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
+  };
+
   const renderMessage = useCallback((message: Message, index: number) => {
     return (
       <div 
@@ -658,37 +696,63 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {message.isLoading ? (
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : message.phase === 'Recommendations' ? (
+            <div className="message-paragraph">
+              {message.content.split('\n').map((line, i) => {
+                if (line.match(/(https?:\/\/[^\s:,)"'\]]+)/)) {
+                  // This is a line containing a URL - handle it specially
+                  const urlMatch = line.match(/(https?:\/\/[^\s:,)"']+)/);
+                  if (urlMatch) {
+                    const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
+                    return (
+                      <div key={i}>
+                        {makeUrlsClickable(line)}
+                        {message.competitorScreenshots?.[cleanUrl] && (
+                          <div className="competitor-screenshot-wrapper">
+                            {message.competitorScreenshots[cleanUrl].status === 'loading' ? (
+                              <div className="screenshot-placeholder pulse"></div>
+                            ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
+                              <img 
+                                src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
+                                alt={`Screenshot of ${cleanUrl}`} 
+                                className="competitor-screenshot"
+                                onError={(e) => {
+                                  console.error(`Error loading screenshot for ${cleanUrl}`);
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="screenshot-error">Failed to load screenshot</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                }
+                // Regular line without URL
+                return <div key={i}>{line}</div>;
+              })}
+            </div>
+          ) : (
             <ReactMarkdown components={{
-              // Only convert URLs to links, leave rest as plain text
               a: ({ node, ...props }) => (
                 <a 
                   {...props} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 />
               ),
-              // Convert URLs in regular text to links
-              text: ({ children }) => {
-                const text = children as string;
-                const urlRegex = /(https?:\/\/[^\s:,)"']+)/g;
-                const parts = text.split(urlRegex);
-                return (
-                  <>
-                    {parts.map((part, i) => 
-                      part.match(urlRegex) ? 
-                        <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : 
-                        part
-                    )}
-                  </>
-                );
-              },
-              // Handle list items with competitor screenshots and make URLs clickable
-              li: ({ node, ...props }): JSX.Element => {
+              p: ({ children }) => <p className="message-paragraph">{children}</p>,
+              li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
                 }
 
+                // Get the content by recursively processing all child nodes
                 const getNodeContent = (node: any): string => {
                   if (node.type === 'text') {
                     return node.value || '';
@@ -700,20 +764,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 };
 
                 const content = node.children.map(getNodeContent).join('');
-                const urlRegex = /(https?:\/\/[^\s:,)"']+)/g;
-                const parts = content.split(urlRegex);
-                const urlMatch = content.match(urlRegex);
+                const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
                 
                 if (urlMatch) {
-                  const cleanUrl = urlMatch[0].replace(/[:,.]+$/, '');
+                  // Clean the URL by removing trailing punctuation
+                  const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
                   
                   return (
                     <li {...props}>
-                      {parts.map((part, i) => 
-                        part.match(urlRegex) ? 
-                          <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a> : 
-                          part
-                      )}
+                      {content}
                       {message.phase === 'Recommendations' && (
                         <div className="competitor-screenshot-wrapper">
                           {message.competitorScreenshots?.[cleanUrl] ? (
@@ -741,24 +800,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </li>
                   );
                 }
-                return <li {...props}>{content}</li>;
-              }
+                return (
+                  <li {...props}>
+                    {content}
+                  </li>
+                );
+              },
             }}>
-              {message.content}
-            </ReactMarkdown>
-          ) : (
-            <ReactMarkdown components={{
-              a: ({ node, ...props }) => (
-                <a 
-                  {...props} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ),
-              p: ({ children }) => <p className="message-paragraph">{children}</p>,
-            }}>
-              {message.content}
+              {DOMPurify.sanitize(message.content)}
             </ReactMarkdown>
           )}
         </div>
