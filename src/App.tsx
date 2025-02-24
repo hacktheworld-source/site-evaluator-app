@@ -27,6 +27,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { db } from './services/firebase';
 import { getFirestore, collection, doc, onSnapshot, DocumentSnapshot, updateDoc } from 'firebase/firestore';
 import { Message } from './components/ChatInterface';
+import Footer from './components/Footer';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 console.log('App loaded');
 
@@ -686,7 +689,12 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <Router>
-        <AppContent />
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        </Routes>
+        <Footer />
       </Router>
     </ErrorBoundary>
   );
