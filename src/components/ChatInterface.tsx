@@ -707,7 +707,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   }}
                 />
               ),
-              p: ({ children }) => <p className="message-paragraph">{children}</p>,
+              p: ({ children }) => (
+                <p className="message-paragraph">
+                  {typeof children === 'string' ? makeUrlsClickable(children) : children}
+                </p>
+              ),
               li: ({ node, ...props }) => {
                 if (!node || !node.children) {
                   return <li {...props}>Invalid content</li>;
@@ -760,10 +764,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </li>
                   );
                 }
-                return <li {...props}>{content}</li>;
+                return <li {...props}>{makeUrlsClickable(content)}</li>;
               },
             }}>
-              {DOMPurify.sanitize(message.content)}
+              {message.content}
             </ReactMarkdown>
           )}
         </div>
@@ -787,7 +791,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setMessages(prevMessages => {
       const processedMessage = {
         ...newMessage,
-        content: convertUrlsToMarkdown(newMessage.content),
         metricsCollapsed: true
       };
       const updatedMessages = [...prevMessages, processedMessage];
@@ -797,23 +800,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       return updatedMessages;
     });
   }, []);
-
-  const convertUrlsToMarkdown = (text: string): string => {
-    return text.replace(URL_REGEX, (url) => {
-      // Add http:// if the URL doesn't start with a protocol
-      const fullUrl = url.startsWith('http') ? url : `http://${url}`;
-      return `[${url}](${fullUrl})`;
-    });
-  };
-
-  const extractUrls = (content: string): string[] => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return content.match(urlRegex) || [];
-  };
-
-  useEffect(() => {
-    const recommendationsMessage = messages.find(msg => msg.phase === 'Recommendations');
-  }, [messages]);
 
   const handleGenerateReport = async () => {
     if (!messages.length || !evaluationResults || !auth.currentUser?.uid) {
