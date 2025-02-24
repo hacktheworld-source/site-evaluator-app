@@ -250,6 +250,16 @@ const AppContent: React.FC = () => {
       setRawInput(rawInput);
     }
 
+    // Reset chat state for new evaluation
+    setChatState({
+      messages: [],
+      currentPhase: null,
+      phaseScores: {},
+      overallScore: null,
+      userInput: '',
+      isThinking: false
+    });
+
     if (!user) {
       handleError('You must be signed in to evaluate a website.');
       return;
