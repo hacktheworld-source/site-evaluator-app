@@ -404,7 +404,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               if (data.type === 'analysis') {
                 const newMessage: Message = {
                   role: 'assistant' as const,
-                  content: data.analysis,
+                  content: convertUrlsToMarkdown(data.analysis),
                   phase: 'Recommendations',
                   competitorScreenshots: data.competitorScreenshots
                 };
