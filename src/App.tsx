@@ -204,35 +204,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Check if we're returning from Stripe portal
-    const returnPath = localStorage.getItem('returnPath');
-    if (returnPath === window.location.pathname) {
-      localStorage.removeItem('returnPath');
-      // Check payment status and unenroll if no payment methods remain
-      paymentService.checkPaymentMethodStatus(user.uid)
-        .then(hasPaymentMethod => {
-          if (!hasPaymentMethod) {
-            // If we don't have any payment methods, update Firestore
-            const userRef = doc(db, 'users', user.uid);
-            updateDoc(userRef, {
-              hasAddedPayment: false,
-              isPayAsYouGo: false
-            })
-              .then(() => {
-                toast.info('Payment method removed. Unenrolled from pay-as-you-go.');
-              })
-              .catch((error: Error) => {
-                console.error('Error updating payment status:', error);
-                toast.error('Failed to update payment status');
-              });
-          }
-        })
-        .catch(error => {
-          console.error('Error checking payment status:', error);
-          toast.error('Failed to verify payment status');
-        });
-    }
-
     // Set up real-time listener for user data
     const unsubscribe = onSnapshot(
       doc(db, 'users', user.uid),
@@ -262,25 +233,27 @@ const AppContent: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Check for Stripe portal return anywhere in the app
+  // Keep only this check, but enhance it
   useEffect(() => {
     const returnPath = localStorage.getItem('returnPath');
     if (returnPath && user) {
-      localStorage.removeItem('returnPath');
-      
-      const verifyPaymentStatus = async () => {
-        try {
-          const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
-          if (hasPaymentMethod) {
-            toast.success('Payment method successfully added!');
-          }
-        } catch (error) {
-          console.error('Error checking payment status:', error);
-          toast.error('Failed to verify payment status');
-        }
-      };
+        localStorage.removeItem('returnPath');
+        
+        const verifyPaymentStatus = async () => {
+            try {
+                const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(user.uid);
+                if (hasPaymentMethod) {
+                    toast.success('Payment method successfully added!');
+                } else {
+                    toast.info('No payment methods found. You have been unenrolled from pay-as-you-go.');
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+                toast.error('Failed to verify payment status');
+            }
+        };
 
-      verifyPaymentStatus();
+        verifyPaymentStatus();
     }
   }, [user]);
 

@@ -22,10 +22,10 @@ const PaymentMethodSuccess: React.FC<PaymentMethodSuccessProps> = ({ onNavigateT
             }
 
             try {
-                // Get the updated user data
-                const userData = await paymentService.getUserData(auth.currentUser.uid);
+                // Use direct Stripe check
+                const hasPaymentMethod = await paymentService.checkPaymentMethodStatus(auth.currentUser.uid);
                 
-                if (userData.hasAddedPayment) {
+                if (hasPaymentMethod) {
                     toast.success('Payment method successfully added!');
                 } else {
                     toast.warning('No payment method was added. Please try again if this was not intended.');
