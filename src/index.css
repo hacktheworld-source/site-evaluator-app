@@ -2892,10 +2892,13 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .legal-page {
-  padding: calc(var(--header-height) + 20px) 40px calc(var(--header-height) + 20px) 40px;
-  min-height: 100vh;
+  padding: calc(var(--header-height) + 20px) 40px 100px 40px;
+  min-height: calc(100vh - var(--header-height));
   background-color: var(--deep-black);
   color: var(--off-white);
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .legal-content {
@@ -2917,9 +2920,42 @@ input[type="text"]:focus, input[type="number"]:focus {
   font-size: 1.5em;
   margin-bottom: 1em;
   color: var(--accent-color);
+  text-align: left;
+}
+
+.legal-content h3 {
+  font-size: 1.2em;
+  margin: 1em 0;
+  color: var(--off-white);
+  text-align: left;
 }
 
 .legal-content p {
   line-height: 1.6;
   margin-bottom: 1em;
+  text-align: left;
+}
+
+.legal-content ul {
+  margin: 1em 0;
+  padding-left: 2em;
+  text-align: left;
+}
+
+.legal-content li {
+  margin-bottom: 0.5em;
+  line-height: 1.6;
+}
+
+/* Ensure the footer stays at the bottom */
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 15px 40px;
+  background-color: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 }

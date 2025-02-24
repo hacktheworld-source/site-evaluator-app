@@ -19,11 +19,11 @@ import AnimatedEye from './components/AnimatedEye';
 import MetricsSearch from './components/MetricsSearch';
 import PaymentSuccessPage from './components/PaymentSuccessPage';
 import PaymentMethodSuccess from './components/PaymentMethodSuccess';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { paymentService, UserData } from './services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBolt, faDollarSign, faCreditCard } from '@fortawesome/free-solid-svg-icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { db } from './services/firebase';
 import { getFirestore, collection, doc, onSnapshot, DocumentSnapshot, updateDoc } from 'firebase/firestore';
 import { Message } from './components/ChatInterface';
@@ -79,6 +79,21 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return this.props.children;
   }
 }
+
+// Add this new component
+const LegalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="App">
+      <header className="app-header">
+        <Link to="/" className="app-title">
+          <h1>Olive</h1>
+        </Link>
+      </header>
+      {children}
+      <Footer />
+    </div>
+  );
+};
 
 const AppContent: React.FC = () => {
   const [user, loading, authError] = useAuthState(auth);
@@ -618,9 +633,9 @@ const AppContent: React.FC = () => {
     <div className="App">
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
-        <div className="app-title" onClick={() => goToPage('home')}>
+        <Link to="/" className="app-title">
           <h1>Olive</h1>
-        </div>
+        </Link>
         {user ? (
           <div className="user-menu-container">
             <div className="points-counter" onClick={() => goToPage('points')}>
@@ -691,10 +706,23 @@ const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/" element={<AppContent />} />
-          <Route path="/terms-of-service" element={<TermsOfService />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route
+            path="/terms-of-service"
+            element={
+              <LegalLayout>
+                <TermsOfService />
+              </LegalLayout>
+            }
+          />
+          <Route
+            path="/privacy-policy"
+            element={
+              <LegalLayout>
+                <PrivacyPolicy />
+              </LegalLayout>
+            }
+          />
         </Routes>
-        <Footer />
       </Router>
     </ErrorBoundary>
   );
