@@ -696,6 +696,7 @@ const AppContent: React.FC = () => {
           zIndex: 9999
         }}
       />
+      <Footer />
     </div>
   );
 };
