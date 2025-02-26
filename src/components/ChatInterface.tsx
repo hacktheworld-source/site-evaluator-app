@@ -11,7 +11,6 @@ import { auth } from '../services/firebase';
 import { SERVICE_COSTS, checkCreditsAndShowError, decrementUserBalance, getUserBalance } from '../services/points';
 
 const MAX_HISTORY_LENGTH = 50;
-const MAX_USER_MESSAGES = 5; // Increased from 3 to 5
 
 const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])|(\b(?:[a-z\d]+\.){1,2}[a-z]{2,}\b)/gi;
 
@@ -285,12 +284,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const getSelectiveHistory = (currentPhase: string | null): Message[] => {
-    const relevantMessages = messages.filter(msg => 
-      msg.role === 'system' || 
-      (msg.phase === currentPhase) || 
-      (messages.indexOf(msg) >= messages.length - (MAX_USER_MESSAGES * 2))
-    );
-    return relevantMessages.slice(-MAX_HISTORY_LENGTH);
+    // Map over all messages and, for messages from past phases (non-system, where phase exists and is not the current phase), drop the metrics
+    const processed = messages.map(msg => {
+      if (msg.role !== 'system' && msg.phase && msg.phase !== currentPhase) {
+        const { metrics, ...rest } = msg;
+        return { ...rest, metrics: {} };
+      }
+      return msg;
+    });
+    // Return the last MAX_HISTORY_LENGTH messages
+    return processed.slice(-MAX_HISTORY_LENGTH);
   };
 
   const handleSendMessage = async () => {
