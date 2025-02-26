@@ -28,6 +28,7 @@ export interface Message {
   metrics?: { [key: string]: any };
   screenshot?: string;
   phase?: string;
+  score?: number;
   isLoading?: boolean;
   metricsCollapsed?: boolean;
   competitorScreenshots?: {
@@ -190,7 +191,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           content: analysis,
           screenshot: evaluationResults.screenshot,
           phase: 'Vision',
-          metrics: {}
+          metrics: {},
+          score: score
         };
         addMessage(initialMessage);
         setCurrentPhase('Vision');
@@ -342,7 +344,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             role: msg.role,
             content: msg.content,
             phase: msg.phase,
-            metrics: msg.metrics // Include metrics but exclude screenshots and UI state
+            metrics: msg.metrics,
+            score: msg.score
           }));
 
           // Then make the API call
@@ -516,6 +519,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             metrics: nextPhase === 'Recommendations' ? undefined : phaseMetrics,
             screenshot: nextPhase === 'Recommendations' ? undefined : evaluationResults.screenshot,
             phase: nextPhase,
+            score: score,
             isLoading: false
           };
 
