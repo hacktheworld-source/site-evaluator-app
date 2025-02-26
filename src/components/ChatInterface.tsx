@@ -1085,7 +1085,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Ask a question..."
+          placeholder="Try: 'If you could rebuild this site, what would it look like?'"
           disabled={isLoading || isMessageLoading}
         />
         <button 
