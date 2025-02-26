@@ -290,6 +290,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const { metrics, ...rest } = msg;
         return { ...rest, metrics: {} };
       }
+      // Add the score for the phase if it exists
+      if (msg.role === 'assistant' && msg.phase && phaseScores[msg.phase] !== undefined) {
+        return { ...msg, score: phaseScores[msg.phase] };
+      }
       return msg;
     });
     // Return the last MAX_HISTORY_LENGTH messages
