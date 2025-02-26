@@ -83,11 +83,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 }) => {
   const PLACEHOLDER_TEXTS = [
     "Try: 'If you could rebuild this site, what would it look like?'",
-    "Ask: 'What's the biggest issue that needs fixing?'",
-    "Try: 'How does this site compare to its competitors?'",
-    "Ask: 'What would make this site convert better?'",
+    "Try: 'What are the 20% of improvements that would make 80% of the difference?'",
+    "Try: 'What are the 3 most important things you would change about this site?'",
+    "Try: 'What would make this site convert better?'",
     "Try: 'What security improvements would you recommend?'",
-    "Ask: 'How can we improve the site's performance?'"
+    "Try: 'How can we improve the site's performance?'",
+    "Try: 'What's the UI equivalent of the a mullet?'",
+    "Try: 'What do you hate about this site the most?'"
   ];
 
   const [currentPlaceholder, setCurrentPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
@@ -100,7 +102,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const nextIndex = (currentIndex + 1) % PLACEHOLDER_TEXTS.length;
         return PLACEHOLDER_TEXTS[nextIndex];
       });
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
