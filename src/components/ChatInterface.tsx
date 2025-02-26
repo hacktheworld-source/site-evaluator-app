@@ -289,12 +289,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Map over all messages and, for messages from past phases (non-system, where phase exists and is not the current phase), drop the metrics
     const processed = messages.map(msg => {
       if (msg.role !== 'system' && msg.phase && msg.phase !== currentPhase) {
+        // Preserve the score while stripping metrics
         const { metrics, ...rest } = msg;
         return { ...rest, metrics: {} };
-      }
-      // Add the score for the phase if it exists
-      if (msg.role === 'assistant' && msg.phase && phaseScores[msg.phase] !== undefined) {
-        return { ...msg, score: phaseScores[msg.phase] };
       }
       return msg;
     });
