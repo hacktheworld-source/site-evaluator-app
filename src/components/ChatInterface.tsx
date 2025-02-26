@@ -350,7 +350,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             url: websiteUrl,
             phase: currentPhase || 'Overall',
             message: newUserMessage.content,
-            history: JSON.stringify(selectiveHistory)
+            history: JSON.stringify(selectiveHistory),
+            overallScore: currentPhase === 'Overall' ? overallScore : undefined
           });
 
           const newAssistantMessage: Message = {
