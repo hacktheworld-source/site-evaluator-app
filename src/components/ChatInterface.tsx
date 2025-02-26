@@ -81,6 +81,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   chatState,
   setChatState
 }) => {
+  const PLACEHOLDER_TEXTS = [
+    "Try: 'If you could rebuild this site, what would it look like?'",
+    "Ask: 'What's the biggest issue that needs fixing?'",
+    "Try: 'How does this site compare to its competitors?'",
+    "Ask: 'What would make this site convert better?'",
+    "Try: 'What security improvements would you recommend?'",
+    "Ask: 'How can we improve the site's performance?'"
+  ];
+
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(PLACEHOLDER_TEXTS[0]);
+
+  // Effect to change placeholder text every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPlaceholder(prev => {
+        const currentIndex = PLACEHOLDER_TEXTS.indexOf(prev);
+        const nextIndex = (currentIndex + 1) % PLACEHOLDER_TEXTS.length;
+        return PLACEHOLDER_TEXTS[nextIndex];
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const { messages, currentPhase, phaseScores, overallScore, userInput, isThinking } = chatState;
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -1091,7 +1115,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Try: 'If you could rebuild this site, what would it look like?'"
+          placeholder={currentPlaceholder}
           disabled={isLoading || isMessageLoading}
         />
         <button 
