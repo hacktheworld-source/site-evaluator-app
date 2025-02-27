@@ -878,88 +878,75 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {message.isLoading ? (
             <TypewriterText text="Thinking" onComplete={() => {}} isLoading={true} />
           ) : (
-            <>
-              <ReactMarkdown components={{
-                text: ({ children }) => {
-                  if (typeof children === 'string') {
-                    return <>{makeUrlsClickable(children)}</>;
-                  }
-                  return <>{children}</>;
-                },
-                p: ({ children }) => (
-                  <p className="message-paragraph">
-                    {typeof children === 'string' ? makeUrlsClickable(children) : children}
-                  </p>
-                ),
-                li: ({ node, ...props }) => {
-                  if (!node || !node.children) {
-                    return <li {...props}>Invalid content</li>;
-                  }
+            <ReactMarkdown components={{
+              text: ({ children }) => {
+                if (typeof children === 'string') {
+                  return <>{makeUrlsClickable(children)}</>;
+                }
+                return <>{children}</>;
+              },
+              p: ({ children }) => (
+                <p className="message-paragraph">
+                  {typeof children === 'string' ? makeUrlsClickable(children) : children}
+                </p>
+              ),
+              li: ({ node, ...props }) => {
+                if (!node || !node.children) {
+                  return <li {...props}>Invalid content</li>;
+                }
 
-                  // Get the content by recursively processing all child nodes
-                  const getNodeContent = (node: any): string => {
-                    if (node.type === 'text') {
-                      return node.value || '';
-                    }
-                    if (node.children) {
-                      return node.children.map(getNodeContent).join('');
-                    }
-                    return '';
-                  };
+                // Get the content by recursively processing all child nodes
+                const getNodeContent = (node: any): string => {
+                  if (node.type === 'text') {
+                    return node.value || '';
+                  }
+                  if (node.children) {
+                    return node.children.map(getNodeContent).join('');
+                  }
+                  return '';
+                };
 
-                  const content = node.children.map(getNodeContent).join('');
-                  const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
+                const content = node.children.map(getNodeContent).join('');
+                const urlMatch = content.match(/(https?:\/\/[^\s:,)"']+)/);
+                
+                if (urlMatch && message.phase === 'Recommendations') {
+                  // Clean the URL by removing trailing punctuation
+                  const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
                   
-                  if (urlMatch && message.phase === 'Recommendations') {
-                    // Clean the URL by removing trailing punctuation
-                    const cleanUrl = urlMatch[1].replace(/[:,.]+$/, '');
-                    
-                    // Split content into parts and make URLs clickable
-                    const parts = makeUrlsClickable(content);
-                    
-                    return (
-                      <li {...props}>
-                        {parts}
-                        {message.competitorScreenshots?.[cleanUrl] && (
-                          <div className="competitor-screenshot-wrapper">
-                            {message.competitorScreenshots[cleanUrl].status === 'loading' ? (
-                              <div className="screenshot-placeholder pulse"></div>
-                            ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
-                              <img 
-                                src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
-                                alt={`Screenshot of ${cleanUrl}`} 
-                                className="competitor-screenshot"
-                                onError={(e) => {
-                                  console.error(`Error loading screenshot for ${cleanUrl}`);
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <div className="screenshot-error">Failed to load screenshot</div>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  }
-                  return <li {...props}>{makeUrlsClickable(content)}</li>;
-                },
-              }}>
-                {message.content}
-              </ReactMarkdown>
-              {message.phase === 'Vision' && message.visionAnalysis?.categoryScores && (
-                <div className="metrics-wrapper fade-in">
-                  {Object.entries(message.visionAnalysis.categoryScores).map(([category, data]) => (
-                    <div key={category} className="metric-tile">
-                      <div className="metric-title">{category.replace(/([A-Z])/g, ' $1').trim()}</div>
-                      <div className="metric-subtitle">Score: {data.score}/25</div>
-                      <div className="metric-subvalue">{data.summary}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+                  // Split content into parts and make URLs clickable
+                  const parts = makeUrlsClickable(content);
+                  
+                  return (
+                    <li {...props}>
+                      {parts}
+                      {message.competitorScreenshots?.[cleanUrl] && (
+                        <div className="competitor-screenshot-wrapper">
+                          {message.competitorScreenshots[cleanUrl].status === 'loading' ? (
+                            <div className="screenshot-placeholder pulse"></div>
+                          ) : message.competitorScreenshots[cleanUrl].status === 'loaded' ? (
+                            <img 
+                              src={`data:image/png;base64,${message.competitorScreenshots[cleanUrl].data}`} 
+                              alt={`Screenshot of ${cleanUrl}`} 
+                              className="competitor-screenshot"
+                              onError={(e) => {
+                                console.error(`Error loading screenshot for ${cleanUrl}`);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="screenshot-error">Failed to load screenshot</div>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                }
+                return <li {...props}>{makeUrlsClickable(content)}</li>;
+              },
+            }}>
+              {message.content}
+            </ReactMarkdown>
           )}
         </div>
         {message.phase === 'Overall' && evaluationResults && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
