@@ -45,6 +45,7 @@ export interface Message {
     isFullPage: boolean;
   };
   visionAnalysis?: {
+    walkthrough: string;
     categoryScores: {
       brandIdentity: { score: number; summary: string; };
       visualHierarchy: { score: number; summary: string; };
@@ -229,6 +230,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         // Parse the structured vision analysis
         const visionAnalysis = {
+          walkthrough: '',
           categoryScores: {
             brandIdentity: { score: 0, summary: '' },
             visualHierarchy: { score: 0, summary: '' },
@@ -239,6 +241,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         };
 
         try {
+          // Extract walkthrough section
+          const walkthroughMatch = analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncategory scores:)/i);
+          if (walkthroughMatch) {
+            visionAnalysis.walkthrough = walkthroughMatch[1].trim();
+          }
+
           // Extract category scores
           const categoryScoreRegex = /- ([^:]+): (\d+)\/25 - (.+)$/gm;
           let match;
