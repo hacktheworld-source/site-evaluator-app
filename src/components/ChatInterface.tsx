@@ -23,6 +23,18 @@ const debugLog = (message: string, data?: any) => {
   }
 };
 
+interface VisionAnalysis {
+  walkthrough: string;
+  categoryScores: {
+    brandIdentity: { score: number; summary: string; };
+    visualHierarchy: { score: number; summary: string; };
+    designAesthetics: { score: number; summary: string; };
+    emotionalImpact: { score: number; summary: string; };
+  };
+  criticalAnalysis?: string;
+  recommendations: string[];
+}
+
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -44,16 +56,7 @@ export interface Message {
     height: number;
     isFullPage: boolean;
   };
-  visionAnalysis?: {
-    walkthrough: string;
-    categoryScores: {
-      brandIdentity: { score: number; summary: string; };
-      visualHierarchy: { score: number; summary: string; };
-      designAesthetics: { score: number; summary: string; };
-      emotionalImpact: { score: number; summary: string; };
-    };
-    recommendations: string[];
-  };
+  visionAnalysis?: VisionAnalysis;
 }
 
 interface ChatInterfaceProps {
@@ -229,7 +232,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const { score, analysis } = response.data;
 
         // Parse the structured vision analysis
-        const visionAnalysis = {
+        const visionAnalysis: VisionAnalysis = {
           walkthrough: '',
           categoryScores: {
             brandIdentity: { score: 0, summary: '' },
@@ -263,30 +266,57 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             }
           }
 
+          // Extract critical analysis
+          const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\nkey recommendations:)/i);
+          if (criticalAnalysisMatch) {
+            visionAnalysis.criticalAnalysis = criticalAnalysisMatch[1].trim();
+          }
+
           // Extract recommendations
-          const recommendationsMatch = analysis.match(/Key Recommendations:\n(?:(?:\d+\. .+\n?)+)/);
+          const recommendationsMatch = analysis.match(/key recommendations:\n((?:\d+\. .+(?:\n|$))*)/i);
           if (recommendationsMatch) {
-            visionAnalysis.recommendations = recommendationsMatch[0]
+            visionAnalysis.recommendations = recommendationsMatch[1]
               .split('\n')
-              .slice(1) // Skip the "Key Recommendations:" line
               .map((rec: string) => rec.replace(/^\d+\.\s*/, '').trim())
               .filter(Boolean);
           }
+
+          // Clean up the content to remove any potential duplicate sections at the start
+          const cleanedContent = analysis.replace(/^[^]*?(?=visual walkthrough:)/i, '').trim();
+          
+          const initialMessage: Message = {
+            role: 'assistant' as const,
+            content: cleanedContent,
+            screenshot: evaluationResults.screenshot,
+            phase: 'Vision',
+            metrics: {},
+            score: score,
+            visionAnalysis
+          };
+          addMessage(initialMessage);
+          setCurrentPhase('Vision');
+
+          const newPhaseScores = { ...phaseScores, Vision: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
+
+          // Turn off the thinking indicator now that the vision analysis is complete
+          setIsThinking(false);
         } catch (error) {
           console.error('Error parsing vision analysis:', error);
           // Continue with unparsed analysis if parsing fails
         }
 
-        const initialMessage: Message = {
+        const newMessage: Message = {
           role: 'assistant' as const,
           content: analysis,
           screenshot: evaluationResults.screenshot,
           phase: 'Vision',
           metrics: {},
           score: score,
-          visionAnalysis
+          isLoading: false
         };
-        addMessage(initialMessage);
+        addMessage(newMessage);
         setCurrentPhase('Vision');
 
         const newPhaseScores = { ...phaseScores, Vision: score };
