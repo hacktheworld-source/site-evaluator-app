@@ -229,16 +229,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const { score, analysis } = response.data;
 
-        // Parse sections from the analysis
+        // Parse sections from the analysis with updated regex patterns
         const sections = {
-          visualWalkthrough: analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncritical analysis:)/i)?.[1]?.trim(),
-          criticalAnalysis: analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\ncategory scores)/i)?.[1]?.trim(),
+          visualWalkthrough: analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\n(?:critical analysis:|category scores:|key recommendations:))/i)?.[1]?.trim(),
+          criticalAnalysis: analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\n(?:category scores:|key recommendations:))/i)?.[1]?.trim(),
           categoryScores: analysis.match(/category scores[^:]*:\n([\s\S]*?)(?=\n\nkey recommendations:)/i)?.[1]?.trim(),
           recommendations: analysis.match(/key recommendations:\n([\s\S]*?)$/i)?.[1]?.trim()
         };
 
-        // Create a formatted content string with proper headers
-        const formattedContent = `visual walkthrough:\n${sections.visualWalkthrough || ''}\n\ncritical analysis:\n${sections.criticalAnalysis || ''}\n\ncategory scores:\n${sections.categoryScores || ''}\n\nkey recommendations:\n${sections.recommendations || ''}`;
+        // Create a formatted content string with proper headers and ensure all sections are included
+        const formattedContent = [
+          sections.visualWalkthrough ? `visual walkthrough:\n${sections.visualWalkthrough}` : '',
+          sections.criticalAnalysis ? `\n\ncritical analysis:\n${sections.criticalAnalysis}` : '',
+          sections.categoryScores ? `\n\ncategory scores:\n${sections.categoryScores}` : '',
+          sections.recommendations ? `\n\nkey recommendations:\n${sections.recommendations}` : ''
+        ].filter(Boolean).join('');
 
         // Create the vision analysis object
         const visionAnalysis: VisionAnalysis = {
