@@ -251,7 +251,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           }
 
           // Extract category scores
-          const categoryScoreRegex = /- ([^:]+): (\d+)\/25 - (.+)$/gm;
+          const categoryScoreRegex = /([A-Za-z\s]+):\s*(\d+)\/25\s*-?\s*(.*?)(?=\n[A-Za-z\s]+:|\n\n|$)/g;
           let match;
           while ((match = categoryScoreRegex.exec(analysis)) !== null) {
             const category = match[1].trim().toLowerCase().replace(/\s+/g, '');
@@ -281,12 +281,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               .filter(Boolean);
           }
 
-          // Clean up the content to remove any potential duplicate sections at the start
-          const cleanedContent = analysis.replace(/^[^]*?(?=visual walkthrough:)/i, '').trim();
-          
+          // Important: Use the original analysis as the content
           const initialMessage: Message = {
             role: 'assistant' as const,
-            content: cleanedContent,
+            content: analysis, // Use original analysis instead of cleaned content
             screenshot: evaluationResults.screenshot,
             phase: 'Vision',
             metrics: {},
