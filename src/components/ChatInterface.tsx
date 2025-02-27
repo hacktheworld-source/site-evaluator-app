@@ -250,54 +250,46 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             visionAnalysis.walkthrough = walkthroughMatch[1].trim();
           }
 
-          // Parse category scores
+          // Parse category scores while preserving the original text
           const categoryScoresMatch = analysis.match(/category scores:\n([\s\S]*?)(?=\n\ncritical analysis:)/i);
           if (categoryScoresMatch) {
-            const categoryScoresText = categoryScoresMatch[1];
+            const scoresText = categoryScoresMatch[1];
             
             // Parse brand identity
-            const brandIdentityMatch = categoryScoresText.match(/brand identity:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (brandIdentityMatch) {
+            const brandMatch = scoresText.match(/brand identity:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
+            if (brandMatch) {
               visionAnalysis.categoryScores.brandIdentity = {
-                score: parseInt(brandIdentityMatch[1]),
-                summary: brandIdentityMatch[2].trim()
+                score: parseInt(brandMatch[1]),
+                summary: brandMatch[2].trim()
               };
             }
 
             // Parse visual hierarchy
-            const visualHierarchyMatch = categoryScoresText.match(/visual hierarchy:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (visualHierarchyMatch) {
+            const hierarchyMatch = scoresText.match(/visual hierarchy:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
+            if (hierarchyMatch) {
               visionAnalysis.categoryScores.visualHierarchy = {
-                score: parseInt(visualHierarchyMatch[1]),
-                summary: visualHierarchyMatch[2].trim()
+                score: parseInt(hierarchyMatch[1]),
+                summary: hierarchyMatch[2].trim()
               };
             }
 
             // Parse design aesthetics
-            const designAestheticsMatch = categoryScoresText.match(/design aesthetics:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (designAestheticsMatch) {
+            const aestheticsMatch = scoresText.match(/design aesthetics:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
+            if (aestheticsMatch) {
               visionAnalysis.categoryScores.designAesthetics = {
-                score: parseInt(designAestheticsMatch[1]),
-                summary: designAestheticsMatch[2].trim()
+                score: parseInt(aestheticsMatch[1]),
+                summary: aestheticsMatch[2].trim()
               };
             }
 
             // Parse emotional impact
-            const emotionalImpactMatch = categoryScoresText.match(/emotional impact:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (emotionalImpactMatch) {
+            const emotionalMatch = scoresText.match(/emotional impact:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
+            if (emotionalMatch) {
               visionAnalysis.categoryScores.emotionalImpact = {
-                score: parseInt(emotionalImpactMatch[1]),
-                summary: emotionalImpactMatch[2].trim()
+                score: parseInt(emotionalMatch[1]),
+                summary: emotionalMatch[2].trim()
               };
             }
-          } else {
-            // Fallback to empty scores if parsing fails
-            visionAnalysis.categoryScores = {
-              brandIdentity: { score: 0, summary: '' },
-              visualHierarchy: { score: 0, summary: '' },
-              designAesthetics: { score: 0, summary: '' },
-              emotionalImpact: { score: 0, summary: '' }
-            };
           }
 
           // Extract critical analysis
@@ -318,7 +310,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           // Important: Use the original analysis as the content
           const initialMessage: Message = {
             role: 'assistant' as const,
-            content: analysis,
+            content: analysis, // Keep the original analysis text
             screenshot: evaluationResults.screenshot,
             phase: 'Vision',
             metrics: {},
