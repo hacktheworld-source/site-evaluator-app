@@ -250,21 +250,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             visionAnalysis.walkthrough = walkthroughMatch[1].trim();
           }
 
-          // Extract category scores
-          const categoryScoreRegex = /([A-Za-z\s]+):\s*(\d+)\/25\s*-?\s*(.*?)(?=\n[A-Za-z\s]+:|\n\n|$)/g;
-          let match;
-          while ((match = categoryScoreRegex.exec(analysis)) !== null) {
-            const category = match[1].trim().toLowerCase().replace(/\s+/g, '');
-            const score = parseInt(match[2]);
-            const summary = match[3].trim();
-            
-            if (category in visionAnalysis.categoryScores) {
-              visionAnalysis.categoryScores[category as keyof typeof visionAnalysis.categoryScores] = {
-                score,
-                summary
-              };
-            }
-          }
+          // We're no longer parsing category scores separately
+          visionAnalysis.categoryScores = {
+            brandIdentity: { score: 0, summary: '' },
+            visualHierarchy: { score: 0, summary: '' },
+            designAesthetics: { score: 0, summary: '' },
+            emotionalImpact: { score: 0, summary: '' }
+          };
 
           // Extract critical analysis
           const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\nkey recommendations:)/i);
@@ -284,7 +276,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           // Important: Use the original analysis as the content
           const initialMessage: Message = {
             role: 'assistant' as const,
-            content: analysis, // Use original analysis instead of cleaned content
+            content: analysis,
             screenshot: evaluationResults.screenshot,
             phase: 'Vision',
             metrics: {},
@@ -915,20 +907,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </ReactMarkdown>
           )}
         </div>
-        {message.phase === 'Vision' && message.visionAnalysis && (
-          <div className="vision-scores fade-in">
-            <h3>Category Scores</h3>
-            <div className="category-scores-grid">
-              {Object.entries(message.visionAnalysis.categoryScores).map(([category, data]) => (
-                <div key={category} className="category-score-card">
-                  <div className="category-name">{category.replace(/([A-Z])/g, ' $1').trim()}</div>
-                  <div className="score">{data.score}/25</div>
-                  <div className="summary">{data.summary}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         {message.phase === 'Overall' && evaluationResults && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
         {(message.phase === 'Overall' || message.phase === 'Vision') && evaluationResults?.screenshot && 
           renderScreenshot(evaluationResults.screenshot, evaluationResults.screenshotMetadata)}
