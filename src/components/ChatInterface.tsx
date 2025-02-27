@@ -304,24 +304,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           setIsThinking(false);
         } catch (error) {
           console.error('Error parsing vision analysis:', error);
-          // Continue with unparsed analysis if parsing fails
+          // If parsing fails, add the unparsed analysis as a fallback
+          const fallbackMessage: Message = {
+            role: 'assistant' as const,
+            content: analysis,
+            screenshot: evaluationResults.screenshot,
+            phase: 'Vision',
+            metrics: {},
+            score: score,
+            isLoading: false
+          };
+          addMessage(fallbackMessage);
+          setCurrentPhase('Vision');
+
+          const newPhaseScores = { ...phaseScores, Vision: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
         }
-
-        const newMessage: Message = {
-          role: 'assistant' as const,
-          content: analysis,
-          screenshot: evaluationResults.screenshot,
-          phase: 'Vision',
-          metrics: {},
-          score: score,
-          isLoading: false
-        };
-        addMessage(newMessage);
-        setCurrentPhase('Vision');
-
-        const newPhaseScores = { ...phaseScores, Vision: score };
-        setPhaseScores(newPhaseScores);
-        updateOverallScore(newPhaseScores);
 
         // Turn off the thinking indicator now that the vision analysis is complete
         setIsThinking(false);
