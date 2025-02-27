@@ -24,13 +24,15 @@ const debugLog = (message: string, data?: any) => {
 };
 
 interface VisionAnalysis {
-  content: string;  // Raw AI response
-  sections?: {
-    visualWalkthrough?: string;
-    criticalAnalysis?: string;
-    categoryScores?: string;
-    recommendations?: string;
+  walkthrough: string;
+  categoryScores: {
+    brandIdentity: { score: number; summary: string; };
+    visualHierarchy: { score: number; summary: string; };
+    designAesthetics: { score: number; summary: string; };
+    emotionalImpact: { score: number; summary: string; };
   };
+  criticalAnalysis?: string;
+  recommendations: string[];
 }
 
 export interface Message {
@@ -229,47 +231,88 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const { score, analysis } = response.data;
 
-        // Parse sections from the analysis with updated regex patterns
-        const sections = {
-          visualWalkthrough: analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\n(?:critical analysis:|category scores:|key recommendations:))/i)?.[1]?.trim(),
-          criticalAnalysis: analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\n(?:category scores:|key recommendations:))/i)?.[1]?.trim(),
-          categoryScores: analysis.match(/category scores[^:]*:\n([\s\S]*?)(?=\n\nkey recommendations:)/i)?.[1]?.trim(),
-          recommendations: analysis.match(/key recommendations:\n([\s\S]*?)$/i)?.[1]?.trim()
-        };
-
-        // Create a formatted content string with proper headers and ensure all sections are included
-        const formattedContent = [
-          sections.visualWalkthrough ? `visual walkthrough:\n${sections.visualWalkthrough}` : '',
-          sections.criticalAnalysis ? `\n\ncritical analysis:\n${sections.criticalAnalysis}` : '',
-          sections.categoryScores ? `\n\ncategory scores:\n${sections.categoryScores}` : '',
-          sections.recommendations ? `\n\nkey recommendations:\n${sections.recommendations}` : ''
-        ].filter(Boolean).join('');
-
-        // Create the vision analysis object
+        // Parse the structured vision analysis
         const visionAnalysis: VisionAnalysis = {
-          content: formattedContent,
-          sections
+          walkthrough: '',
+          categoryScores: {
+            brandIdentity: { score: 0, summary: '' },
+            visualHierarchy: { score: 0, summary: '' },
+            designAesthetics: { score: 0, summary: '' },
+            emotionalImpact: { score: 0, summary: '' }
+          },
+          recommendations: []
         };
 
-        // Create the message with the formatted analysis
-        const initialMessage: Message = {
-          role: 'assistant' as const,
-          content: formattedContent,
-          screenshot: evaluationResults.screenshot,
-          phase: 'Vision',
-          metrics: {},
-          score: score,
-          visionAnalysis
-        };
+        try {
+          // Extract walkthrough section
+          const walkthroughMatch = analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncategory scores:)/i);
+          if (walkthroughMatch) {
+            visionAnalysis.walkthrough = walkthroughMatch[1].trim();
+          }
 
-        addMessage(initialMessage);
-        setCurrentPhase('Vision');
+          // We're no longer parsing category scores separately
+          visionAnalysis.categoryScores = {
+            brandIdentity: { score: 0, summary: '' },
+            visualHierarchy: { score: 0, summary: '' },
+            designAesthetics: { score: 0, summary: '' },
+            emotionalImpact: { score: 0, summary: '' }
+          };
 
-        const newPhaseScores = { ...phaseScores, Vision: score };
-        setPhaseScores(newPhaseScores);
-        updateOverallScore(newPhaseScores);
+          // Extract critical analysis
+          const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\nkey recommendations:)/i);
+          if (criticalAnalysisMatch) {
+            visionAnalysis.criticalAnalysis = criticalAnalysisMatch[1].trim();
+          }
 
-        // Turn off the thinking indicator
+          // Extract recommendations
+          const recommendationsMatch = analysis.match(/key recommendations:\n((?:\d+\. .+(?:\n|$))*)/i);
+          if (recommendationsMatch) {
+            visionAnalysis.recommendations = recommendationsMatch[1]
+              .split('\n')
+              .map((rec: string) => rec.replace(/^\d+\.\s*/, '').trim())
+              .filter(Boolean);
+          }
+
+          // Important: Use the original analysis as the content
+          const initialMessage: Message = {
+            role: 'assistant' as const,
+            content: analysis,
+            screenshot: evaluationResults.screenshot,
+            phase: 'Vision',
+            metrics: {},
+            score: score,
+            visionAnalysis
+          };
+          addMessage(initialMessage);
+          setCurrentPhase('Vision');
+
+          const newPhaseScores = { ...phaseScores, Vision: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
+
+          // Turn off the thinking indicator now that the vision analysis is complete
+          setIsThinking(false);
+        } catch (error) {
+          console.error('Error parsing vision analysis:', error);
+          // If parsing fails, add the unparsed analysis as a fallback
+          const fallbackMessage: Message = {
+            role: 'assistant' as const,
+            content: analysis,
+            screenshot: evaluationResults.screenshot,
+            phase: 'Vision',
+            metrics: {},
+            score: score,
+            isLoading: false
+          };
+          addMessage(fallbackMessage);
+          setCurrentPhase('Vision');
+
+          const newPhaseScores = { ...phaseScores, Vision: score };
+          setPhaseScores(newPhaseScores);
+          updateOverallScore(newPhaseScores);
+        }
+
+        // Turn off the thinking indicator now that the vision analysis is complete
         setIsThinking(false);
       } catch (error) {
         console.error('error starting vision analysis:', error);
