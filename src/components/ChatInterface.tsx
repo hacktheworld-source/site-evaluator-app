@@ -24,15 +24,7 @@ const debugLog = (message: string, data?: any) => {
 };
 
 interface VisionAnalysis {
-  walkthrough: string;
-  categoryScores: {
-    brandIdentity: { score: number; summary: string; };
-    visualHierarchy: { score: number; summary: string; };
-    designAesthetics: { score: number; summary: string; };
-    emotionalImpact: { score: number; summary: string; };
-  };
-  criticalAnalysis?: string;
-  recommendations: string[];
+  content: string;  // Raw AI response
 }
 
 export interface Message {
@@ -231,122 +223,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const { score, analysis } = response.data;
 
-        // Parse the structured vision analysis
+        // Create a simple vision analysis object with the raw content
         const visionAnalysis: VisionAnalysis = {
-          walkthrough: '',
-          categoryScores: {
-            brandIdentity: { score: 0, summary: '' },
-            visualHierarchy: { score: 0, summary: '' },
-            designAesthetics: { score: 0, summary: '' },
-            emotionalImpact: { score: 0, summary: '' }
-          },
-          recommendations: []
+          content: analysis
         };
 
-        try {
-          // Extract walkthrough section
-          const walkthroughMatch = analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncategory scores:)/i);
-          if (walkthroughMatch) {
-            visionAnalysis.walkthrough = walkthroughMatch[1].trim();
-          }
+        // Create the message with the raw analysis
+        const initialMessage: Message = {
+          role: 'assistant' as const,
+          content: analysis,
+          screenshot: evaluationResults.screenshot,
+          phase: 'Vision',
+          metrics: {},
+          score: score,
+          visionAnalysis
+        };
 
-          // Parse category scores while preserving the original text
-          const categoryScoresMatch = analysis.match(/category scores:\n([\s\S]*?)(?=\n\ncritical analysis:)/i);
-          if (categoryScoresMatch) {
-            const scoresText = categoryScoresMatch[1];
-            
-            // Parse brand identity
-            const brandMatch = scoresText.match(/brand identity:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (brandMatch) {
-              visionAnalysis.categoryScores.brandIdentity = {
-                score: parseInt(brandMatch[1]),
-                summary: brandMatch[2].trim()
-              };
-            }
+        addMessage(initialMessage);
+        setCurrentPhase('Vision');
 
-            // Parse visual hierarchy
-            const hierarchyMatch = scoresText.match(/visual hierarchy:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (hierarchyMatch) {
-              visionAnalysis.categoryScores.visualHierarchy = {
-                score: parseInt(hierarchyMatch[1]),
-                summary: hierarchyMatch[2].trim()
-              };
-            }
+        const newPhaseScores = { ...phaseScores, Vision: score };
+        setPhaseScores(newPhaseScores);
+        updateOverallScore(newPhaseScores);
 
-            // Parse design aesthetics
-            const aestheticsMatch = scoresText.match(/design aesthetics:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (aestheticsMatch) {
-              visionAnalysis.categoryScores.designAesthetics = {
-                score: parseInt(aestheticsMatch[1]),
-                summary: aestheticsMatch[2].trim()
-              };
-            }
-
-            // Parse emotional impact
-            const emotionalMatch = scoresText.match(/emotional impact:\s*(\d+)\/25\s*-\s*([^\n]+)/i);
-            if (emotionalMatch) {
-              visionAnalysis.categoryScores.emotionalImpact = {
-                score: parseInt(emotionalMatch[1]),
-                summary: emotionalMatch[2].trim()
-              };
-            }
-          }
-
-          // Extract critical analysis
-          const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\nkey recommendations:)/i);
-          if (criticalAnalysisMatch) {
-            visionAnalysis.criticalAnalysis = criticalAnalysisMatch[1].trim();
-          }
-
-          // Extract recommendations
-          const recommendationsMatch = analysis.match(/key recommendations:\n((?:\d+\. .+(?:\n|$))*)/i);
-          if (recommendationsMatch) {
-            visionAnalysis.recommendations = recommendationsMatch[1]
-              .split('\n')
-              .map((rec: string) => rec.replace(/^\d+\.\s*/, '').trim())
-              .filter(Boolean);
-          }
-
-          // Important: Use the original analysis as the content
-          const initialMessage: Message = {
-            role: 'assistant' as const,
-            content: analysis, // Keep the original analysis text
-            screenshot: evaluationResults.screenshot,
-            phase: 'Vision',
-            metrics: {},
-            score: score,
-            visionAnalysis
-          };
-          addMessage(initialMessage);
-          setCurrentPhase('Vision');
-
-          const newPhaseScores = { ...phaseScores, Vision: score };
-          setPhaseScores(newPhaseScores);
-          updateOverallScore(newPhaseScores);
-
-          // Turn off the thinking indicator now that the vision analysis is complete
-          setIsThinking(false);
-        } catch (error) {
-          console.error('Error parsing vision analysis:', error);
-          // If parsing fails, add the unparsed analysis as a fallback
-          const fallbackMessage: Message = {
-            role: 'assistant' as const,
-            content: analysis,
-            screenshot: evaluationResults.screenshot,
-            phase: 'Vision',
-            metrics: {},
-            score: score,
-            isLoading: false
-          };
-          addMessage(fallbackMessage);
-          setCurrentPhase('Vision');
-
-          const newPhaseScores = { ...phaseScores, Vision: score };
-          setPhaseScores(newPhaseScores);
-          updateOverallScore(newPhaseScores);
-        }
-
-        // Turn off the thinking indicator now that the vision analysis is complete
+        // Turn off the thinking indicator
         setIsThinking(false);
       } catch (error) {
         console.error('error starting vision analysis:', error);
