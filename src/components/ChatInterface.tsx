@@ -245,41 +245,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         try {
           // Extract walkthrough section
-          const walkthroughMatch = analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncritical analysis:|\n\ncategory scores:)/i);
+          const walkthroughMatch = analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncategory scores:)/i);
           if (walkthroughMatch) {
             visionAnalysis.walkthrough = walkthroughMatch[1].trim();
           }
 
-          // Extract critical analysis with fallback pattern
-          const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\ncategory scores:)/i)
-            || analysis.match(/critical\s([\s\S]*?)(?=\n\ncategory scores:)/i); // fallback match
+          // We're no longer parsing category scores separately
+          visionAnalysis.categoryScores = {
+            brandIdentity: { score: 0, summary: '' },
+            visualHierarchy: { score: 0, summary: '' },
+            designAesthetics: { score: 0, summary: '' },
+            emotionalImpact: { score: 0, summary: '' }
+          };
+
+          // Extract critical analysis
+          const criticalAnalysisMatch = analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\nkey recommendations:)/i);
           if (criticalAnalysisMatch) {
             visionAnalysis.criticalAnalysis = criticalAnalysisMatch[1].trim();
-          } else {
-            visionAnalysis.criticalAnalysis = "Critical analysis section missing or malformed.";
-          }
-
-          // Extract category scores
-          const categoryScoresMatch = analysis.match(/category scores:[\s\S]*?brand identity:\s*(\d+)\/25\s*-\s*([^\n]*)\n.*?visual hierarchy:\s*(\d+)\/25\s*-\s*([^\n]*)\n.*?design aesthetics:\s*(\d+)\/25\s*-\s*([^\n]*)\n.*?emotional impact:\s*(\d+)\/25\s*-\s*([^\n]*)/i);
-          if (categoryScoresMatch) {
-            visionAnalysis.categoryScores = {
-              brandIdentity: { 
-                score: parseInt(categoryScoresMatch[1]), 
-                summary: categoryScoresMatch[2].trim() 
-              },
-              visualHierarchy: { 
-                score: parseInt(categoryScoresMatch[3]), 
-                summary: categoryScoresMatch[4].trim() 
-              },
-              designAesthetics: { 
-                score: parseInt(categoryScoresMatch[5]), 
-                summary: categoryScoresMatch[6].trim() 
-              },
-              emotionalImpact: { 
-                score: parseInt(categoryScoresMatch[7]), 
-                summary: categoryScoresMatch[8].trim() 
-              }
-            };
           }
 
           // Extract recommendations
