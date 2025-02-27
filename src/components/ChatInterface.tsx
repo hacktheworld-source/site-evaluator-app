@@ -25,6 +25,12 @@ const debugLog = (message: string, data?: any) => {
 
 interface VisionAnalysis {
   content: string;  // Raw AI response
+  sections?: {
+    visualWalkthrough?: string;
+    criticalAnalysis?: string;
+    categoryScores?: string;
+    recommendations?: string;
+  };
 }
 
 export interface Message {
@@ -223,15 +229,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const { score, analysis } = response.data;
 
-        // Create a simple vision analysis object with the raw content
-        const visionAnalysis: VisionAnalysis = {
-          content: analysis
+        // Parse sections from the analysis
+        const sections = {
+          visualWalkthrough: analysis.match(/visual walkthrough:\n([\s\S]*?)(?=\n\ncritical analysis:)/i)?.[1]?.trim(),
+          criticalAnalysis: analysis.match(/critical analysis:\n([\s\S]*?)(?=\n\ncategory scores)/i)?.[1]?.trim(),
+          categoryScores: analysis.match(/category scores[^:]*:\n([\s\S]*?)(?=\n\nkey recommendations:)/i)?.[1]?.trim(),
+          recommendations: analysis.match(/key recommendations:\n([\s\S]*?)$/i)?.[1]?.trim()
         };
 
-        // Create the message with the raw analysis
+        // Create a formatted content string with proper headers
+        const formattedContent = `visual walkthrough:\n${sections.visualWalkthrough || ''}\n\ncritical analysis:\n${sections.criticalAnalysis || ''}\n\ncategory scores:\n${sections.categoryScores || ''}\n\nkey recommendations:\n${sections.recommendations || ''}`;
+
+        // Create the vision analysis object
+        const visionAnalysis: VisionAnalysis = {
+          content: formattedContent,
+          sections
+        };
+
+        // Create the message with the formatted analysis
         const initialMessage: Message = {
           role: 'assistant' as const,
-          content: analysis,
+          content: formattedContent,
           screenshot: evaluationResults.screenshot,
           phase: 'Vision',
           metrics: {},
