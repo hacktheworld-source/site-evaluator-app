@@ -44,6 +44,15 @@ export interface Message {
     height: number;
     isFullPage: boolean;
   };
+  visionAnalysis?: {
+    categoryScores: {
+      brandIdentity: { score: number; summary: string; };
+      visualHierarchy: { score: number; summary: string; };
+      designAesthetics: { score: number; summary: string; };
+      emotionalImpact: { score: number; summary: string; };
+    };
+    recommendations: string[];
+  };
 }
 
 interface ChatInterfaceProps {
@@ -218,13 +227,56 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const { score, analysis } = response.data;
 
+        // Parse the structured vision analysis
+        const visionAnalysis = {
+          categoryScores: {
+            brandIdentity: { score: 0, summary: '' },
+            visualHierarchy: { score: 0, summary: '' },
+            designAesthetics: { score: 0, summary: '' },
+            emotionalImpact: { score: 0, summary: '' }
+          },
+          recommendations: []
+        };
+
+        try {
+          // Extract category scores
+          const categoryScoreRegex = /- ([^:]+): (\d+)\/25 - (.+)$/gm;
+          let match;
+          while ((match = categoryScoreRegex.exec(analysis)) !== null) {
+            const category = match[1].trim().toLowerCase().replace(/\s+/g, '');
+            const score = parseInt(match[2]);
+            const summary = match[3].trim();
+            
+            if (category in visionAnalysis.categoryScores) {
+              visionAnalysis.categoryScores[category as keyof typeof visionAnalysis.categoryScores] = {
+                score,
+                summary
+              };
+            }
+          }
+
+          // Extract recommendations
+          const recommendationsMatch = analysis.match(/Key Recommendations:\n(?:(?:\d+\. .+\n?)+)/);
+          if (recommendationsMatch) {
+            visionAnalysis.recommendations = recommendationsMatch[0]
+              .split('\n')
+              .slice(1) // Skip the "Key Recommendations:" line
+              .map((rec: string) => rec.replace(/^\d+\.\s*/, '').trim())
+              .filter(Boolean);
+          }
+        } catch (error) {
+          console.error('Error parsing vision analysis:', error);
+          // Continue with unparsed analysis if parsing fails
+        }
+
         const initialMessage: Message = {
           role: 'assistant' as const,
           content: analysis,
           screenshot: evaluationResults.screenshot,
           phase: 'Vision',
           metrics: {},
-          score: score
+          score: score,
+          visionAnalysis
         };
         addMessage(initialMessage);
         setCurrentPhase('Vision');
