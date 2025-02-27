@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import { reportStorage } from '../services/reportStorage';
 import { auth } from '../services/firebase';
 import { SERVICE_COSTS, checkCreditsAndShowError, decrementUserBalance, getUserBalance } from '../services/points';
+import ScreenshotModal from './ScreenshotModal';
 
 const MAX_HISTORY_LENGTH = 50;
 
@@ -673,6 +674,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return 'N/A';
   };
 
+  const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<{ data: string; metadata?: any } | null>(null);
+
   const renderScreenshot = useCallback((screenshot: string, metadata?: any) => (
     <div className="screenshot-viewer">
       <img 
@@ -685,8 +689,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }}
         onClick={() => {
           if (metadata?.isFullPage) {
-            // Open in modal or new window for full view
-            window.open(`data:image/png;base64,${screenshot}`, '_blank');
+            setSelectedScreenshot({ data: screenshot, metadata });
+            setIsScreenshotModalOpen(true);
           }
         }}
       />
@@ -1151,6 +1155,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <i className="fas fa-paper-plane"></i>
         </button>
       </form>
+      {isScreenshotModalOpen && selectedScreenshot && (
+        <ScreenshotModal
+          screenshot={selectedScreenshot.data}
+          metadata={selectedScreenshot.metadata}
+          onClose={() => {
+            setIsScreenshotModalOpen(false);
+            setSelectedScreenshot(null);
+          }}
+        />
+      )}
     </div>
   );
 };

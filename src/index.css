@@ -3022,3 +3022,89 @@ input[type="text"]:focus, input[type="number"]:focus {
 .screenshot-viewer:hover .screenshot-info {
   opacity: 1;
 }
+
+.screenshot-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.screenshot-modal-content {
+  position: relative;
+  max-width: 95vw;
+  max-height: 95vh;
+  background: var(--background-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.screenshot-modal-image-container {
+  overflow: auto;
+  max-height: calc(95vh - 60px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.screenshot-modal-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+}
+
+.screenshot-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+  transition: background-color 0.2s;
+}
+
+.screenshot-modal-close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.screenshot-modal-info {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .screenshot-modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .screenshot-modal-image-container {
+    height: 100%;
+    max-height: 100vh;
+  }
+}
