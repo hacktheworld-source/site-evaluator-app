@@ -2984,3 +2984,41 @@ input[type="text"]:focus, input[type="number"]:focus {
     left: 100%;
   }
 }
+
+.screenshot-viewer {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.screenshot-viewer:hover {
+  transform: scale(1.01);
+}
+
+.website-screenshot.full-page {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.screenshot-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.screenshot-viewer:hover .screenshot-info {
+  opacity: 1;
+}

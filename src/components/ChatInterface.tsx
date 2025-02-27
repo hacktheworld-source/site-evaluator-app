@@ -38,6 +38,11 @@ export interface Message {
       error?: string;
     };
   };
+  screenshotMetadata?: {
+    width: number;
+    height: number;
+    isFullPage: boolean;
+  };
 }
 
 interface ChatInterfaceProps {
@@ -668,12 +673,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return 'N/A';
   };
 
-  const renderScreenshot = useCallback((screenshot: string) => (
-    <img 
-      src={`data:image/png;base64,${screenshot}`} 
-      alt="website screenshot" 
-      className="website-screenshot fade-in" 
-    />
+  const renderScreenshot = useCallback((screenshot: string, metadata?: any) => (
+    <div className="screenshot-viewer">
+      <img 
+        src={`data:image/png;base64,${screenshot}`} 
+        alt="website screenshot" 
+        className={`website-screenshot fade-in ${metadata?.isFullPage ? 'full-page' : ''}`}
+        style={{
+          maxHeight: metadata?.isFullPage ? '800px' : 'none',
+          objectFit: metadata?.isFullPage ? 'cover' : 'contain'
+        }}
+        onClick={() => {
+          if (metadata?.isFullPage) {
+            // Open in modal or new window for full view
+            window.open(`data:image/png;base64,${screenshot}`, '_blank');
+          }
+        }}
+      />
+      {metadata?.isFullPage && (
+        <div className="screenshot-info">
+          Click to view full page ({metadata.width}x{metadata.height})
+        </div>
+      )}
+    </div>
   ), []);
 
   const makeUrlsClickable = (text: string): React.ReactNode[] => {
@@ -803,7 +825,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           )}
         </div>
         {message.phase === 'Overall' && evaluationResults && renderMetrics(evaluationResults, index, message.metricsCollapsed ?? true)}
-        {(message.phase === 'Overall' || message.phase === 'Vision') && evaluationResults?.screenshot && renderScreenshot(evaluationResults.screenshot)}
+        {(message.phase === 'Overall' || message.phase === 'Vision') && evaluationResults?.screenshot && 
+          renderScreenshot(evaluationResults.screenshot, evaluationResults.screenshotMetadata)}
         {message.phase !== 'Overall' && message.phase !== 'Recommendations' && message.metrics && 
           renderMetrics(message.metrics, index, message.metricsCollapsed ?? true)}
       </div>
