@@ -1,14 +1,13 @@
 {
   "files": {
-    "main.css": "./static/css/main.cf6bd286.css",
+    "main.css": "./static/css/main.774731d6.css",
     "main.js": "./static/js/main.d73d8461.js",
-    "static/media/olive-watermark.png": "./static/media/olive-watermark.46f955c09c0575d4959b.png",
     "index.html": "./index.html",
-    "main.cf6bd286.css.map": "./static/css/main.cf6bd286.css.map",
+    "main.774731d6.css.map": "./static/css/main.774731d6.css.map",
     "main.d73d8461.js.map": "./static/js/main.d73d8461.js.map"
   },
   "entrypoints": [
-    "static/css/main.cf6bd286.css",
+    "static/css/main.774731d6.css",
     "static/js/main.d73d8461.js"
   ]
 }
