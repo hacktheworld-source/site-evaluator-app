@@ -119,6 +119,7 @@ const AppContent: React.FC = () => {
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Add chat state
@@ -137,6 +138,8 @@ const AppContent: React.FC = () => {
     userInput: '',
     isThinking: false
   });
+
+  const getLastError = () => lastError;
 
   useEffect(() => {
     console.log('App component mounted');
@@ -257,9 +260,9 @@ const AppContent: React.FC = () => {
     }
   }, [user]);
 
-  const handleError = (message: string) => {
-    toast.error(message);
-    setError(message);
+  const handleError = (error: string) => {
+    setLastError(error);
+    toast.error(error);
   };
 
   const handleEvaluation = async (website: string, rawInput?: string) => {
@@ -380,13 +383,18 @@ const AppContent: React.FC = () => {
                 console.error('Server reported error:', data.error);
                 clearTimeout(timeoutId);
                 eventSource.close();
-                await cleanupAndRefund();
-                // Special handling for robots.txt disallowed error
-                if (data.error.includes('robots.txt')) {
+                
+                // Special handling for ROBOTS_TXT_DISALLOWED
+                if (data.error === 'ROBOTS_TXT_DISALLOWED') {
+                  await cleanupAndRefund();
                   handleError('This website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
-                } else {
-                  handleError(data.error);
+                  setIsLoading(false);
+                  setIsGenerating(false);
+                  return;
                 }
+                
+                await cleanupAndRefund();
+                handleError(data.error);
               } else {
                 console.log('Received unknown message type:', data);
               }
@@ -410,6 +418,19 @@ const AppContent: React.FC = () => {
             // Only handle errors if we haven't received results yet
             if (!hasResults) {
               if (eventSource.readyState === EventSource.CLOSED) {
+                // Check if this was a ROBOTS_TXT_DISALLOWED error
+                const lastError = await getLastError();
+                if (lastError === 'ROBOTS_TXT_DISALLOWED') {
+                  console.log('Robots.txt disallowed - stopping retries');
+                  clearTimeout(timeoutId);
+                  eventSource.close();
+                  await cleanupAndRefund();
+                  handleError('This website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
+                  setIsLoading(false);
+                  setIsGenerating(false);
+                  return;
+                }
+
                 // If this is the first connection attempt, or we've exceeded retries, treat as error
                 if (isFirstConnect || retryCount >= MAX_RETRIES) {
                   console.log('Connection closed without results - treating as error');
