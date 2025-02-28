@@ -283,7 +283,7 @@ const ProfilePage: React.FC = () => {
 
           <div className="account-actions">
             <button 
-              className="change-password-button"
+              className="change-password-button royal-olive secondary"
               onClick={() => setShowChangePassword(true)}
             >
               <FontAwesomeIcon icon={faKey} />
@@ -305,7 +305,7 @@ const ProfilePage: React.FC = () => {
               <p>Delete your account and all associated data. This action cannot be undone.</p>
               {!showDeleteConfirm ? (
                 <button 
-                  className="delete-account-button"
+                  className="delete-account-button royal-olive danger"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   Delete Account
@@ -315,7 +315,7 @@ const ProfilePage: React.FC = () => {
                   <p>Are you sure you want to delete your account? This cannot be undone.</p>
                   <div className="confirmation-buttons">
                     <button
-                      className="confirm-delete-button"
+                      className="confirm-delete-button royal-olive danger"
                       onClick={handleDeleteAccount}
                       disabled={isDeletingAccount}
                     >

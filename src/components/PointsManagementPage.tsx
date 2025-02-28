@@ -192,7 +192,7 @@ const PointsManagementPage: React.FC = () => {
           </div>
           <div className="payment-buttons">
             <button 
-              className="signup-button"
+              className="signup-button royal-olive primary"
               onClick={handlePayAsYouGoSignup}
               disabled={isProcessing}
             >
@@ -200,7 +200,7 @@ const PointsManagementPage: React.FC = () => {
               Set Up Pay-as-you-go
             </button>
             <button 
-              className="manage-payment-button"
+              className="manage-payment-button royal-olive secondary"
               onClick={handleManagePaymentMethods}
               disabled={isProcessing}
             >
@@ -218,7 +218,7 @@ const PointsManagementPage: React.FC = () => {
           </div>
           <div className="payment-buttons">
             <button 
-              className="unenroll-button"
+              className="unenroll-button royal-olive danger"
               onClick={handleUnenroll}
               disabled={isProcessing}
             >
@@ -226,7 +226,7 @@ const PointsManagementPage: React.FC = () => {
               Unenroll from Pay-as-you-go
             </button>
             <button 
-              className="manage-payment-button"
+              className="manage-payment-button royal-olive secondary"
               onClick={handleManagePaymentMethods}
               disabled={isProcessing}
             >

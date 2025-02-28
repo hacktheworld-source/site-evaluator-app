@@ -54,12 +54,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
             placeholder="Password"
             required
           />
-          <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+          <button type="submit" className="royal-olive primary">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
         </form>
         <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth-mode">
           {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
         </button>
-        <button onClick={handleGoogleSignIn} className="google-sign-in-button">Sign In with Google</button>
+        <button onClick={handleGoogleSignIn} className="google-sign-in-button royal-olive secondary">Sign In with Google</button>
       </div>
     </div>
   );

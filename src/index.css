@@ -182,8 +182,35 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Playfair Display', serif;
 }
 
-/* Base button styles */
+/* Base button styles - simple version for utility buttons */
 button {
+  background: none;
+  color: var(--accent-color);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+button:hover {
+  color: var(--off-white);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--gold-dark);
+}
+
+/* Royal Olive styling for main action buttons */
+button.royal-olive {
   background: var(--glass-bg);
   color: var(--gold-light);
   border: 1px solid var(--glass-border);
@@ -196,10 +223,10 @@ button {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(4px);
   overflow: hidden;
+  line-height: 1px;
 }
 
-/* Gold gradient border effect on hover */
-button:hover {
+button.royal-olive:hover {
   border-color: var(--gold-primary);
   background: var(--olive-dark);
   color: var(--gold-light);
@@ -207,16 +234,14 @@ button:hover {
   box-shadow: 0 4px 12px rgba(197, 165, 114, 0.2);
 }
 
-/* Active state with olive accent */
-button:active {
+button.royal-olive:active {
   transform: translateY(0);
   background: var(--olive-medium);
   border-color: var(--gold-dark);
   box-shadow: 0 2px 6px rgba(197, 165, 114, 0.1);
 }
 
-/* Disabled state */
-button:disabled {
+button.royal-olive:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--glass-bg);
@@ -227,45 +252,45 @@ button:disabled {
 }
 
 /* Primary button variant */
-button.primary {
+button.royal-olive.primary {
   background: linear-gradient(135deg, var(--olive-medium), var(--olive-dark));
   border: 1px solid var(--gold-primary);
   color: var(--gold-light);
 }
 
-button.primary:hover {
+button.royal-olive.primary:hover {
   background: linear-gradient(135deg, var(--olive-dark), var(--olive-medium));
   border-color: var(--gold-light);
   box-shadow: 0 4px 15px rgba(197, 165, 114, 0.3);
 }
 
 /* Secondary button variant */
-button.secondary {
+button.royal-olive.secondary {
   background: var(--glass-bg);
   border: 1px solid var(--gold-primary);
   color: var(--gold-primary);
 }
 
-button.secondary:hover {
+button.royal-olive.secondary:hover {
   background: var(--glass-highlight);
   color: var(--gold-light);
 }
 
 /* Danger button variant */
-button.danger {
+button.royal-olive.danger {
   background: rgba(255, 82, 82, 0.1);
   border: 1px solid #ff5252;
   color: #ff5252;
 }
 
-button.danger:hover {
+button.royal-olive.danger:hover {
   background: rgba(255, 82, 82, 0.2);
   border-color: #ff6b6b;
   box-shadow: 0 4px 12px rgba(255, 82, 82, 0.2);
 }
 
 /* Add shimmer effect to primary buttons */
-button.primary::after {
+button.royal-olive.primary::after {
   content: '';
   position: absolute;
   top: 0;
@@ -281,7 +306,7 @@ button.primary::after {
   transition: 0.5s;
 }
 
-button.primary:hover::after {
+button.royal-olive.primary:hover::after {
   left: 100%;
   transition: 0.5s;
 }

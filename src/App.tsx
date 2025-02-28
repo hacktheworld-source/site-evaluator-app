@@ -654,7 +654,7 @@ const AppContent: React.FC = () => {
             </button>
           </div>
         ) : (
-          <button onClick={handleSignInClick} className="sign-in-button">Sign In / Sign Up</button>
+          <button onClick={handleSignInClick} className="royal-olive">Sign In / Sign Up</button>
         )}
       </header>
       <div className={`content-wrapper`}>

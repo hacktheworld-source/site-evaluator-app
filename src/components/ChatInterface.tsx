@@ -1185,7 +1185,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="button" 
               onClick={handleContinue} 
               disabled={isLoading || isMessageLoading} 
-              className="floating-action-button"
+              className="floating-action-button royal-olive"
             >
               Next
             </button>
@@ -1194,7 +1194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="button"
               onClick={handleGenerateReport}
               disabled={isLoading || isMessageLoading || isGeneratingReport}
-              className={`floating-action-button ${isGeneratingReport ? 'generating' : ''}`}
+              className={`floating-action-button royal-olive primary ${isGeneratingReport ? 'generating' : ''}`}
             >
               {isGeneratingReport ? 'Generating...' : 'Download Report'}
             </button>
