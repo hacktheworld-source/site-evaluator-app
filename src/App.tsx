@@ -257,16 +257,9 @@ const AppContent: React.FC = () => {
     }
   }, [user]);
 
-  const handleError = (error: string) => {
-    // If this is a robots.txt error, show a specific message
-    if (error === 'ROBOTS_TXT_DISALLOWED' || error.includes('robots.txt')) {
-      toast.error('This website does not allow automated access according to its robots.txt file.');
-      setIsLoading(false);
-      setIsGenerating(false);
-      return;
-    }
-    
-    toast.error(error);
+  const handleError = (message: string) => {
+    toast.error(message);
+    setError(message);
   };
 
   const handleEvaluation = async (website: string, rawInput?: string) => {
@@ -387,23 +380,8 @@ const AppContent: React.FC = () => {
                 console.error('Server reported error:', data.error);
                 clearTimeout(timeoutId);
                 eventSource.close();
-                
-                // Special handling for ROBOTS_TXT_DISALLOWED
-                if (data.error === 'ROBOTS_TXT_DISALLOWED') {
-                  await cleanupAndRefund();
-                  handleError('ROBOTS_TXT_DISALLOWED');
-                  return;
-                }
-                
-                // For other errors, attempt retry if within limits
-                if (retryCount < MAX_RETRIES) {
-                  retryCount++;
-                  console.log(`Retrying... Attempt ${retryCount}/${MAX_RETRIES}`);
-                  await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                } else {
-                  await cleanupAndRefund();
-                  handleError(data.error);
-                }
+                await cleanupAndRefund();
+                handleError(data.error);
               } else {
                 console.log('Received unknown message type:', data);
               }
@@ -426,35 +404,17 @@ const AppContent: React.FC = () => {
 
             // Only handle errors if we haven't received results yet
             if (!hasResults) {
-              if (eventSource.readyState === EventSource.CLOSED) {
-                // If this is the first connection attempt, or we've exceeded retries, treat as error
-                if (isFirstConnect || retryCount >= MAX_RETRIES) {
-                  console.log('Connection closed without results - treating as error');
-                  clearTimeout(timeoutId);
-                  eventSource.close();
-                  await cleanupAndRefund();
-                  handleError('Lost connection to the evaluation server. Please try again.');
-                } else {
-                  // Otherwise, increment retry count and wait for reconnect
-                  retryCount++;
-                  console.log(`Retry attempt ${retryCount}/${MAX_RETRIES}`);
-                  await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                }
-              } else if (eventSource.readyState === EventSource.CONNECTING) {
-                // Connection is attempting to reconnect - log but don't take action yet
-                console.log('EventSource is attempting to reconnect...');
-                isFirstConnect = false;
-              } else {
-                console.error('EventSource in unexpected state:', eventSource.readyState);
-                clearTimeout(timeoutId);
-                eventSource.close();
-                await cleanupAndRefund();
-                handleError('Connection error. Please try again.');
-              }
+              clearTimeout(timeoutId);
+              eventSource.close();
+              await cleanupAndRefund();
+              // Don't retry on navigation timeouts or other server-side errors
+              handleError('Website evaluation failed. The site might be blocking automated access or is too slow to respond.');
             } else {
               // We have results, so just close quietly
               console.log('Connection closed after receiving results - normal completion');
               eventSource.close();
+              setIsLoading(false);
+              setIsGenerating(false);
             }
           };
 
