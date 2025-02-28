@@ -187,16 +187,22 @@ button {
   background: none;
   color: var(--accent-color);
   border: none;
-  padding: 12px 24px;
+  padding: 8px 16px;
   border-radius: 5px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 16px;
+  transition: all 0.2s ease;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1;
 }
 
 button:hover {
   color: var(--off-white);
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--deep-black), 0 0 0 4px var(--accent-color);
 }
 
 button:active {
@@ -216,14 +222,18 @@ button.royal-olive {
   border: 1px solid var(--glass-border);
   padding: 12px 24px;
   border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(4px);
   overflow: hidden;
-  line-height: 1px;
+  line-height: 1;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 button.royal-olive:hover {
@@ -232,6 +242,11 @@ button.royal-olive:hover {
   color: var(--gold-light);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(197, 165, 114, 0.2);
+}
+
+button.royal-olive:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--deep-black), 0 0 0 4px var(--gold-primary);
 }
 
 button.royal-olive:active {
@@ -256,6 +271,7 @@ button.royal-olive.primary {
   background: linear-gradient(135deg, var(--olive-medium), var(--olive-dark));
   border: 1px solid var(--gold-primary);
   color: var(--gold-light);
+  font-weight: 600;
 }
 
 button.royal-olive.primary:hover {
@@ -289,6 +305,23 @@ button.royal-olive.danger:hover {
   box-shadow: 0 4px 12px rgba(255, 82, 82, 0.2);
 }
 
+/* Button groups */
+.button-group {
+  display: flex;
+  gap: 12px;
+}
+
+.button-group.vertical {
+  flex-direction: column;
+}
+
+/* Compact variant */
+button.royal-olive.compact {
+  padding: 8px 16px;
+  min-height: 36px;
+  font-size: 14px;
+}
+
 /* Add shimmer effect to primary buttons */
 button.royal-olive.primary::after {
   content: '';
@@ -309,6 +342,36 @@ button.royal-olive.primary::after {
 button.royal-olive.primary:hover::after {
   left: 100%;
   transition: 0.5s;
+}
+
+/* Loading state */
+button.royal-olive.loading {
+  position: relative;
+  cursor: wait;
+  color: transparent !important;
+}
+
+button.royal-olive.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--gold-light);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: button-loading-spinner 0.8s linear infinite;
+}
+
+@keyframes button-loading-spinner {
+  from {
+    transform: rotate(0turn);
+  }
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 button:hover {
