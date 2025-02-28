@@ -387,7 +387,7 @@ const AppContent: React.FC = () => {
                 if (data.error.includes('robots.txt')) {
                   setIsLoading(false);
                   setIsGenerating(false);
-                  setStatusMessage('');
+                  setStatusMessage('Olive apologizes, but this website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
                 }
               } else {
                 console.log('Received unknown message type:', data);
