@@ -356,7 +356,20 @@ const AppContent: React.FC = () => {
               const data = JSON.parse(event.data);
               console.log('Parsed server response:', data);
 
-              if (data.status) {
+              if (data.error) {
+                console.error('Server reported error:', data.error);
+                clearTimeout(timeoutId);
+                eventSource.close();
+                
+                // Handle robots.txt specific error
+                if (data.error === 'ROBOTS_TXT_DISALLOWED') {
+                  await cleanupAndRefund();
+                  handleError('This website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
+                } else {
+                  await cleanupAndRefund();
+                  handleError(data.error);
+                }
+              } else if (data.status) {
                 console.log('Status update:', data.status);
                 // Don't show "Connecting to existing analysis" if we're already showing progress
                 if (!(data.status === 'Connecting to existing analysis...' && lastStatus !== '')) {
@@ -376,12 +389,6 @@ const AppContent: React.FC = () => {
                   setIsGenerating(false);
                   setTimeout(() => setStatusMessage(''), 2000);
                 }
-              } else if (data.error) {
-                console.error('Server reported error:', data.error);
-                clearTimeout(timeoutId);
-                eventSource.close();
-                await cleanupAndRefund();
-                handleError(data.error);
               } else {
                 console.log('Received unknown message type:', data);
               }
