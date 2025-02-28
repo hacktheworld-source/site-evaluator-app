@@ -1,0 +1,14 @@
+{
+  "files": {
+    "main.css": "./static/css/main.d5e008fb.css",
+    "main.js": "./static/js/main.d73d8461.js",
+    "static/media/olive-watermark.png": "./static/media/olive-watermark.46f955c09c0575d4959b.png",
+    "index.html": "./index.html",
+    "main.d5e008fb.css.map": "./static/css/main.d5e008fb.css.map",
+    "main.d73d8461.js.map": "./static/js/main.d73d8461.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.d5e008fb.css",
+    "static/js/main.d73d8461.js"
+  ]
+}
