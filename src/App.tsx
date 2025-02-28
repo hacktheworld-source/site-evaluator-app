@@ -404,31 +404,11 @@ const AppContent: React.FC = () => {
 
             // Only handle errors if we haven't received results yet
             if (!hasResults) {
-              if (eventSource.readyState === EventSource.CLOSED) {
-                // If this is the first connection attempt, or we've exceeded retries, treat as error
-                if (isFirstConnect || retryCount >= MAX_RETRIES) {
-                  console.log('Connection closed without results - treating as error');
-                  clearTimeout(timeoutId);
-                  eventSource.close();
-                  await cleanupAndRefund();
-                  handleError('Lost connection to the evaluation server. Please try again.');
-                } else {
-                  // Otherwise, increment retry count and wait for reconnect
-                  retryCount++;
-                  console.log(`Retry attempt ${retryCount}/${MAX_RETRIES}`);
-                  await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                }
-              } else if (eventSource.readyState === EventSource.CONNECTING) {
-                // Connection is attempting to reconnect - log but don't take action yet
-                console.log('EventSource is attempting to reconnect...');
-                isFirstConnect = false;
-              } else {
-                console.error('EventSource in unexpected state:', eventSource.readyState);
-                clearTimeout(timeoutId);
-                eventSource.close();
-                await cleanupAndRefund();
-                handleError('Connection error. Please try again.');
-              }
+              clearTimeout(timeoutId);
+              eventSource.close();
+              await cleanupAndRefund();
+              // Don't retry on navigation timeouts or other server-side errors
+              handleError('Website evaluation failed. The site might be blocking automated access or is too slow to respond.');
             } else {
               // We have results, so just close quietly
               console.log('Connection closed after receiving results - normal completion');

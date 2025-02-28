@@ -194,7 +194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       });
       return response.data.score || 0;
     } catch (error) {
-      console.error(`error getting ${phase} score:`, error);
+      console.error(`Error getting ${phase} score:`, error);
       return 0;
     }
   };
@@ -230,10 +230,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         // Turn off the thinking indicator now that the vision analysis is complete
         setIsThinking(false);
       } catch (error) {
-        console.error('error starting vision analysis:', error);
+        console.error('Error starting vision analysis:', error);
         addMessage({
           role: 'assistant' as const,
-          content: 'an error occurred while starting the vision analysis. please try again.'
+          content: 'Error: An error occurred while starting the vision analysis. Please try again.'
         });
         setIsThinking(false);
       }
@@ -387,7 +387,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
           addMessage(newAssistantMessage);
         } catch (error) {
-          console.error('error fetching ai response:', error);
+          console.error('Error fetching AI response:', error);
           if (error instanceof Error && error.message.includes('Insufficient points')) {
             toast.error(`Insufficient balance. You need $${SERVICE_COSTS.CHAT_MESSAGE.toFixed(2)} to send a message.`);
             toast.info('Click here to enroll in pay-as-you-go', {
@@ -396,7 +396,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           } else {
             addMessage({
               role: 'assistant' as const,
-              content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
+              content: `Error: ${error instanceof Error ? error.message : 'An error occurred while processing your message. Please try again.'}`
             });
           }
         } finally {
