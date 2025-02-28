@@ -382,6 +382,13 @@ const AppContent: React.FC = () => {
                 eventSource.close();
                 await cleanupAndRefund();
                 handleError(data.error);
+                
+                // Only clear loading states for robots.txt errors
+                if (data.error.includes('robots.txt')) {
+                  setIsLoading(false);
+                  setIsGenerating(false);
+                  setStatusMessage('');
+                }
               } else {
                 console.log('Received unknown message type:', data);
               }
