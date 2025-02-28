@@ -381,7 +381,12 @@ const AppContent: React.FC = () => {
                 clearTimeout(timeoutId);
                 eventSource.close();
                 await cleanupAndRefund();
-                handleError(data.error);
+                // Special handling for robots.txt disallowed error
+                if (data.error.includes('robots.txt')) {
+                  handleError('This website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
+                } else {
+                  handleError(data.error);
+                }
               } else {
                 console.log('Received unknown message type:', data);
               }
