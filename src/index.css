@@ -65,7 +65,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('/olive-watermark.png');
+  background-image: url('./olive-watermark.png');
   background-repeat: repeat;
   background-size: 400px;
   background-position: center;
