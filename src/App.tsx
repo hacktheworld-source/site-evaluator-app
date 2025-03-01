@@ -383,11 +383,13 @@ const AppContent: React.FC = () => {
                 await cleanupAndRefund();
                 handleError(data.error);
                 
-                // Only clear loading states for robots.txt errors
-                if (data.error.includes('robots.txt')) {
+                // Clear loading states for specific errors
+                if (data.error.includes('robots.txt') || data.error.includes('ERR_HTTP2_PROTOCOL_ERROR')) {
                   setIsLoading(false);
                   setIsGenerating(false);
-                  setStatusMessage('Olive apologizes, but this website does not allow automated access according to its robots.txt file. Your credits have been refunded.');
+                  setStatusMessage(data.error.includes('robots.txt') 
+                    ? 'Olive apologizes, but this website does not allow automated access according to its robots.txt file. Your credits have been refunded.'
+                    : 'Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
                 }
               } else {
                 console.log('Received unknown message type:', data);
@@ -397,7 +399,16 @@ const AppContent: React.FC = () => {
               clearTimeout(timeoutId);
               eventSource.close();
               await cleanupAndRefund();
-              handleError(`Error processing evaluation data: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
+              
+              const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+              handleError(`Error processing evaluation data: ${errorMessage}`);
+              
+              // Reset UI for HTTP2 protocol errors
+              if (errorMessage.includes('ERR_HTTP2_PROTOCOL_ERROR')) {
+                setIsLoading(false);
+                setIsGenerating(false);
+                setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
+              }
             }
           };
 
@@ -409,13 +420,29 @@ const AppContent: React.FC = () => {
               CLOSED: EventSource.CLOSED
             });
 
+            // Check if this is an HTTP2 protocol error
+            const errorString = String(error);
+            const isHttp2Error = errorString.includes('ERR_HTTP2_PROTOCOL_ERROR');
+
             // Only handle errors if we haven't received results yet
             if (!hasResults) {
               clearTimeout(timeoutId);
               eventSource.close();
               await cleanupAndRefund();
+              
               // Don't retry on navigation timeouts or other server-side errors
-              handleError('Website evaluation failed. The site might be blocking automated access or is too slow to respond.');
+              const errorMessage = isHttp2Error 
+                ? 'Connection error occurred. Please try again or try a different website.'
+                : 'Website evaluation failed. The site might be blocking automated access or is too slow to respond.';
+              
+              handleError(errorMessage);
+              
+              // Reset UI state for HTTP2 errors
+              if (isHttp2Error) {
+                setIsLoading(false);
+                setIsGenerating(false);
+                setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
+              }
             } else {
               // We have results, so just close quietly
               console.log('Connection closed after receiving results - normal completion');

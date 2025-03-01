@@ -479,9 +479,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               onClick: () => window.location.href = '/points'
             });
           } else {
+            // Check for HTTP2 protocol errors
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+            const isHttp2Error = errorMessage.includes('ERR_HTTP2_PROTOCOL_ERROR');
+            
             addMessage({
               role: 'assistant' as const,
-              content: `error: ${error instanceof Error ? error.message : 'an error occurred while processing your message. please try again.'}`
+              content: isHttp2Error
+                ? 'Connection error occurred. Please try again or try a different website.'
+                : `error: ${errorMessage.includes('ERR_HTTP2_PROTOCOL_ERROR') ? 'Connection error occurred. Please try again.' : errorMessage}`
             });
           }
         } finally {
@@ -604,9 +610,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             eventSource.close();
             setIsThinking(false);
             setIsMessageLoading(false);
+            
+            // Check for HTTP2 protocol errors
+            const errorString = String(error);
+            const isHttp2Error = errorString.includes('ERR_HTTP2_PROTOCOL_ERROR');
+            
             addMessage({
               role: 'assistant' as const,
-              content: 'An error occurred during the recommendations phase. Please try again.',
+              content: isHttp2Error 
+                ? 'Connection error occurred. Please try again or try a different website.' 
+                : 'An error occurred during the recommendations phase. Please try again.',
               phase: 'Recommendations'
             });
           };
