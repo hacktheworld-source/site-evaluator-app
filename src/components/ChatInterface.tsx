@@ -1175,7 +1175,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
       {overallScore !== null && (
         <div className="overall-score">
-          overall score: {overallScore}
+          Overall Score: {overallScore}
         </div>
       )}
       {currentPhase && (
