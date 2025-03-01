@@ -77,21 +77,22 @@ body {
 
 .app-header {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 10px;
+  left: 20px;
+  right: 20px;
   height: var(--header-height);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 40px;
+  padding: 0 30px;
   background-color: rgba(10, 12, 7, 0.5); /* Semi-transparent deep-black */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px); /* For Safari support */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   transition: all 0.3s ease;
-  border-bottom: 1px solid var(--glass-border); /* Adds subtle border for glass effect */
+  border: 1px solid var(--glass-border); /* Enhanced border */
+  border-radius: 15px; /* Rounded corners */
 }
 
 .app-title {
@@ -452,11 +453,10 @@ input[type="text"]:focus, input[type="number"]:focus {
 .content-wrapper {
   display: flex;
   justify-content: center;
-  padding-top: var(--header-height);
+  padding-top: calc(var(--header-height) + 20px);
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  padding: var(--header-height) 0 0 0;
 }
 
 .content-wrapper.blur {
@@ -3290,14 +3290,17 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .app-footer {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 15px 40px;
-  background-color: transparent;
+  bottom: 10px;
+  left: 20px;
+  right: 20px;
+  padding: 15px 30px;
+  background-color: rgba(10, 12, 7, 0.5); /* Match the header */
   backdrop-filter: blur(10px);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   z-index: 1000;
+  border: 1px solid var(--glass-border);
+  border-radius: 15px;
 }
 
 .footer-links {
@@ -3332,7 +3335,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 .legal-content {
   max-width: 800px;
   margin: 0 auto;
-  padding-bottom: 60px; /* Add extra padding at bottom to account for footer */
+  padding-bottom: 80px; /* Increase padding to account for floating footer */
 }
 
 .legal-content h1 {
