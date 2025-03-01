@@ -3805,6 +3805,7 @@ textarea::placeholder {
   font-size: 14px;
   color: var(--off-white);
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .metrics-search::after {
