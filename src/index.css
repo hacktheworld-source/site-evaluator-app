@@ -1824,27 +1824,32 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .pre-analysis-content {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  padding: 10px 40px 50px 40px;
   opacity: 1;
   transform: translateY(0);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   box-sizing: border-box;
   position: relative;
   z-index: 1;
 }
 
-/* Add landing page background */
+/* Update background image positioning to ignore padding */
 .pre-analysis-content::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -10px;     /* Negative value of top padding */
+  left: -40px;    /* Negative value of left padding */
+  width: calc(100% + 80px);  /* 100% + left padding + right padding */
+  height: calc(100% + 60px); /* 100% + top padding + bottom padding */
   background-image: url('../public/landing-page.png');
   background-size: contain;
   background-repeat: no-repeat;
