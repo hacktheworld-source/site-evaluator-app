@@ -63,9 +63,9 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
           disabled={isLoading || !website.trim()}
         >
           {isLoading ? (
-            <div className="loading-indicator" />
+            <div className="royal-spinner" />
           ) : (
-            <i className="fas fa-arrow-right" />
+            <FontAwesomeIcon icon={faArrowRight} />
           )}
         </button>
       </div>

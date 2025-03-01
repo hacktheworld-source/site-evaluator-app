@@ -936,6 +936,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .input-wrapper:focus-within {
   border-bottom-color: var(--off-white);
+  background: transparent; /* Keep the same background when focused */
 }
 
 .input-wrapper input {
@@ -2041,9 +2042,27 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .website-input-form.compact .evaluate-submit-button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   font-size: 14px;
+  position: relative;
+  right: 3px;
+  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
+  border: none;
+  border-radius: 50%;
+  color: var(--deep-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.website-input-form.compact .evaluate-submit-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
 }
 
 .metric-value pre {
@@ -2091,13 +2110,27 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .website-input-form.compact .evaluate-submit-button {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   font-size: 14px;
+  position: relative;
   right: 3px;
-  background: none;
+  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
   border: none;
-  margin-bottom: 8px;
+  border-radius: 50%;
+  color: var(--deep-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.website-input-form.compact .evaluate-submit-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
 }
 
 .screenshot-preview {
@@ -3868,6 +3901,11 @@ textarea::placeholder {
   animation: borderGlow 2s infinite;
 }
 
+.input-wrapper input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+
 /* Animated page transitions */
 .main-content {
   animation: fadeIn 0.5s ease-out;
@@ -3993,4 +4031,59 @@ html {
   background: linear-gradient(to right, var(--gold-dark), var(--gold-light), var(--gold-dark));
   animation: shimmerGold 2s infinite linear;
   background-size: 200% 100%;
+}
+
+/* New robust Royal Olive spinner that won't conflict with other styles */
+.royal-spinner {
+  width: 24px !important;
+  height: 24px !important;
+  border: 3px solid rgba(197, 165, 114, 0.2) !important; 
+  border-top: 3px solid var(--gold-primary) !important;
+  border-right: 3px solid var(--gold-primary) !important;
+  border-radius: 50% !important;
+  animation: royal-spin 1s linear infinite !important;
+  box-sizing: border-box !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+  position: relative !important;
+  z-index: 100 !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  transform-origin: center center !important;
+}
+
+@keyframes royal-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.website-input-form.compact .input-wrapper {
+  margin: 0;
+  background: none;
+}
+
+.website-input-form.compact .input-wrapper:focus-within {
+  background: none; /* Keep the same background when focused */
+}
+
+/* ... existing code ... */
+/* Enhanced focus states with animation */
+.auth-modal input:focus,
+.metrics-search-input:focus {
+  animation: borderGlow 2s infinite;
+}
+
+.website-input-form .input-wrapper:focus-within {
+  animation: borderGlow 2s infinite;
+  background: rgba(28, 30, 25, 0.6) !important; /* Force same background when focused */
+}
+
+.website-input-form.compact .input-wrapper:focus-within {
+  background: transparent !important; /* Force transparent background when focused */
+  border-color: var(--gold-primary);
+}
+
+.input-wrapper input:focus {
+  background: transparent;
 }
