@@ -946,6 +946,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 .evaluate-submit-button {
   background: none;
   color: var(--accent-color);
+  transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;  /* Add transition for smooth appearance */
 }
 
 .evaluate-submit-button:hover {
@@ -959,18 +960,27 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .evaluate-submit-button:disabled {
   color: transparent;
-  opacity: 0.5;
+  opacity: 0;  /* Changed from 0.5 to 0 to make it completely invisible */
   cursor: not-allowed;
+  border-color: transparent;  /* Make border invisible too */
+  background: transparent;  /* Ensure background is also invisible */
+  transition: opacity 0.3s ease;  /* Smooth transition when appearing/disappearing */
 }
 
 .loading-indicator {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--off-white);
-  border-top: 2px solid var(--accent-color);
+  width: 24px;
+  height: 24px;
+  border: 3px solid transparent;
+  border-top: 3px solid var(--gold-primary);
+  border-right: 3px solid var(--gold-primary);
+  border-bottom: 3px solid var(--olive-medium);
+  border-left: 3px solid var(--olive-medium);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 8px;
+  box-sizing: border-box;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 10px;
 }
 
 @keyframes spin {
@@ -1490,7 +1500,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   -webkit-backdrop-filter: blur(4px) blur(calc(12px * var(--blur-strength)));
   --blur-strength: 0;
   animation: increaseBlur 0.3s forwards;
-  background: linear-gradient(to bottom, transparent, rgba(18, 18, 18, 1));
+  background: linear-gradient(to bottom, transparent, rgb(0, 0, 0));
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
