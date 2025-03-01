@@ -138,6 +138,36 @@ const AppContent: React.FC = () => {
     isThinking: false
   });
 
+  // Setup global error handler to catch unhandled errors
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      console.error('Global error caught:', event.error);
+      
+      // Check if this is an HTTP2 protocol error
+      const errorString = String(event.error || event.message);
+      const isHttp2Error = errorString.includes('ERR_HTTP2_PROTOCOL_ERROR');
+      
+      if (isHttp2Error) {
+        console.log('HTTP2 protocol error detected in global handler');
+        // Reset UI states
+        setIsLoading(false);
+        setIsGenerating(false);
+        setStatusMessage('Connection error occurred. Please try again or try a different website.');
+        
+        // Prevent default browser error handling
+        event.preventDefault();
+      }
+    };
+
+    // Add the global error event listener
+    window.addEventListener('error', handleGlobalError);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+    };
+  }, []);
+
   useEffect(() => {
     console.log('App component mounted');
     
@@ -409,6 +439,10 @@ const AppContent: React.FC = () => {
                 setIsGenerating(false);
                 setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
               }
+              
+              // Always reset UI states for any error
+              setIsLoading(false);
+              setIsGenerating(false);
             }
           };
 
@@ -423,6 +457,10 @@ const AppContent: React.FC = () => {
             // Check if this is an HTTP2 protocol error
             const errorString = String(error);
             const isHttp2Error = errorString.includes('ERR_HTTP2_PROTOCOL_ERROR');
+            
+            // Always reset loading states immediately on any EventSource error
+            setIsLoading(false);
+            setIsGenerating(false);
 
             // Only handle errors if we haven't received results yet
             if (!hasResults) {
@@ -437,18 +475,16 @@ const AppContent: React.FC = () => {
               
               handleError(errorMessage);
               
-              // Reset UI state for HTTP2 errors
+              // Display user-friendly message for HTTP2 errors
               if (isHttp2Error) {
-                setIsLoading(false);
-                setIsGenerating(false);
                 setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
+              } else {
+                setStatusMessage('Error occurred during evaluation. Your credits have been refunded.');
               }
             } else {
               // We have results, so just close quietly
               console.log('Connection closed after receiving results - normal completion');
               eventSource.close();
-              setIsLoading(false);
-              setIsGenerating(false);
             }
           };
 

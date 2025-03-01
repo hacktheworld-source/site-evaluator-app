@@ -607,6 +607,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             });
 
             console.error('EventSource error:', error);
+            
+            // Always close the connection and reset UI states immediately
             eventSource.close();
             setIsThinking(false);
             setIsMessageLoading(false);

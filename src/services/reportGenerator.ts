@@ -917,6 +917,17 @@ class ReportGenerator {
           return;
         }
 
+        // Check for HTTP2 protocol errors
+        const errorString = String(error);
+        const isHttp2Error = errorString.includes('ERR_HTTP2_PROTOCOL_ERROR');
+        
+        if (isHttp2Error) {
+          console.error('[Report Generator] HTTP2 protocol error detected');
+          cleanup();
+          clearTimeout(timeout);
+          throw new Error('Connection error occurred. Please try again later.');
+        }
+
         if (!isConnected) {
           // Connection establishment error
           retryCount++;
