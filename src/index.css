@@ -13,6 +13,8 @@
   --olive-dark: #3D4A28;    /* Deep olive green */
   --olive-medium: #606C38;  /* Medium olive */
   --olive-light: #8A9A5B;   /* Light olive */
+  --olive-xdark: #242918;   /* Extra dark olive for background */
+  --olive-black: #151A0E;   /* Near-black olive for background */
   
   /* Gold Accents */
   --gold-primary: #C5A572;  /* Antique gold */
@@ -48,7 +50,14 @@ body {
   font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--deep-black);
+  background: 
+    radial-gradient(circle at 10% 20%, var(--olive-xdark) 0%, transparent 35%),
+    radial-gradient(circle at 80% 30%, var(--olive-dark) 0%, transparent 25%),
+    radial-gradient(circle at 40% 70%, var(--olive-medium) 0%, transparent 20%),
+    radial-gradient(circle at 90% 85%, var(--olive-xdark) 0%, transparent 30%),
+    radial-gradient(circle at 20% 60%, var(--olive-dark) 0%, transparent 15%),
+    var(--olive-black);
+  background-attachment: fixed;
   color: var(--text-primary); /* Changed from --off-white to --text-primary */
 }
 
