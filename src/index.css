@@ -14,8 +14,7 @@
   --olive-medium: #606C38;  /* Medium olive */
   --olive-light: #8A9A5B;   /* Light olive */
   --olive-xdark: #242918;   /* Extra dark olive for background */
-  --olive-xxdark: #121409;  /* Nearly black olive */
-  --olive-black: #0A0A05;   /* Near-black olive for background */
+  --olive-black: #151A0E;   /* Near-black olive for background */
   
   /* Gold Accents */
   --gold-primary: #C5A572;  /* Antique gold */
@@ -52,16 +51,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: 
-    radial-gradient(ellipse at 15% 10%, var(--olive-xdark) 0%, transparent 50%),
-    radial-gradient(circle at 67% 32%, rgba(18, 20, 9, 0.5) 0%, transparent 35%),
-    radial-gradient(ellipse at 50% 22%, rgba(0, 0, 0, 0.6) 0%, transparent 32%),
-    radial-gradient(farthest-corner at 75% 25%, var(--olive-xxdark) 0%, transparent 40%),
-    radial-gradient(ellipse at 45% 60%, rgba(10, 12, 7, 0.7) 0%, transparent 60%),
-    radial-gradient(farthest-side at 85% 80%, #000 0%, transparent 55%),
-    radial-gradient(ellipse at 30% 70%, var(--olive-xxdark) 0%, transparent 45%),
-    radial-gradient(circle at 20% 90%, #000 0%, transparent 30%),
-    linear-gradient(135deg, #000 0%, var(--olive-black) 60%, var(--olive-xxdark) 100%);
-  background-blend-mode: multiply;
+    radial-gradient(50% 50% at 25% 25%, rgba(36, 41, 24, 0.12) 0%, transparent 70%),
+    radial-gradient(60% 50% at 75% 30%, rgba(10, 12, 7, 0.18) 0%, transparent 75%),
+    radial-gradient(70% 60% at 35% 50%, rgba(21, 26, 14, 0.1) 0%, transparent 65%),
+    radial-gradient(40% 60% at 60% 85%, rgba(36, 41, 24, 0.08) 0%, transparent 60%),
+    radial-gradient(65% 55% at 15% 70%, rgba(10, 12, 7, 0.15) 0%, transparent 65%),
+    radial-gradient(30% 40% at 88% 22%, rgba(36, 41, 24, 0.1) 0%, transparent 55%),
+    radial-gradient(55% 65% at 40% 80%, rgba(21, 26, 14, 0.12) 0%, transparent 70%),
+    radial-gradient(45% 45% at 92% 80%, rgba(10, 12, 7, 0.15) 0%, transparent 60%),
+    linear-gradient(135deg, var(--deep-black) 0%, var(--olive-black) 25%, var(--deep-black) 50%, rgba(10, 12, 7, 0.95) 75%, var(--deep-black) 100%);
   background-attachment: fixed;
   color: var(--text-primary); /* Changed from --off-white to --text-primary */
 }
