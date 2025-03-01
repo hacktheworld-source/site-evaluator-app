@@ -2529,7 +2529,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 15px;
-  align-items: center;
+  align-items: start;  /* Changed from center to start to allow content to expand */
   padding: 18px;
   border-radius: 10px;
   background: var(--card-bg);
@@ -2537,7 +2537,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: relative;
-  overflow: hidden;
+  overflow: visible;  /* Changed from hidden to visible to allow content to expand */
+  min-height: fit-content;  /* Ensure the container expands with content */
 }
 
 .report-item::after {
@@ -2596,6 +2597,9 @@ input[type="text"]:focus, input[type="number"]:focus {
 .report-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;  /* Ensure the info container uses full width */
 }
 
 .report-info h4 {
@@ -2619,6 +2623,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;  /* Ensure the metrics container uses full width */
+  margin-top: 8px;  /* Add some spacing from the date */
 }
 
 .metric {

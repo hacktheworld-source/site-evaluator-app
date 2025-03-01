@@ -1194,7 +1194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="button"
               onClick={handleGenerateReport}
               disabled={isLoading || isMessageLoading || isGeneratingReport}
-              className={`floating-action-button royal-olive primary ${isGeneratingReport ? 'generating' : ''}`}
+              className={`floating-action-button royal-olive ${isGeneratingReport ? 'generating' : ''}`}
             >
               {isGeneratingReport ? 'Generating...' : 'Download Report'}
             </button>
