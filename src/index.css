@@ -968,19 +968,18 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .loading-indicator {
-  width: 24px;
-  height: 24px;
-  border: 3px solid transparent;
-  border-top: 3px solid var(--gold-primary);
-  border-right: 3px solid var(--gold-primary);
-  border-bottom: 3px solid var(--olive-medium);
-  border-left: 3px solid var(--olive-medium);
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(197, 165, 114, 0.2); /* Very subtle gold border */
+  border-top: 3px solid var(--gold-primary);    /* Gold top border */
+  border-right: 3px solid var(--gold-primary);  /* Gold right border */
   border-radius: 50%;
   animation: spin 1s linear infinite;
   box-sizing: border-box;
   display: inline-block;
   vertical-align: middle;
-  margin: 0 10px;
+  margin: 0;
+  position: relative;
 }
 
 @keyframes spin {
@@ -3696,6 +3695,7 @@ textarea::placeholder {
 .website-input-form .input-wrapper:focus-within {
   border-color: var(--gold-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(197, 165, 114, 0.1);
+  background: rgba(28, 30, 25, 0.6); /* Keep the same background when focused */
 }
 
 .website-input-form input {
@@ -3866,21 +3866,6 @@ textarea::placeholder {
 .website-input-form .input-wrapper:focus-within,
 .metrics-search-input:focus {
   animation: borderGlow 2s infinite;
-}
-
-/* Animated loading indicators */
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(197, 165, 114, 0.3);
-  border-radius: 50%;
-  border-top-color: var(--gold-primary);
-  animation: spin 1s ease-in-out infinite;
-  display: inline-block;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* Animated page transitions */
