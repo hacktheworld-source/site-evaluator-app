@@ -2557,6 +2557,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: calc(100vh - var(--header-height));
   overflow-y: auto;
   padding-right: 15px;
+  padding-top: 5px;
 }
 
 .reports-list::-webkit-scrollbar {
