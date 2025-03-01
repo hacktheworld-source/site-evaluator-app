@@ -1818,7 +1818,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding: 0px 40px 35px 40px;
+  padding: 10px 40px 50px 40px;
 }
 
 .pre-analysis-content {
@@ -3290,17 +3290,15 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .app-footer {
   position: fixed;
-  bottom: 10px;
-  left: 20px;
-  right: 20px;
-  padding: 15px 30px;
-  background-color: rgba(10, 12, 7, 0.5); /* Match the header */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  border: 1px solid var(--glass-border);
-  border-radius: 15px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 15px 40px;
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
 }
 
 .footer-links {
