@@ -14,8 +14,8 @@
   --olive-medium: #606C38;  /* Medium olive */
   --olive-light: #8A9A5B;   /* Light olive */
   --olive-xdark: #242918;   /* Extra dark olive for background */
-  --olive-xxdark: #1A1F12;  /* Extra extra dark olive for deeper shadows */
-  --olive-black: #0F1209;   /* Near-black olive for background - even darker */
+  --olive-xxdark: #121409;  /* Nearly black olive */
+  --olive-black: #0A0A05;   /* Near-black olive for background */
   
   /* Gold Accents */
   --gold-primary: #C5A572;  /* Antique gold */
@@ -52,14 +52,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: 
-    radial-gradient(ellipse at 10% 10%, var(--olive-xxdark) 0%, transparent 45%),
-    radial-gradient(ellipse at 90% 20%, var(--olive-xxdark) 0%, transparent 40%),
-    radial-gradient(ellipse at 25% 40%, var(--olive-xdark) 0%, transparent 55%),
-    radial-gradient(ellipse at 70% 60%, var(--olive-xxdark) 0%, transparent 65%),
-    radial-gradient(ellipse at 30% 85%, var(--olive-xxdark) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 80%, var(--olive-xdark) 0%, transparent 65%),
-    radial-gradient(ellipse at 50% 50%, var(--olive-xdark) 0%, transparent 70%),
-    var(--olive-black);
+    radial-gradient(ellipse at 15% 10%, var(--olive-xdark) 0%, transparent 50%),
+    radial-gradient(circle at 67% 32%, rgba(18, 20, 9, 0.5) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 22%, rgba(0, 0, 0, 0.6) 0%, transparent 32%),
+    radial-gradient(farthest-corner at 75% 25%, var(--olive-xxdark) 0%, transparent 40%),
+    radial-gradient(ellipse at 45% 60%, rgba(10, 12, 7, 0.7) 0%, transparent 60%),
+    radial-gradient(farthest-side at 85% 80%, #000 0%, transparent 55%),
+    radial-gradient(ellipse at 30% 70%, var(--olive-xxdark) 0%, transparent 45%),
+    radial-gradient(circle at 20% 90%, #000 0%, transparent 30%),
+    linear-gradient(135deg, #000 0%, var(--olive-black) 60%, var(--olive-xxdark) 100%);
+  background-blend-mode: multiply;
   background-attachment: fixed;
   color: var(--text-primary); /* Changed from --off-white to --text-primary */
 }
