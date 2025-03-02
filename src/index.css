@@ -965,42 +965,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding-right: 40px;
 }
 
-.evaluate-submit-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  padding: 0 20px;
-  border-radius: 22px;
-  background-color: black;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s ease-out;
-  position: relative;
-  overflow: hidden;
-  min-width: 140px;
-  font-size: 14px;
-}
-
-.evaluate-submit-button:hover {
-  background-color: #333;
-}
-
-.evaluate-submit-button:active {
-  background-color: #000;
-}
-
-.evaluate-submit-button:disabled {
-  color: transparent;
-  opacity: 0;  /* Changed from 0.5 to 0 to make it completely invisible */
-  cursor: not-allowed;
-  border-color: transparent;  /* Make border invisible too */
-  background: transparent;  /* Ensure background is also invisible */
-  transition: opacity 0.3s ease;  /* Smooth transition when appearing/disappearing */
-}
-
 .loading-indicator {
   width: 28px;
   height: 28px;
@@ -2107,25 +2071,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   background: none;
 }
 
-.website-input-form.compact .evaluate-submit-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  padding: 0 15px;
-  border-radius: 18px;
-  background-color: black;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s ease-out;
-  position: relative;
-  overflow: hidden;
-  min-width: 80px;
-  font-size: 14px;
-}
-
 .metric-value pre {
   margin: 0;
   white-space: pre-wrap;
@@ -2168,29 +2113,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   border: none;
   border-radius: 0;
   width: 100%;
-}
-
-.website-input-form.compact .evaluate-submit-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  padding: 0 15px;
-  border-radius: 18px;
-  background-color: black;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s ease-out;
-  position: relative;
-  overflow: hidden;
-  min-width: 80px;
-  font-size: 14px;
-}
-
-.website-input-form.compact .evaluate-submit-button:hover {
-  background-color: #333;
 }
 
 .screenshot-preview {
@@ -3805,33 +3727,6 @@ textarea::placeholder {
   box-shadow: none;
 }
 
-.evaluate-submit-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  padding: 0 20px;
-  border-radius: 22px;
-  background-color: black;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s ease-out;
-  position: relative;
-  overflow: hidden;
-  min-width: 140px;
-  font-size: 14px;
-}
-
-.evaluate-submit-button:hover {
-  background-color: #333;
-}
-
-.evaluate-submit-button:active {
-  background-color: #000;
-}
-
 /* Remove shimmer effect by deleting the ::before block */
 
 .website-input-form.compact .evaluate-submit-button {
@@ -3840,7 +3735,7 @@ textarea::placeholder {
   justify-content: center;
   height: 36px;
   padding: 0 15px;
-  border-radius: 18px;
+  border-radius: 8px;
   background-color: black;
   color: white;
   font-weight: 500;
@@ -3946,8 +3841,7 @@ textarea::placeholder {
 
 /* Gold shimmer effect for important elements */
 .auth-modal button[type="submit"],
-.primary-button,
-.evaluate-submit-button {
+.primary-button {
   background-size: 200% 100%;
   background-image: linear-gradient(
     to right,
