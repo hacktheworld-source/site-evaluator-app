@@ -47,6 +47,18 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
     }
   };
 
+  const getButtonContent = () => {
+    if (isLoading) {
+      return <div className="royal-spinner" />;
+    }
+    
+    if (variant === 'compact') {
+      return <FontAwesomeIcon icon={faArrowRight} />;
+    }
+    
+    return isLoggedIn ? "Get My Analysis" : "Get Your Free Analysis";
+  };
+
   return (
     <form onSubmit={handleSubmit} className={`website-input-form ${variant}`}>
       <div className="input-wrapper">
@@ -62,11 +74,7 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
           className="evaluate-submit-button"
           disabled={isLoading || !website.trim()}
         >
-          {isLoading ? (
-            <div className="royal-spinner" />
-          ) : (
-            "Analyze"
-          )}
+          {getButtonContent()}
         </button>
       </div>
     </form>
