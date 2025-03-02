@@ -1666,41 +1666,38 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding: 120px 40px 80px 8%; /* Adjusted padding to move content left with proper spacing */
+  padding: 10px 40px 50px 40px;
   opacity: 1;
   transform: translateY(0);
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Changed from center to flex-start for left alignment */
+  align-items: center;
   justify-content: center;
   box-sizing: border-box;
   position: relative;
   z-index: 1;
 }
 
-/* Updated container to implement rule of thirds */
-.pre-analysis-content > * {
-  max-width: 33%; /* Limit content to approximately one third of screen width */
-  text-align: left; /* Ensure text is left-aligned within the container */
-  position: relative;
-  z-index: 2;
-}
-
-/* Update background image positioning to work with rule of thirds layout */
+/* Update background image positioning to ignore padding */
 .pre-analysis-content::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -10px;     /* Negative value of top padding */
+  left: -40px;    /* Negative value of left padding */
+  width: calc(100% + 80px);  /* 100% + left padding + right padding */
+  height: calc(100% + 60px); /* 100% + top padding + bottom padding */
   background-image: url('../public/landing-page.png');
-  background-size: cover;
+  background-size: cover;  /* Changed from '100% auto' to 'cover' to ensure complete filling */
   background-repeat: no-repeat;
   background-position: top center;
   z-index: -1;
   opacity: 0.9;
   pointer-events: none;
+}
+
+.pre-analysis-content > * {
+  position: relative;
+  z-index: 2;
 }
 
 .pre-analysis-content.fade-out {
@@ -3732,7 +3729,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 12px 16px;
-  color: var(--off-white) ;
+  color: var(--off-white); 
   font-size: 16px;
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -4080,15 +4077,4 @@ textarea::placeholder {
 .website-input-form .input-wrapper:focus-within {
   border-color: var(--off-white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Add responsive design for smaller screens */
-@media (max-width: 768px) {
-  .pre-analysis-content {
-    padding: 100px 20px 60px 5%;
-  }
-  
-  .pre-analysis-content > * {
-    max-width: 90%;
-  }
 }
