@@ -1671,11 +1671,46 @@ input[type="text"]:focus, input[type="number"]:focus {
   transform: translateY(0);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start */
   justify-content: center;
   box-sizing: border-box;
   position: relative;
   z-index: 1;
+}
+
+.pre-analysis-content h1,
+.pre-analysis-content .animated-eye,
+.pre-analysis-content .app-description,
+.pre-analysis-content .website-input-form,
+.pre-analysis-content .error-message {
+  max-width: 60%; /* Reduced from 66% for better visual proportion */
+  margin-left: 33%; /* Align with left third vertical line */
+  align-self: flex-start; /* Ensure alignment is consistent */
+}
+
+.pre-analysis-content h1 {
+  font-size: 2.4rem; /* Make heading slightly larger for emphasis */
+  margin-bottom: 1.5rem;
+  text-align: left; /* Align text to the left instead of center */
+}
+
+.pre-analysis-content .app-description {
+  margin-bottom: 2rem; /* Increase spacing before the input */
+  font-size: 1.1rem; /* Slightly larger description text */
+  line-height: 1.6;
+  text-align: left; /* Align text to the left instead of center */
+}
+
+/* For mobile responsiveness */
+@media (max-width: 768px) {
+  .pre-analysis-content h1,
+  .pre-analysis-content .animated-eye,
+  .pre-analysis-content .app-description,
+  .pre-analysis-content .website-input-form,
+  .pre-analysis-content .error-message {
+    max-width: 100%;
+    margin-left: 0;
+  }
 }
 
 /* Update background image positioning to ignore padding */
@@ -3729,7 +3764,7 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 12px 16px;
-  color: var(--off-white); 
+  color: var(--off-white) ;
   font-size: 16px;
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
