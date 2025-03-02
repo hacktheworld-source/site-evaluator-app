@@ -453,12 +453,15 @@ input[type="text"]:focus, input[type="number"]:focus {
 .content-wrapper {
   display: flex;
   justify-content: center;
-  padding-top: calc(var(--header-height) + 20px);
+  /* Remove padding-top since main-content is now absolutely positioned */
+  padding-top: 0;
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
   /* Ensure consistent spacing for footer */
   padding-bottom: 60px;
+  /* Add position relative to serve as positioning context */
+  position: relative;
 }
 
 .content-wrapper.blur {
@@ -469,12 +472,19 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: calc(100vh - var(--header-height));
-  position: relative;
+  /* Replace the calculated height with fixed positioning to prevent shifts */
+  position: absolute;
+  /* Add margin adjustment to properly account for header spacing */
+  top: calc(var(--header-height) + 20px);
+  bottom: 0;
+  left: 0;
+  right: 0;
   overflow: hidden;
   max-width: none;
   padding: 0;
   padding-bottom: 40px;
+  /* Add this to ensure consistent box model */
+  box-sizing: border-box;
 }
 
 .app-description {
@@ -1852,7 +1862,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   left: -40px;    /* Negative value of left padding */
   width: calc(100% + 80px);  /* 100% + left padding + right padding */
   height: calc(100% + 60px); /* 100% + top padding + bottom padding */
-  background-image: url('../public/landing-page.png');
+  background-image: url('../public/landing-page2.png');
   background-size: cover;  /* Changed from '100% auto' to 'cover' to ensure complete filling */
   background-repeat: no-repeat;
   background-position: top center;
