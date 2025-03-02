@@ -3736,16 +3736,21 @@ textarea::placeholder {
   height: 36px;
   padding: 0 15px;
   border-radius: 8px;
-  background-color: black;
-  color: white;
+  background-color: white;
+  color: black;
   font-weight: 500;
   cursor: pointer;
   border: none;
-  transition: background-color 0.2s ease-out;
+  transition: all 0.2s ease-out;
   position: relative;
   overflow: hidden;
   min-width: 80px;
   font-size: 14px;
+}
+
+.website-input-form.compact .evaluate-submit-button:disabled {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .website-input-form.compact .evaluate-submit-button:hover {
