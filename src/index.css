@@ -472,7 +472,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   overflow: hidden;
   max-width: none;
   padding: 0;
-  padding-bottom: 35px;
+  padding-bottom: 40px;
 }
 
 .app-description {
@@ -1821,7 +1821,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding: 40px 0px;
+  padding: 40px 0px 0px 0px;
 }
 
 .pre-analysis-content {
