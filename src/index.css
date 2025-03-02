@@ -966,18 +966,30 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .evaluate-submit-button {
-  background: none;
-  color: var(--accent-color);
-  transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;  /* Add transition for smooth appearance */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+  font-size: 14px;
 }
 
 .evaluate-submit-button:hover {
-  background: none;
-  color: var(--off-white);
+  background-color: #333;
 }
 
 .evaluate-submit-button:active {
-  transform: none;
+  background-color: #000;
 }
 
 .evaluate-submit-button:disabled {
@@ -2096,27 +2108,22 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .website-input-form.compact .evaluate-submit-button {
-  width: 32px;
-  height: 32px;
-  font-size: 14px;
-  position: relative;
-  right: 3px;
-  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
-  border: none;
-  border-radius: 50%;
-  color: var(--deep-black);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-}
-
-.website-input-form.compact .evaluate-submit-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 18px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 80px;
+  font-size: 14px;
 }
 
 .metric-value pre {
@@ -2164,27 +2171,26 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .website-input-form.compact .evaluate-submit-button {
-  width: 32px;
-  height: 32px;
-  font-size: 14px;
-  position: relative;
-  right: 3px;
-  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
-  border: none;
-  border-radius: 50%;
-  color: var(--deep-black);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 18px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 80px;
+  font-size: 14px;
 }
 
 .website-input-form.compact .evaluate-submit-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
+  background-color: #333;
 }
 
 .screenshot-preview {
@@ -3800,53 +3806,57 @@ textarea::placeholder {
 }
 
 .evaluate-submit-button {
-  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
-  color: var(--deep-black);
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: none;
+  transition: background-color 0.2s ease-out;
   position: relative;
   overflow: hidden;
-}
-
-.evaluate-submit-button::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: rotate(45deg);
-  animation: shimmer 3s infinite;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  min-width: 140px;
+  font-size: 14px;
 }
 
 .evaluate-submit-button:hover {
-  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background-color: #333;
 }
 
-.evaluate-submit-button:hover::before {
-  opacity: 1;
+.evaluate-submit-button:active {
+  background-color: #000;
 }
 
-/* Enhanced Metrics Search Input */
+/* Remove shimmer effect by deleting the ::before block */
+
+.website-input-form.compact .evaluate-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 18px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 80px;
+  font-size: 14px;
+}
+
+.website-input-form.compact .evaluate-submit-button:hover {
+  background-color: #333;
+}
+
 .metrics-search {
   position: relative;
   margin-bottom: 15px;

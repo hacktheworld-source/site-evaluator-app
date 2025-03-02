@@ -65,7 +65,7 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
           {isLoading ? (
             <div className="royal-spinner" />
           ) : (
-            <FontAwesomeIcon icon={faArrowRight} />
+            "Analyze"
           )}
         </button>
       </div>
