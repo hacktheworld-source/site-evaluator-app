@@ -453,10 +453,14 @@ input[type="text"]:focus, input[type="number"]:focus {
 .content-wrapper {
   display: flex;
   justify-content: center;
+  /* Ensure consistent top padding based on header height */
   padding-top: calc(var(--header-height) + 20px);
-  height: 100vh;
+  /* Adjust height to account for footer */
+  height: calc(100vh - 60px); /* 60px for footer height + padding */
   overflow: hidden;
   box-sizing: border-box;
+  /* Add position relative to create a positioning context */
+  position: relative;
 }
 
 .content-wrapper.blur {
@@ -467,12 +471,15 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: calc(100vh - var(--header-height));
+  /* Adjust height to account for header and footer */
+  height: calc(100vh - var(--header-height) - 60px); /* 60px accounts for footer height + padding */
   position: relative;
   overflow: hidden;
   max-width: none;
   padding: 0;
-  padding-bottom: 40px;
+  /* Adjust padding to ensure consistent footer spacing */
+  padding-bottom: 60px;
+  box-sizing: border-box;
 }
 
 .app-description {
@@ -1821,7 +1828,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding: 40px 0px 0px 0px;
 }
 
 .pre-analysis-content {
@@ -1882,6 +1888,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
+  /* Add padding to account for header and footer */
+  padding-top: var(--header-height);
+  padding-bottom: 60px; /* Footer height + some extra space */
 }
 
 .post-analysis-content.fade-in {
@@ -1896,28 +1905,30 @@ input[type="text"]:focus, input[type="number"]:focus {
   grid-template-columns: minmax(20px, 1fr) 800px minmax(20px, 1fr);
   gap: 0;
   width: 100%;
+  /* Adjust height to properly account for header and footer */
   height: 100%;
   padding: 0;
-  position: relative;
-  max-height: 100%;
   overflow: hidden;
   transition: grid-template-columns 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  /* Ensure proper positioning */
+  position: absolute;
+  top: var(--header-height);
+  bottom: 60px; /* Account for footer */
+  left: 0;
+  right: 0;
+  margin: 0;
 }
 
 .analysis-layout.has-results {
   grid-template-columns: 400px minmax(0, 1fr) 0;
-}
-
-.analysis-main {
-  grid-column: 2;
-  display: flex;
-  flex-direction: column;
+  /* Keep the same positioning when the metrics panel is visible */
   height: 100%;
-  overflow: hidden;
-  position: relative;
-  padding: 0 20px;
-  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  transform-origin: center;
+  position: absolute;
+  top: var(--header-height);
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  margin: 0;
 }
 
 .metrics-panel {
@@ -1925,8 +1936,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   backdrop-filter: none;
   border-radius: 0;
   padding: 20px;
-  height: 100%;
-  max-height: 100%;
+  /* Adjust height to account for header and footer */
+  height: calc(100% - var(--header-height) - 60px);
+  max-height: calc(100% - var(--header-height) - 60px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1940,6 +1952,13 @@ input[type="text"]:focus, input[type="number"]:focus {
     opacity 0.3s ease,
     visibility 0s linear 0.3s,
     transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  /* Ensure consistent positioning to prevent layout shifts */
+  position: absolute;
+  left: 0;
+  top: var(--header-height);
+  margin: 0;
+  padding-top: 20px;
+  padding-bottom: 60px; /* Account for footer */
 }
 
 .analysis-layout.has-results .metrics-panel {
@@ -1952,6 +1971,10 @@ input[type="text"]:focus, input[type="number"]:focus {
     opacity 0.3s ease,
     visibility 0s linear 0s,
     transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  /* Keep consistent positioning */
+  position: absolute;
+  left: 0;
+  top: var(--header-height);
 }
 
 .metrics-header {
@@ -2074,6 +2097,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: 100%;
   min-height: 0;
   position: relative;
+  /* Add consistent bottom padding to prevent footer overlap */
+  padding-bottom: 60px; 
+  box-sizing: border-box;
 }
 
 .chat-interface {
@@ -2223,12 +2249,18 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .analysis-main {
+  grid-column: 2;
   display: flex;
   flex-direction: column;
+  /* Ensure consistent height regardless of metrics panel */
   height: 100%;
   overflow: hidden;
   position: relative;
   padding: 0 20px;
+  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform-origin: center;
+  /* Prevent layout shift when metrics panel slides in */
+  will-change: transform;
 }
 
 .status-message {
