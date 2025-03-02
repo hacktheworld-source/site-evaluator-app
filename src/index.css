@@ -963,6 +963,9 @@ input[type="text"]:focus, input[type="number"]:focus {
 .input-wrapper input {
   flex-grow: 1;
   padding-right: 40px;
+  background: transparent;
+  border: none;
+  color: var(--off-white);
 }
 
 .loading-indicator {
@@ -3946,26 +3949,15 @@ textarea::placeholder {
 }
 
 .auth-modal .google-sign-in-button {
-  background: var(--deep-black);
-  color: var(--off-white);
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: var(--deep-black) !important;
+  color: var(--off-white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .auth-modal .google-sign-in-button:hover {
-  background: var(--deep-black);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: #151515 !important;
+  border-color: var(--off-white) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
 }
 
 .auth-modal .divider {
@@ -3994,7 +3986,6 @@ textarea::placeholder {
   background-image: none !important;
   background-color: var(--off-white) !important;
   background: linear-gradient(to bottom, var(--off-white) 0%, var(--off-white) 100%) !important;
-  animation: none !important;
   color: var(--deep-black) !important;
   border: none !important;
   border-radius: 8px;
@@ -4002,11 +3993,12 @@ textarea::placeholder {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease !important;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
   margin-top: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
+  animation: none !important;
 }
 
 .auth-modal button[type="submit"]::before {
@@ -4021,8 +4013,17 @@ textarea::placeholder {
 }
 
 .auth-modal button[type="submit"]:hover {
-  background: var(--off-white) !important;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  background: #f0f0f0 !important;
+  background-color: #f0f0f0 !important;
+  background-image: none !important;
+  transform: translateY(-1px) !important;
+}
+
+.auth-modal button[type="submit"]:active {
+  background: #e8e8e8 !important;
+  background-color: #e8e8e8 !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .auth-modal button[type="submit"]:hover::before {
