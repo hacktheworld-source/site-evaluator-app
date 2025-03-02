@@ -1065,8 +1065,8 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .auth-modal {
-  background: rgba(24, 24, 24, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(24, 24, 24, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 16px;
   padding: 32px;
   width: 90%;
@@ -1079,6 +1079,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   margin: 0 0 24px 0;
   font-size: 24px;
   font-weight: 500;
+  color: var(--off-white) !important;
 }
 
 .auth-modal form {
@@ -1088,24 +1089,26 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .auth-modal input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  background: rgba(28, 30, 25, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: var(--off-white) !important;
   padding: 12px 16px;
-  color: var(--off-white);
   font-size: 16px;
   transition: all 0.2s ease;
 }
 
 .auth-modal input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--off-white) !important;
+  background: rgba(28, 30, 25, 0.8) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  animation: none !important;
 }
 
 .auth-modal button[type="submit"] {
-  background: var(--off-white);
-  color: var(--deep-black);
+  background: var(--off-white) !important;
+  background-image: none !important;
+  animation: none !important;
+  color: var(--deep-black) !important;
   border: none;
   border-radius: 8px;
   padding: 12px;
@@ -1132,7 +1135,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .auth-modal button[type="submit"]:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: #f5f5f5 !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
@@ -1171,11 +1174,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   transition: all 0.3s ease;
   text-decoration: underline;
   text-underline-offset: 3px;
+  color: var(--off-white) !important;
 }
 
 .auth-modal .toggle-auth-mode:hover {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.8 !important;
+  color: var(--off-white) !important;
 }
 
 .auth-modal .google-sign-in-button {
@@ -4140,4 +4144,69 @@ html {
   opacity: 1;
   visibility: visible;
   box-shadow: none;
+}
+
+/* Enhanced focus states with animation */
+.auth-modal input:focus,
+.website-input-form .input-wrapper:focus-within,
+.metrics-search-input:focus {
+  animation: borderGlow 2s infinite;
+}
+
+/* Override gold styling for auth modal button - higher specificity */
+.auth-modal button[type="submit"] {
+  background: var(--off-white) !important;
+  background-image: none !important;
+  animation: none !important;
+  color: var(--deep-black) !important;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.auth-modal button[type="submit"]:hover {
+  background: #f5f5f5 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.input-wrapper input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Override gold styling for auth modal elements - higher specificity */
+.auth-modal .toggle-auth-mode {
+  color: var(--off-white) !important;
+  background: none !important;
+  border: none !important;
+  text-decoration: underline;
+  transition: opacity 0.3s ease;
+  opacity: 0.8;
+}
+
+.auth-modal .toggle-auth-mode:hover {
+  opacity: 1 !important;
+  color: var(--off-white) !important;
+}
+
+.auth-modal .divider {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.auth-modal .divider::before,
+.auth-modal .divider::after {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Add at the end of the file */
+/* Critical override to remove gold gradients from auth button */
+.auth-modal button[type="submit"] {
+  background: var(--off-white) !important;
+  background-image: none !important;
+  background-color: var(--off-white) !important;
+  background: linear-gradient(to bottom, var(--off-white) 0%, var(--off-white) 100%) !important;
+  border: none !important;
+  color: var(--deep-black) !important;
+  transition: all 0.2s ease !important;
 }
