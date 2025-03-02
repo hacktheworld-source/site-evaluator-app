@@ -453,14 +453,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 .content-wrapper {
   display: flex;
   justify-content: center;
-  /* Ensure consistent top padding based on header height */
   padding-top: calc(var(--header-height) + 20px);
-  /* Adjust height to account for footer */
-  height: calc(100vh - 60px); /* 60px for footer height + padding */
+  height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  /* Add position relative to create a positioning context */
-  position: relative;
+  /* Ensure consistent spacing for footer */
+  padding-bottom: 60px;
 }
 
 .content-wrapper.blur {
@@ -471,15 +469,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Adjust height to account for header and footer */
-  height: calc(100vh - var(--header-height) - 60px); /* 60px accounts for footer height + padding */
+  height: calc(100vh - var(--header-height));
   position: relative;
   overflow: hidden;
   max-width: none;
   padding: 0;
-  /* Adjust padding to ensure consistent footer spacing */
-  padding-bottom: 60px;
-  box-sizing: border-box;
+  padding-bottom: 40px;
 }
 
 .app-description {
@@ -1888,9 +1883,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  /* Add padding to account for header and footer */
-  padding-top: var(--header-height);
-  padding-bottom: 60px; /* Footer height + some extra space */
+  /* Ensure consistent positioning relative to header and footer */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .post-analysis-content.fade-in {
@@ -1902,33 +1900,39 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .analysis-layout {
   display: grid;
-  grid-template-columns: minmax(20px, 1fr) 800px minmax(20px, 1fr);
+  /* Keep a consistent grid structure that accommodates the metrics panel */
+  grid-template-columns: 0 minmax(0, 1fr) 0;
   gap: 0;
   width: 100%;
-  /* Adjust height to properly account for header and footer */
   height: 100%;
   padding: 0;
+  position: relative;
+  max-height: 100%;
   overflow: hidden;
+  /* Use a smooth transition for the grid change */
   transition: grid-template-columns 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  /* Ensure proper positioning */
-  position: absolute;
-  top: var(--header-height);
-  bottom: 60px; /* Account for footer */
-  left: 0;
-  right: 0;
-  margin: 0;
+  /* Ensure grid maintains its position */
+  align-items: start;
 }
 
 .analysis-layout.has-results {
+  /* When results are shown, adjust the columns but maintain vertical alignment */
   grid-template-columns: 400px minmax(0, 1fr) 0;
-  /* Keep the same positioning when the metrics panel is visible */
+}
+
+.analysis-main {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  position: absolute;
-  top: var(--header-height);
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  margin: 0;
+  overflow: hidden;
+  position: relative;
+  padding: 0 20px;
+  /* Remove any transformations that might affect vertical positioning */
+  transition: width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  /* Ensure the content takes up exactly the right height */
+  min-height: 0;
+  max-height: 100%;
 }
 
 .metrics-panel {
@@ -1936,29 +1940,23 @@ input[type="text"]:focus, input[type="number"]:focus {
   backdrop-filter: none;
   border-radius: 0;
   padding: 20px;
-  /* Adjust height to account for header and footer */
-  height: calc(100% - var(--header-height) - 60px);
-  max-height: calc(100% - var(--header-height) - 60px);
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  grid-column: 1;
   width: 0;
   opacity: 0;
   visibility: hidden;
   transform: translateX(-20px);
+  /* Use smooth transitions for the panel appearance */
   transition: 
     width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
     opacity 0.3s ease,
     visibility 0s linear 0.3s,
     transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  /* Ensure consistent positioning to prevent layout shifts */
-  position: absolute;
-  left: 0;
-  top: var(--header-height);
-  margin: 0;
-  padding-top: 20px;
-  padding-bottom: 60px; /* Account for footer */
 }
 
 .analysis-layout.has-results .metrics-panel {
@@ -1971,10 +1969,6 @@ input[type="text"]:focus, input[type="number"]:focus {
     opacity 0.3s ease,
     visibility 0s linear 0s,
     transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  /* Keep consistent positioning */
-  position: absolute;
-  left: 0;
-  top: var(--header-height);
 }
 
 .metrics-header {
@@ -2097,9 +2091,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: 100%;
   min-height: 0;
   position: relative;
-  /* Add consistent bottom padding to prevent footer overlap */
-  padding-bottom: 60px; 
-  box-sizing: border-box;
+  /* Prevent any vertical movement by ensuring consistent height */
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .chat-interface {
@@ -2108,7 +2102,10 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex: 1;
   height: 100%;
   min-height: 0;
+  max-height: 100%;
   background: transparent;
+  /* Prevent overflow issues */
+  overflow: hidden;
 }
 
 .chat-messages {
@@ -2117,6 +2114,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 15px 20px;
   margin: 0;
   background: none;
+  /* Prevent any pushing against top or bottom */
+  max-height: calc(100% - 50px); /* Adjust if needed for input height */
 }
 
 .website-input-form.compact .evaluate-submit-button {
@@ -2249,18 +2248,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .analysis-main {
-  grid-column: 2;
   display: flex;
   flex-direction: column;
-  /* Ensure consistent height regardless of metrics panel */
   height: 100%;
   overflow: hidden;
   position: relative;
   padding: 0 20px;
-  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  transform-origin: center;
-  /* Prevent layout shift when metrics panel slides in */
-  will-change: transform;
 }
 
 .status-message {
