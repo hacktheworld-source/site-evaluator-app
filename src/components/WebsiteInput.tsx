@@ -59,7 +59,7 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
         />
         <button
           type="submit"
-          className="evaluate-submit-button"
+          className="evaluate-submit-button landing-page"
           disabled={isLoading || !website.trim()}
         >
           {isLoading ? (
