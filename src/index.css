@@ -971,9 +971,8 @@ input[type="text"]:focus, input[type="number"]:focus {
 .loading-indicator {
   width: 28px;
   height: 28px;
-  border: 3px solid rgba(197, 165, 114, 0.2); /* Very subtle gold border */
-  border-top: 3px solid var(--gold-primary);    /* Gold top border */
-  border-right: 3px solid var(--gold-primary);  /* Gold right border */
+  border-top: 3px solid var(--off-white);
+  border-right: 3px solid var(--off-white);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   box-sizing: border-box;
@@ -3688,8 +3687,8 @@ html {
   width: 24px !important;
   height: 24px !important;
   border: 3px solid rgba(197, 165, 114, 0.2) !important; 
-  border-top: 3px solid var(--gold-primary) !important;
-  border-right: 3px solid var(--gold-primary) !important;
+  border-top: 3px solid var(--off-white) !important;
+  border-right: 3px solid var(--off-white) !important;
   border-radius: 50% !important;
   animation: royal-spin 1s linear infinite !important;
   box-sizing: border-box !important;
