@@ -1850,8 +1850,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   left: -40px;    /* Negative value of left padding */
   width: calc(100% + 80px);  /* 100% + left padding + right padding */
   height: calc(100% + 60px); /* 100% + top padding + bottom padding */
-  background-image: url('../public/landing-page.png');
-  background-size: contain;
+  background-image: url('../public/landing-page.png'); /* Keep this path relative */
+  background-size: 100% auto;  /* Changed from 'contain' to '100% auto' to ensure full width */
   background-repeat: no-repeat;
   background-position: top center;
   z-index: -1;
