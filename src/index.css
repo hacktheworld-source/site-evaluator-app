@@ -1612,7 +1612,6 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .animated-eye {
   display: flex;
-  justify-content: center;
   margin: 10px 0;
 }
 
@@ -1671,13 +1670,15 @@ input[type="text"]:focus, input[type="number"]:focus {
   transform: translateY(0);
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Changed from center to flex-start */
+  align-items: flex-start; /* Ensure items align to the left */
   justify-content: center;
   box-sizing: border-box;
   position: relative;
   z-index: 1;
+  text-align: left; /* Add explicit text alignment */
 }
 
+/* Individual element positioning for rule of thirds */
 .pre-analysis-content h1,
 .pre-analysis-content .animated-eye,
 .pre-analysis-content .app-description,
@@ -1686,12 +1687,21 @@ input[type="text"]:focus, input[type="number"]:focus {
   max-width: 60%; /* Reduced from 66% for better visual proportion */
   margin-left: 33%; /* Align with left third vertical line */
   align-self: flex-start; /* Ensure alignment is consistent */
+  text-align: left; /* Force text alignment left */
+}
+
+/* Specifically target the animated eye for alignment */
+.pre-analysis-content .animated-eye {
+  align-self: flex-start; /* Force eye component to align left */
+  margin-left: 33%; /* Match other elements */
+  margin-bottom: 1.5rem; /* Add some space after the eye */
 }
 
 .pre-analysis-content h1 {
   font-size: 2.4rem; /* Make heading slightly larger for emphasis */
   margin-bottom: 1.5rem;
   text-align: left; /* Align text to the left instead of center */
+  width: 100%; /* Ensure full width within the container */
 }
 
 .pre-analysis-content .app-description {
@@ -1699,6 +1709,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   font-size: 1.1rem; /* Slightly larger description text */
   line-height: 1.6;
   text-align: left; /* Align text to the left instead of center */
+  width: 100%; /* Ensure full width within the container */
 }
 
 /* For mobile responsiveness */
@@ -1722,12 +1733,13 @@ input[type="text"]:focus, input[type="number"]:focus {
   width: calc(100% + 80px);  /* 100% + left padding + right padding */
   height: calc(100% + 60px); /* 100% + top padding + bottom padding */
   background-image: url('../public/landing-page.png');
-  background-size: cover;  /* Changed from '100% auto' to 'cover' to ensure complete filling */
+  background-size: cover;  
   background-repeat: no-repeat;
-  background-position: top center;
+  background-position: center;  /* Center the background image */
   z-index: -1;
   opacity: 0.9;
   pointer-events: none;
+  filter: brightness(0.9); /* Slightly darken the background for better contrast */
 }
 
 .pre-analysis-content > * {
@@ -4112,4 +4124,24 @@ textarea::placeholder {
 .website-input-form .input-wrapper:focus-within {
   border-color: var(--off-white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Specific website input form styling within pre-analysis content */
+.pre-analysis-content .website-input-form .input-wrapper {
+  width: 100%; /* Make the input take full width of its container */
+  max-width: 100%; /* Ensure it doesn't exceed its container */
+  margin: 0; /* Remove any default margins */
+}
+
+/* Ensure input text aligns properly with our layout */
+.pre-analysis-content .website-input-form input {
+  width: 100%;
+  padding-left: 16px; /* Add some padding back to the input */
+}
+
+/* Adjust the error message styling for better visibility */
+.pre-analysis-content .error-message {
+  color: #ff6b6b; /* A softer red that's still visible on dark background */
+  margin-top: 12px;
+  font-size: 0.9rem;
 }
