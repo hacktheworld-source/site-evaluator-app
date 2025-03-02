@@ -59,17 +59,13 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
         />
         <button
           type="submit"
-          className="evaluate-submit-button landing-page"
+          className="evaluate-submit-button"
           disabled={isLoading || !website.trim()}
         >
           {isLoading ? (
             <div className="royal-spinner" />
           ) : (
-            variant === 'compact' ? (
-              <FontAwesomeIcon icon={faArrowRight} />
-            ) : (
-              <>Get Your Free Analysis</>
-            )
+            <FontAwesomeIcon icon={faArrowRight} />
           )}
         </button>
       </div>

@@ -968,7 +968,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 .evaluate-submit-button {
   background: none;
   color: var(--accent-color);
-  transition: opacity 0.3s ease, color 0.3s ease;  /* Add transition for smooth appearance */
+  transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;  /* Add transition for smooth appearance */
 }
 
 .evaluate-submit-button:hover {
@@ -2103,25 +2103,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   right: 3px;
   background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
   border: none;
-  border-radius: 8px;
-  color: var(--deep-black);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-}
-
-.evaluate-submit-button.landing-page{
-  width: fit-content;
-  height: 32px;
-  font-size: 14px;
-  position: relative;
-  right: 3px;
-  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
-  border: none;
-  border-radius: 8px;
+  border-radius: 50%;
   color: var(--deep-black);
   display: flex;
   align-items: center;
@@ -3856,6 +3838,7 @@ textarea::placeholder {
 
 .evaluate-submit-button:hover {
   background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
