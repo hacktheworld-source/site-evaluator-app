@@ -1104,21 +1104,41 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .auth-modal button[type="submit"] {
-  background: var(--accent-color);
-  color: var(--off-white);
+  background: var(--off-white);
+  color: var(--deep-black);
   border: none;
   border-radius: 8px;
   padding: 12px;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-modal button[type="submit"]::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  /* Remove the shimmer animation */
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .auth-modal button[type="submit"]:hover {
-  background: rgba(128, 128, 128, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.auth-modal button[type="submit"]:hover::before {
+  opacity: 0; /* Disable the shimmer effect */
 }
 
 .auth-modal .close-button {
@@ -1132,26 +1152,30 @@ input[type="text"]:focus, input[type="number"]:focus {
   cursor: pointer;
   padding: 4px 8px;
   opacity: 0.6;
-  transition: opacity 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .auth-modal .close-button:hover {
   opacity: 1;
+  transform: rotate(90deg);
 }
 
 .auth-modal .toggle-auth-mode {
   background: none;
   border: none;
-  color: var(--accent-color);
+  color: var(--off-white);
   font-size: 14px;
   margin-top: 16px;
   cursor: pointer;
   opacity: 0.8;
-  transition: opacity 0.2s ease;
+  transition: all 0.3s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .auth-modal .toggle-auth-mode:hover {
   opacity: 1;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-modal .google-sign-in-button {
@@ -1163,17 +1187,19 @@ input[type="text"]:focus, input[type="number"]:focus {
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   margin-top: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .auth-modal .google-sign-in-button:hover {
-  background: #357abd;
-  transform: translateY(-1px);
+  background: #5294ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
 .auth-modal .divider {
@@ -1188,7 +1214,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 .auth-modal .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .auth-modal .divider span {
@@ -3528,10 +3554,10 @@ input[type="password"],
 textarea,
 select {
   background: rgba(28, 30, 25, 0.6);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 12px 16px;
-  color: var(--text-primary); /* Changed from --off-white to --text-primary */
+  color: var(--off-white); 
   font-size: 16px;
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -3546,9 +3572,9 @@ input[type="password"]:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: var(--gold-primary);
+  border-color: var(--off-white);
   background: rgba(28, 30, 25, 0.8);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(197, 165, 114, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .auth-modal input::placeholder,
@@ -3561,7 +3587,7 @@ textarea::placeholder {
 
 /* Enhanced Form Button Styles */
 .auth-modal button[type="submit"] {
-  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
+  background: var(--off-white);
   color: var(--deep-black);
   border: none;
   border-radius: 8px;
@@ -3571,7 +3597,7 @@ textarea::placeholder {
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -3583,36 +3609,19 @@ textarea::placeholder {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: linear-gradient(
-    to bottom right,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: rotate(45deg);
-  animation: shimmer 3s infinite;
-  z-index: 1;
+  /* Remove the shimmer animation */
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .auth-modal button[type="submit"]:hover {
-  background: linear-gradient(to bottom, var(--gold-primary), var(--gold-dark));
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .auth-modal button[type="submit"]:hover::before {
-  opacity: 1;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) rotate(45deg);
-  }
+  opacity: 0; /* Disable the shimmer effect */
 }
 
 .auth-modal .close-button {
@@ -3621,7 +3630,7 @@ textarea::placeholder {
   right: 16px;
   background: none;
   border: none;
-  color: var(--gold-light);
+  color: var(--off-white);
   font-size: 24px;
   cursor: pointer;
   padding: 4px 8px;
@@ -3637,7 +3646,7 @@ textarea::placeholder {
 .auth-modal .toggle-auth-mode {
   background: none;
   border: none;
-  color: var(--gold-light);
+  color: var(--off-white);
   font-size: 14px;
   margin-top: 16px;
   cursor: pointer;
@@ -3649,11 +3658,11 @@ textarea::placeholder {
 
 .auth-modal .toggle-auth-mode:hover {
   opacity: 1;
-  color: var(--gold-primary);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-modal .google-sign-in-button {
-  background: linear-gradient(to bottom, #4285f4, #366ac1);
+  background: #4285f4;
   color: white;
   border: none;
   border-radius: 8px;
@@ -3671,7 +3680,7 @@ textarea::placeholder {
 }
 
 .auth-modal .google-sign-in-button:hover {
-  background: linear-gradient(to bottom, #5294ff, #4285f4);
+  background: #5294ff;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
@@ -3681,14 +3690,14 @@ textarea::placeholder {
   align-items: center;
   text-align: center;
   margin: 24px 0;
-  color: rgba(197, 165, 114, 0.4);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .auth-modal .divider::before,
 .auth-modal .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid rgba(197, 165, 114, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .auth-modal .divider span {
@@ -3815,9 +3824,15 @@ textarea::placeholder {
 }
 
 @keyframes borderGlow {
-  0% { border-color: var(--gold-dark); }
-  50% { border-color: var(--gold-light); }
-  100% { border-color: var(--gold-dark); }
+  0% {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.8);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 }
 
 @keyframes shimmerGold {
@@ -4117,4 +4132,12 @@ html {
   background-color: var(--deep-black);
   color: var(--off-white);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.website-input-form.compact .evaluate-submit-button:disabled {
+  background-color: transparent;
+  color: var(--off-white);
+  opacity: 1;
+  visibility: visible;
+  box-shadow: none;
 }
