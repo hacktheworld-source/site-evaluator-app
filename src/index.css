@@ -2103,7 +2103,25 @@ input[type="text"]:focus, input[type="number"]:focus {
   right: 3px;
   background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
   border: none;
-  border-radius: 50%;
+  border-radius: 8px;
+  color: var(--deep-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.evaluate-submit-button.landing-page{
+  width: fit-content;
+  height: 32px;
+  font-size: 14px;
+  position: relative;
+  right: 3px;
+  background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary));
+  border: none;
+  border-radius: 8px;
   color: var(--deep-black);
   display: flex;
   align-items: center;
