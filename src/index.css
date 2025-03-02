@@ -457,8 +457,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  /* Ensure consistent spacing for footer */
-  padding-bottom: 60px;
 }
 
 .content-wrapper.blur {
@@ -469,14 +467,12 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Force explicit height calculation and prevent inheritance issues */
-  height: calc(100vh - var(--header-height) - 60px); /* Subtract footer space */
+  height: calc(100vh - var(--header-height));
   position: relative;
   overflow: hidden;
   max-width: none;
   padding: 0;
-  /* Remove bottom padding - handled by the footer space in height calc */
-  /* padding-bottom: 40px; */
+  padding-bottom: 40px;
 }
 
 .app-description {
@@ -1880,18 +1876,11 @@ input[type="text"]:focus, input[type="number"]:focus {
   pointer-events: none;
   visibility: hidden;
   width: 100%;
-  /* Use the same explicit height calculation */
   height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  /* Absolute positioning to prevent height inheritance problems */
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
 }
 
 .post-analysis-content.fade-in {
@@ -1903,28 +1892,33 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 .analysis-layout {
   display: grid;
-  /* Use a consistent 3-column grid structure in both states */
-  grid-template-columns: 0fr minmax(0, 1fr) 0fr;
+  grid-template-columns: minmax(20px, 1fr) 800px minmax(20px, 1fr);
   gap: 0;
   width: 100%;
-  /* Use explicit height instead of percentage */
   height: 100%;
   padding: 0;
   position: relative;
   max-height: 100%;
   overflow: hidden;
-  /* Use a smooth transition for the grid change */
   transition: grid-template-columns 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  /* Fix vertical alignment */
-  align-items: stretch; /* Change from start to stretch to ensure full height */
 }
 
 .analysis-layout.has-results {
-  /* Keep the same 3-column structure, just adjust the width of the first column */
-  grid-template-columns: 400px minmax(0, 1fr) 0fr;
+  grid-template-columns: 400px minmax(0, 1fr) 0;
 }
 
-/* Ensure metrics panel is properly positioned in column 1 */
+.analysis-main {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  padding: 0 20px;
+  transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform-origin: center;
+}
+
 .metrics-panel {
   background: none;
   backdrop-filter: none;
@@ -1936,13 +1930,10 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  /* Explicitly set to grid-column 1 */
-  grid-column: 1;
   width: 0;
   opacity: 0;
   visibility: hidden;
   transform: translateX(-20px);
-  /* Use smooth transitions for the panel appearance */
   transition: 
     width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
     opacity 0.3s ease,
@@ -1950,20 +1941,16 @@ input[type="text"]:focus, input[type="number"]:focus {
     transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-/* Explicitly set analysis-main to grid-column 2 */
-.analysis-main {
-  grid-column: 2;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-  padding: 0 20px;
-  /* Remove any transformations that might affect vertical positioning */
-  transition: width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  /* Ensure the content takes up exactly the right height */
-  min-height: 0;
-  max-height: 100%;
+.analysis-layout.has-results .metrics-panel {
+  width: 400px;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  transition: 
+    width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 0.3s ease,
+    visibility 0s linear 0s,
+    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .metrics-header {
@@ -2083,19 +2070,9 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex: 1;
   display: flex;
   flex-direction: column;
-  /* Use explicit calculation matching parent container */
   height: 100%;
   min-height: 0;
-  /* Enforce stable positioning */
   position: relative;
-  /* Prevent any vertical movement by ensuring consistent height */
-  max-height: 100%;
-  overflow: hidden;
-  /* Add padding to ensure content stays within visible area */
-  padding-bottom: 10px;
-  /* Prevent repaint/reflow issues */
-  will-change: transform;
-  transform: translateZ(0);
 }
 
 .chat-interface {
@@ -2104,10 +2081,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex: 1;
   height: 100%;
   min-height: 0;
-  max-height: 100%;
   background: transparent;
-  /* Prevent overflow issues */
-  overflow: hidden;
 }
 
 .chat-messages {
@@ -2116,8 +2090,6 @@ input[type="text"]:focus, input[type="number"]:focus {
   padding: 15px 20px;
   margin: 0;
   background: none;
-  /* Prevent any pushing against top or bottom */
-  max-height: calc(100% - 50px); /* Adjust if needed for input height */
 }
 
 .website-input-form.compact .evaluate-submit-button {
@@ -4169,17 +4141,4 @@ html {
 
 .input-wrapper input:focus {
   background: transparent;
-}
-
-/* Ensure metrics panel properly expands when results are showing */
-.analysis-layout.has-results .metrics-panel {
-  width: 400px;
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(0);
-  transition: 
-    width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
-    opacity 0.3s ease,
-    visibility 0s linear 0s,
-    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
