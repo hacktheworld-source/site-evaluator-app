@@ -1822,8 +1822,8 @@ input[type="text"]:focus, input[type="number"]:focus {
   top: 0;
   left: 0;
   transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-  padding-top: calc(var(--header-height) + 10px);
-  padding-bottom: var(--footer-height);
+  padding-top: calc(var(--header-height) + 20px);
+  padding-bottom: calc(var(--footer-height) + 10px);
 }
 
 .pre-analysis-content {
