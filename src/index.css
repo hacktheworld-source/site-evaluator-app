@@ -4054,3 +4054,58 @@ html {
 .input-wrapper input:focus {
   background: transparent;
 }
+
+.evaluate-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.evaluate-submit-button:hover {
+  background-color: #222;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.evaluate-submit-button:active {
+  background-color: #000;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+.website-input-form.compact .evaluate-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 18px;
+  background-color: black;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  min-width: 80px;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.website-input-form.compact .evaluate-submit-button:hover {
+  background-color: #222;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
