@@ -4010,10 +4010,12 @@ textarea::placeholder {
 }
 
 .auth-modal button[type="submit"]:hover {
-  background: #f0f0f0 !important;
-  background-color: #f0f0f0 !important;
+  background: var(--deep-black) !important;
+  background-color: var(--deep-black) !important;
   background-image: none !important;
   transform: translateY(-1px) !important;
+  color: var(--off-white) !important;
+  transition: background-color 0.3s ease, color 0.3s ease !important;
 }
 
 .auth-modal button[type="submit"]:active {
@@ -4021,10 +4023,6 @@ textarea::placeholder {
   background-color: #e8e8e8 !important;
   transform: translateY(0) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-}
-
-.auth-modal button[type="submit"]:hover::before {
-  opacity: 0;
 }
 
 .input-wrapper input:focus {
