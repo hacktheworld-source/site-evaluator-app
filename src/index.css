@@ -453,15 +453,12 @@ input[type="text"]:focus, input[type="number"]:focus {
 .content-wrapper {
   display: flex;
   justify-content: center;
-  /* Remove padding-top since main-content is now absolutely positioned */
-  padding-top: 0;
+  padding-top: calc(var(--header-height) + 20px);
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
   /* Ensure consistent spacing for footer */
   padding-bottom: 60px;
-  /* Add position relative to serve as positioning context */
-  position: relative;
 }
 
 .content-wrapper.blur {
@@ -472,18 +469,14 @@ input[type="text"]:focus, input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Replace the calculated height with fixed positioning to prevent shifts */
-  position: absolute;
-  /* Add margin adjustment to properly account for header spacing */
-  top: calc(var(--header-height) - 30px);
-  bottom: 15px;
-  left: 0;
-  right: 0;
+  /* Force explicit height calculation and prevent inheritance issues */
+  height: calc(100vh - var(--header-height) - 60px); /* Subtract footer space */
+  position: relative;
   overflow: hidden;
   max-width: none;
   padding: 0;
-  /* Add this to ensure consistent box model */
-  box-sizing: border-box;
+  /* Remove bottom padding - handled by the footer space in height calc */
+  /* padding-bottom: 40px; */
 }
 
 .app-description {
@@ -1861,7 +1854,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   left: -40px;    /* Negative value of left padding */
   width: calc(100% + 80px);  /* 100% + left padding + right padding */
   height: calc(100% + 60px); /* 100% + top padding + bottom padding */
-  background-image: url('../public/landing-page2.png');
+  background-image: url('../public/landing-page.png');
   background-size: cover;  /* Changed from '100% auto' to 'cover' to ensure complete filling */
   background-repeat: no-repeat;
   background-position: top center;
@@ -1887,12 +1880,13 @@ input[type="text"]:focus, input[type="number"]:focus {
   pointer-events: none;
   visibility: hidden;
   width: 100%;
+  /* Use the same explicit height calculation */
   height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  /* Ensure consistent positioning relative to header and footer */
+  /* Absolute positioning to prevent height inheritance problems */
   position: absolute;
   top: 0;
   left: 0;
@@ -1913,6 +1907,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   grid-template-columns: 0fr minmax(0, 1fr) 0fr;
   gap: 0;
   width: 100%;
+  /* Use explicit height instead of percentage */
   height: 100%;
   padding: 0;
   position: relative;
@@ -1921,10 +1916,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   /* Use a smooth transition for the grid change */
   transition: grid-template-columns 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
   /* Fix vertical alignment */
-  align-items: start;
-  /* Set a fixed position to prevent shifting */
-  top: 0;
-  left: 0;
+  align-items: stretch; /* Change from start to stretch to ensure full height */
 }
 
 .analysis-layout.has-results {
@@ -2091,12 +2083,19 @@ input[type="text"]:focus, input[type="number"]:focus {
   flex: 1;
   display: flex;
   flex-direction: column;
+  /* Use explicit calculation matching parent container */
   height: 100%;
   min-height: 0;
+  /* Enforce stable positioning */
   position: relative;
   /* Prevent any vertical movement by ensuring consistent height */
   max-height: 100%;
   overflow: hidden;
+  /* Add padding to ensure content stays within visible area */
+  padding-bottom: 10px;
+  /* Prevent repaint/reflow issues */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .chat-interface {
