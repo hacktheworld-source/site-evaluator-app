@@ -475,14 +475,13 @@ input[type="text"]:focus, input[type="number"]:focus {
   /* Replace the calculated height with fixed positioning to prevent shifts */
   position: absolute;
   /* Add margin adjustment to properly account for header spacing */
-  top: calc(var(--header-height) + 20px);
-  bottom: 0;
+  top: calc(var(--header-height) - 30px);
+  bottom: 15px;
   left: 0;
   right: 0;
   overflow: hidden;
   max-width: none;
   padding: 0;
-  padding-bottom: 40px;
   /* Add this to ensure consistent box model */
   box-sizing: border-box;
 }
