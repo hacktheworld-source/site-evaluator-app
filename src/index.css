@@ -966,9 +966,22 @@ input[type="text"]:focus, input[type="number"]:focus {
 }
 
 .evaluate-submit-button {
-  background: none;
-  color: var(--accent-color);
-  transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;  /* Add transition for smooth appearance */
+  background-color: var(--olive-green);
+  color: white;
+  border: none;
+  height: 48px;
+  min-width: 140px;
+  font-weight: bold;
+  font-size: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .evaluate-submit-button:hover {
