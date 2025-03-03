@@ -549,12 +549,12 @@ const AppContent: React.FC = () => {
       <>
         <div className={`main-content ${analysisState}`} style={{ display: currentPage === 'home' ? 'flex' : 'none' }}>
           <div className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}>
-            <h1>Uncover Your Website's True Potential—No Sugar Coating</h1>
+            <h1>Olive: Chat with AI to Evaluate Your Website</h1>
             <AnimatedEye
               isGenerating={isGenerating}
               isWaitingForResponse={isWaitingForResponse}
             />
-            <p className="app-description">Drop any URL and get an instant, no-BS analysis. Olive cuts through the fluff with razor-sharp insights. No jargon, no fluff—just what works and what doesn't.</p>
+            <p className="app-description">Drop a URL for Olive's sharp-eyed, no-fluff critique on aesthetic, performance, SEO, and more.</p>
             <WebsiteInput
               onSubmit={handleEvaluation}
               isLoading={isLoading}
