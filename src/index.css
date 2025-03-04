@@ -2256,54 +2256,72 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 /* Individual Toast */
 .Toastify__toast {
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(28, 30, 25, 0.6) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 12px 20px;
   color: var(--off-white);
   font-size: 0.9em;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+/* Remove progress bar */
+.Toastify__progress-bar {
+  display: none;
 }
 
 /* Close Button */
 .Toastify__close-button {
-  color: var(--off-white);
   opacity: 0.5;
   transition: opacity 0.2s ease;
+  color: var(--off-white);
 }
 
 .Toastify__close-button:hover {
   opacity: 1;
 }
 
-/* Progress Bar */
-.Toastify__progress-bar {
-  background: var(--accent-color);
-  height: 2px;
-  opacity: 0.7;
-}
-
 /* Toast Types */
 .Toastify__toast--success {
-  background: rgba(30, 30, 30, 0.95);
-  border-left: 4px solid #4caf50;
+  background: rgba(39, 174, 96, 0.15) !important;
 }
 
 .Toastify__toast--error {
-  background: rgba(30, 30, 30, 0.95);
-  border-left: 4px solid #f44336;
+  background: rgba(255, 82, 82, 0.15) !important;
 }
 
 .Toastify__toast--warning {
-  background: rgba(30, 30, 30, 0.95);
-  border-left: 4px solid #ff9800;
+  background: rgba(241, 196, 15, 0.15) !important;
 }
 
 .Toastify__toast--info {
-  background: rgba(30, 30, 30, 0.95);
-  border-left: 4px solid #2196f3;
+  background: rgba(33, 150, 243, 0.15) !important;
+}
+
+/* Toast hover effect */
+.Toastify__toast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Toast entrance animation */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.Toastify__toast {
+  animation: toastSlideIn 0.3s ease forwards !important;
 }
 
 .danger-zone {
