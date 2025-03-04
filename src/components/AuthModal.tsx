@@ -126,6 +126,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           email: result.user.email,
           uid: result.user.uid
         });
+
+        // Initialize user document
+        try {
+          await fetch(`${process.env.REACT_APP_API_URL}/api/balance/${result.user.uid}`, {
+            method: 'GET'  // This will trigger document creation if it doesn't exist
+          });
+        } catch (initError) {
+          console.error('Error initializing user document:', initError);
+          // Don't throw - the document will be created on next data fetch
+        }
+
         toast.success('Account created successfully!');
       } else {
         console.log('Attempting sign in...');
