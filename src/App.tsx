@@ -174,12 +174,25 @@ const AppContent: React.FC = () => {
     const initializeApp = async () => {
       if (user) {
         try {
-          const [balance, userData] = await Promise.all([
-            getUserBalance(user.uid),
-            paymentService.getUserData(user.uid)
-          ]);
-          setUserPoints(balance);
-          setIsPayAsYouGo(!!(userData?.stripeCustomerId && userData?.hasAddedPayment));
+          // Try up to 3 times with increasing delays
+          for (let i = 0; i < 3; i++) {
+            try {
+              const [balance, userData] = await Promise.all([
+                getUserBalance(user.uid),
+                paymentService.getUserData(user.uid)
+              ]);
+              setUserPoints(balance);
+              setIsPayAsYouGo(!!(userData?.stripeCustomerId && userData?.hasAddedPayment));
+              break; // Success, exit loop
+            } catch (error) {
+              if (i === 2) { // Only show error on last attempt
+                console.error('Error initializing app:', error);
+                handleError('Failed to load user data');
+              } else {
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 1s, 2s, 3s delays
+              }
+            }
+          }
         } catch (error) {
           console.error('Error initializing app:', error);
           handleError('Failed to load user data');
