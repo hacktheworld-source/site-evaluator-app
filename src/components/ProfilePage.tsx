@@ -179,17 +179,18 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!user || !deleteAccountPassword) return;
+    if (!user) return;
     
     setIsDeletingAccount(true);
     try {
-      await deleteUserAccount(user, deleteAccountPassword);
+      await deleteUserAccount(user);
       toast.success('Account deleted successfully');
     } catch (error) {
       console.error('Failed to delete account:', error);
       if (error instanceof Error) {
-        if (error.message.includes('auth/wrong-password')) {
-          toast.error('Incorrect password');
+        if (error.message.includes('auth/requires-recent-login')) {
+          toast.info('For security, please sign in again before deleting your account');
+          await signOut(auth);
         } else {
           toast.error('Failed to delete account. Please try again.');
         }
@@ -320,19 +321,11 @@ const ProfilePage: React.FC = () => {
               ) : (
                 <div className="delete-confirmation">
                   <p>Are you sure you want to delete your account? This cannot be undone.</p>
-                  <div className="password-confirmation">
-                    <input
-                      type="password"
-                      placeholder="Enter your password to confirm"
-                      value={deleteAccountPassword}
-                      onChange={(e) => setDeleteAccountPassword(e.target.value)}
-                    />
-                  </div>
                   <div className="confirmation-buttons">
                     <button
                       className="confirm-delete-button royal-olive danger"
-                      onClick={() => handleDeleteAccount()}
-                      disabled={isDeletingAccount || !deleteAccountPassword}
+                      onClick={handleDeleteAccount}
+                      disabled={isDeletingAccount}
                     >
                       {isDeletingAccount ? (
                         <FontAwesomeIcon icon={faSpinner} spin />
@@ -342,10 +335,7 @@ const ProfilePage: React.FC = () => {
                     </button>
                     <button
                       className="cancel-delete-button"
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setDeleteAccountPassword('');
-                      }}
+                      onClick={() => setShowDeleteConfirm(false)}
                       disabled={isDeletingAccount}
                     >
                       Cancel
