@@ -3492,12 +3492,15 @@ input[type="text"]:focus, input[type="number"]:focus {
   border-radius: 8px;
   padding: 0 16px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 12px rgba(255, 255, 255, 0.4); /* Stronger white glow */
+  padding-right: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .website-input-form .input-wrapper:focus-within {
   border-color: var(--gold-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(197, 165, 114, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 16px rgba(255, 255, 255, 0.5); /* Added stronger white glow when focused */
   background: rgba(28, 30, 25, 0.6); /* Keep the same background when focused */
 }
 
