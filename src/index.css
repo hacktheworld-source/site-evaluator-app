@@ -10,7 +10,7 @@
   --text-secondary: #E8D5B5; /* Keep light gold for secondary/accent text */
   
   /* Olive Theme Colors */
-  --olive-dark: #3D4A28;    /* Deep olive green */
+  --olive-dark: #14180f;    /* Deep olive green */
   --olive-medium: #606C38;  /* Medium olive */
   --olive-light: #8A9A5B;   /* Light olive */
   --olive-xdark: #242918;   /* Extra dark olive for background */
@@ -3468,6 +3468,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   align-items: flex-start;
   z-index: 1000;
   padding: 20px;
+  padding-top: var(--header-height);
 }
 
 .screenshot-modal-content {
