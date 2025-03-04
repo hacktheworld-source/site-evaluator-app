@@ -116,6 +116,7 @@ const AppContent: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
   const [analysisState, setAnalysisState] = useState<'pre' | 'post'>('pre');
+  const [fadeOutComplete, setFadeOutComplete] = useState(false);
   const [metricsSearchTerm, setMetricsSearchTerm] = useState<string>('');
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -561,23 +562,33 @@ const AppContent: React.FC = () => {
     return (
       <>
         <div className={`main-content ${analysisState}`} style={{ display: currentPage === 'home' ? 'flex' : 'none' }}>
-          <div className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}>
-            <div className="pre-analysis-content-wrapper">
-              <h1>Olive: Chat with AI to Evaluate Your Website</h1>
-              <AnimatedEye
-                isGenerating={isGenerating}
-                isWaitingForResponse={isWaitingForResponse}
-              />
-              <p className="app-description">Drop a URL for Olive's sharp-eyed, no-fluff critique on aesthetic, performance, SEO, and more.</p>
-              <WebsiteInput
-                onSubmit={handleEvaluation}
-                isLoading={isLoading}
-                isLoggedIn={!!user}
-                onSignInRequired={handleSignInRequired}
-              />
-              {error && <p className="error-message">{error}</p>}
+          {(analysisState === 'pre' || !fadeOutComplete) && (
+            <div 
+              className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}
+              onTransitionEnd={(e) => {
+                // Only handle the opacity transition
+                if (e.propertyName === 'opacity' && analysisState === 'post') {
+                  setFadeOutComplete(true);
+                }
+              }}
+            >
+              <div className="pre-analysis-content-wrapper">
+                <h1>Olive: Chat with AI to Evaluate Your Website</h1>
+                <AnimatedEye
+                  isGenerating={isGenerating}
+                  isWaitingForResponse={isWaitingForResponse}
+                />
+                <p className="app-description">Drop a URL for Olive's sharp-eyed, no-fluff critique on aesthetic, performance, SEO, and more.</p>
+                <WebsiteInput
+                  onSubmit={handleEvaluation}
+                  isLoading={isLoading}
+                  isLoggedIn={!!user}
+                  onSignInRequired={handleSignInRequired}
+                />
+                {error && <p className="error-message">{error}</p>}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className={`post-analysis-content ${analysisState === 'post' ? 'fade-in' : ''}`}>
             <div className={`analysis-layout ${evaluationResults ? 'has-results' : ''}`}>
