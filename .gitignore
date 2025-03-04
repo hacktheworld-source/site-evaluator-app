@@ -40,3 +40,13 @@ yarn-error.log*
 # backend
 /backend
 ./backend/
+
+# Firebase Functions
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.runtimeconfig.json
+functions/*.log
+.firebase/
+firebase-debug.log
+ui-debug.log

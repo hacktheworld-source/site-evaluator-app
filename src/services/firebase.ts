@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, User, deleteUser } from 'firebase/auth';
+import { getAuth, User, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, doc, deleteDoc } from 'firebase/firestore';
 import { reportStorage } from './reportStorage';
 
@@ -44,8 +44,14 @@ auth.onAuthStateChanged((user) => {
   console.log('Auth state changed:', user ? `User ${user.email} signed in` : 'User signed out');
 });
 
-export const deleteUserAccount = async (user: User) => {
+export const deleteUserAccount = async (user: User, currentPassword?: string) => {
   try {
+    if (currentPassword) {
+      // Re-authenticate the user if password is provided
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+    }
+
     // Delete user document and all subcollections
     const userDocRef = doc(db, 'users', user.uid);
     await deleteDoc(userDocRef);
