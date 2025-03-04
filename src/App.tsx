@@ -549,19 +549,21 @@ const AppContent: React.FC = () => {
       <>
         <div className={`main-content ${analysisState}`} style={{ display: currentPage === 'home' ? 'flex' : 'none' }}>
           <div className={`pre-analysis-content ${analysisState === 'post' ? 'fade-out' : ''}`}>
-            <h1>Olive: Chat with AI to Evaluate Your Website</h1>
-            <AnimatedEye
-              isGenerating={isGenerating}
-              isWaitingForResponse={isWaitingForResponse}
-            />
-            <p className="app-description">Drop a URL for Olive's sharp-eyed, no-fluff critique on aesthetic, performance, SEO, and more.</p>
-            <WebsiteInput
-              onSubmit={handleEvaluation}
-              isLoading={isLoading}
-              isLoggedIn={!!user}
-              onSignInRequired={handleSignInRequired}
-            />
-            {error && <p className="error-message">{error}</p>}
+            <div className="pre-analysis-content-wrapper">
+              <h1>Olive: Chat with AI to Evaluate Your Website</h1>
+              <AnimatedEye
+                isGenerating={isGenerating}
+                isWaitingForResponse={isWaitingForResponse}
+              />
+              <p className="app-description">Drop a URL for Olive's sharp-eyed, no-fluff critique on aesthetic, performance, SEO, and more.</p>
+              <WebsiteInput
+                onSubmit={handleEvaluation}
+                isLoading={isLoading}
+                isLoggedIn={!!user}
+                onSignInRequired={handleSignInRequired}
+              />
+              {error && <p className="error-message">{error}</p>}
+            </div>
           </div>
 
           <div className={`post-analysis-content ${analysisState === 'post' ? 'fade-in' : ''}`}>
@@ -699,6 +701,10 @@ const AppContent: React.FC = () => {
         <div className="app-title" onClick={() => goToPage('home')}>
           <h1>Olive</h1>
         </div>
+        <div className="header-links">
+          <Link to="/terms-of-service">Terms of Service</Link>
+          <Link to="/privacy-policy">Privacy Policy</Link>
+        </div>
         {user ? (
           <div className="user-menu-container">
             <div className="points-counter" onClick={() => goToPage('points')}>
@@ -759,7 +765,6 @@ const AppContent: React.FC = () => {
           zIndex: 9999
         }}
       />
-      <Footer />
     </div>
   );
 };

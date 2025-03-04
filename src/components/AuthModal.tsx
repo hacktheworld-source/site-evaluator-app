@@ -59,6 +59,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         <button onClick={() => setIsSignUp(!isSignUp)} className="toggle-auth-mode">
           {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
         </button>
+        <br />
         <button onClick={handleGoogleSignIn} className="google-sign-in-button royal-olive secondary">Sign In with Google</button>
       </div>
     </div>
