@@ -45,6 +45,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         case 'auth/user-not-found':
           return 'Account not found. Please check your email or sign up.';
         case 'auth/wrong-password':
+        case 'auth/invalid-credential':
           return 'Invalid email or password.';
         
         // Sign-up errors
