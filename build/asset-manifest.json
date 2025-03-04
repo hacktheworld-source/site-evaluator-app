@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "./static/css/main.f136c21e.css",
-    "main.js": "./static/js/main.27074dec.js",
+    "main.css": "./static/css/main.418f06bc.css",
+    "main.js": "./static/js/main.b3616de1.js",
     "static/media/landing-page2-transparent-dark-gold.png": "./static/media/landing-page2-transparent-dark-gold.481c3afe1fa2ae84f66b.png",
     "index.html": "./index.html",
-    "main.f136c21e.css.map": "./static/css/main.f136c21e.css.map",
-    "main.27074dec.js.map": "./static/js/main.27074dec.js.map"
+    "main.418f06bc.css.map": "./static/css/main.418f06bc.css.map",
+    "main.b3616de1.js.map": "./static/js/main.b3616de1.js.map"
   },
   "entrypoints": [
-    "static/css/main.f136c21e.css",
-    "static/js/main.27074dec.js"
+    "static/css/main.418f06bc.css",
+    "static/js/main.b3616de1.js"
   ]
 }
