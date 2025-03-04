@@ -18,7 +18,7 @@ Header set X-XSS-Protection "1; mode=block"
 Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 # Enable CORS
-Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Allow-Origin "https://olivesays.com https://www.olivesays.com https://api.olivesays.com"
 Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
 Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
 

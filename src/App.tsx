@@ -723,7 +723,7 @@ const AppContent: React.FC = () => {
       {isOffline && <div className="error-message">You are currently offline. Some features may not work.</div>}
       <header className="app-header">
         <div className="app-title" onClick={() => goToPage('home')}>
-          <h1>Olive</h1>
+          <h1>OliveSays</h1>
         </div>
         <div className="header-links">
           <Link to="/terms-of-service">Terms of Service</Link>
