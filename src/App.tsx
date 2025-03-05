@@ -111,6 +111,7 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [funStatusMessage, setFunStatusMessage] = useState<string>('');
   const [websiteUrl, setWebsiteUrl] = useState<string>('');
   const [rawInput, setRawInput] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -121,6 +122,40 @@ const AppContent: React.FC = () => {
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const navigate = useNavigate();
+
+  const FUN_STATUS_MESSAGES = [
+    "Mixing potions...",
+    "Fighting robots...",
+    "Calibrating Dyson Sphere...",
+    "Training AI hamsters...",
+    "Consulting the crystal ball...",
+    "Summoning website wizards...",
+    "Hacking the mainframe...",
+    "Charging up the flux capacitor...",
+    "Feeding the server gremlins...",
+    "Downloading more RAM...",
+    "Reticulating splines...",
+    "Warming up the quantum computer...",
+    "Polishing the crystal ball...",
+    "Consulting ancient scrolls...",
+    "Brewing code coffee...",
+    "Waking up the AI...",
+    "Dusting off the pixel polisher...",
+    "Tuning the neural networks...",
+    "Feeding treats to the server...",
+    "Channeling digital spirits...",
+    "Creating new world..."
+  ];
+
+  const getRandomFunMessage = () => {
+    return FUN_STATUS_MESSAGES[Math.floor(Math.random() * FUN_STATUS_MESSAGES.length)];
+  };
+
+  // Wrap the existing setStatusMessage calls with fun messages
+  const updateStatus = (message: string) => {
+    setStatusMessage(message);
+    setFunStatusMessage(getRandomFunMessage());
+  };
 
   // Add chat state
   const [chatState, setChatState] = useState<{
@@ -153,7 +188,7 @@ const AppContent: React.FC = () => {
         // Reset UI states
         setIsLoading(false);
         setIsGenerating(false);
-        setStatusMessage('Connection error occurred. Please try again or try a different website.');
+        updateStatus('Connection error occurred. Please try again or try a different website.');
         
         // Prevent default browser error handling
         event.preventDefault();
@@ -360,7 +395,7 @@ const AppContent: React.FC = () => {
         setIsGenerating(true);
         setIsLoading(true);
         setError(null);
-        setStatusMessage('Job in queue...');
+        updateStatus('Job in queue...');
         setEvaluationResults(null);
 
         try {
@@ -404,7 +439,7 @@ const AppContent: React.FC = () => {
                 console.log('Status update:', data.status);
                 // Don't show "Connecting to existing analysis" if we're already showing progress
                 if (!(data.status === 'Connecting to existing analysis...' && lastStatus !== '')) {
-                  setStatusMessage(data.status);
+                  updateStatus(data.status);
                   lastStatus = data.status;
                 }
 
@@ -413,12 +448,12 @@ const AppContent: React.FC = () => {
                   hasResults = true;
                   console.log('Evaluation results received:', data.result);
                   setEvaluationResults(data.result);
-                  setStatusMessage('Evaluation complete!');
+                  updateStatus('Evaluation complete!');
                   clearTimeout(timeoutId);
                   eventSource.close();
                   setIsLoading(false);
                   setIsGenerating(false);
-                  setTimeout(() => setStatusMessage(''), 2000);
+                  setTimeout(() => updateStatus(''), 2000);
                 }
               } else if (data.error) {
                 console.error('Server reported error:', data.error);
@@ -431,7 +466,7 @@ const AppContent: React.FC = () => {
                 if (data.error.includes('robots.txt') || data.error.includes('ERR_HTTP2_PROTOCOL_ERROR')) {
                   setIsLoading(false);
                   setIsGenerating(false);
-                  setStatusMessage(data.error.includes('robots.txt') 
+                  updateStatus(data.error.includes('robots.txt') 
                     ? 'Olive apologizes, but this website does not allow automated access according to its robots.txt file. Your credits have been refunded.'
                     : 'Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
                 }
@@ -451,7 +486,7 @@ const AppContent: React.FC = () => {
               if (errorMessage.includes('ERR_HTTP2_PROTOCOL_ERROR')) {
                 setIsLoading(false);
                 setIsGenerating(false);
-                setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
+                updateStatus('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
               }
               
               // Always reset UI states for any error
@@ -491,9 +526,9 @@ const AppContent: React.FC = () => {
               
               // Display user-friendly message for HTTP2 errors
               if (isHttp2Error) {
-                setStatusMessage('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
+                updateStatus('Connection error occurred. Please try again or try a different website. Your credits have been refunded.');
               } else {
-                setStatusMessage('Error occurred during evaluation. Your credits have been refunded.');
+                updateStatus('Error occurred during evaluation. Your credits have been refunded.');
               }
             } else {
               // We have results, so just close quietly
@@ -505,7 +540,7 @@ const AppContent: React.FC = () => {
         } catch (error) {
           await cleanupAndRefund();
           handleError(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
-          setStatusMessage('');
+          updateStatus('');
         }
       }
     );
@@ -672,6 +707,7 @@ const AppContent: React.FC = () => {
                     evaluationResults={evaluationResults}
                     isLoading={isLoading}
                     statusMessage={statusMessage}
+                    funStatusMessage={funStatusMessage}
                     onPointsUpdated={(points) => setUserPoints(points)}
                   />
                 </div>

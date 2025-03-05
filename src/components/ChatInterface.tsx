@@ -66,6 +66,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   onGenerateReport?: (data: ReportData) => void;
   statusMessage?: string;
+  funStatusMessage?: string;
   onPointsUpdated?: (newPoints: number) => void;
   chatState: {
     messages: Message[];
@@ -96,6 +97,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading,
   onGenerateReport,
   statusMessage,
+  funStatusMessage,
   onPointsUpdated,
   chatState,
   setChatState
@@ -1225,8 +1227,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ))}
           {isThinking && renderThinkingPlaceholder()}
         </div>
-        {messages.length === 0 && statusMessage && (
-          <div className="status-message">{statusMessage}</div>
+        {messages.length === 0 && (statusMessage || funStatusMessage) && (
+          <div className="status-message">
+            {funStatusMessage && <div className="fun-message">{funStatusMessage}</div>}
+            {statusMessage && <div className="technical-message">{statusMessage}</div>}
+          </div>
         )}
         <div ref={chatEndRef} />
       </div>
