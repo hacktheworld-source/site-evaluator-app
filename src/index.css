@@ -1697,7 +1697,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   font-size: 3em;
 }
 
-/* Create a container that will use the rule of thirds */
+/* Create a container that will use 50/50 split */
 .pre-analysis-content::after {
   content: "";
   position: absolute;
@@ -1707,15 +1707,14 @@ input[type="text"]:focus, input[type="number"]:focus {
   height: 100%;
   z-index: -2;
   pointer-events: none;
-  /* Add third lines for visual reference during development */
-  /*background-image: linear-gradient(to right, transparent calc(33.33% - 1px), rgba(128, 0, 128, 0.3) calc(33.33% - 1px), rgba(128, 0, 128, 0.3) calc(33.33% + 1px), transparent calc(33.33% + 1px)),
-                    linear-gradient(to right, transparent calc(66.66% - 1px), rgba(128, 0, 128, 0.3) calc(66.66% - 1px), rgba(128, 0, 128, 0.3) calc(66.66% + 1px), transparent calc(66.66% + 1px));*/
+  /* Add center line for visual reference during development */
+  /*background-image: linear-gradient(to right, transparent calc(50% - 1px), rgba(128, 0, 128, 0.3) calc(50% - 1px), rgba(128, 0, 128, 0.3) calc(50% + 1px), transparent calc(50% + 1px));*/
 }
 
-/* Create a content wrapper for the left third */
+/* Content wrapper for the left half */
 .pre-analysis-content-wrapper {
   position: absolute;
-  left: 33.33%;
+  left: 25%;
   top: 50%;
   transform: translate(-50%, -50%);
   max-width: 600px;
@@ -1727,19 +1726,13 @@ input[type="text"]:focus, input[type="number"]:focus {
   gap: 0px;
 }
 
-/* Individual content items styling */
-.pre-analysis-content > *:not(.pre-analysis-content-wrapper):not(::before):not(::after) {
-  position: static;
-  max-width: 100%;
-}
-
-/* Image positioned over the right third line */
+/* Image positioned on the right half */
 .pre-analysis-content::before {
   content: '';
   position: absolute;
   width: 700px;
   height: 700px;
-  left: 66.66%;
+  left: 75%;
   top: 50%;
   transform: translate(-50%, -50%);
   background-image: url('../public/landing-page2-transparent-dark-gold.png');
@@ -1754,23 +1747,27 @@ input[type="text"]:focus, input[type="number"]:focus {
 /* Responsive adjustments */
 @media (max-width: 1200px) {
   .pre-analysis-content-wrapper {
-    max-width: 1000px;
+    left: 25%;
+    max-width: 500px;
   }
   
   .pre-analysis-content::before {
     width: 600px;
     height: 600px;
+    left: 75%;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1050px) {
   .pre-analysis-content-wrapper {
+    left: 25%;
     max-width: 400px;
   }
   
   .pre-analysis-content::before {
-    width: 650px;
-    height: 650px;
+    width: 500px;
+    height: 500px;
+    left: 75%;
   }
 
   .pre-analysis-content h1 {
@@ -1778,7 +1775,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 850px) {
   .pre-analysis-content {
     flex-direction: column;
     align-items: center;
