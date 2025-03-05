@@ -92,7 +92,7 @@ const LegalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="App">
       <header className="app-header">
         <div className="app-title" onClick={handleHomeClick}>
-          <h1>OliveSays</h1>
+          <h1>Olive</h1>
         </div>
       </header>
       {children}
@@ -776,12 +776,12 @@ const AppContent: React.FC = () => {
       {showAuthModal && <AuthModal onClose={handleCloseAuthModal} />}
       <ToastContainer 
         position="bottom-right"
-        autoClose={3000}
-        hideProgressBar
+        autoClose={4000}
+        hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
         rtl={false}
-        pauseOnFocusLoss={false}
+        pauseOnFocusLoss
         draggable={false}
         pauseOnHover
         theme="dark"

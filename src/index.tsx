@@ -2,21 +2,30 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { toast } from 'react-toastify';
 
 declare global {
   interface Window {
     React: typeof React;
     ReactDOM: any;
+    debugToast: (type: 'success' | 'error' | 'info' | 'warning', message: string, duration?: number) => void;
   }
 }
 
 console.log('Index.tsx started executing');
 
-// Expose React for debugging
+// Expose React and toast helper for debugging
 window.React = React;
 window.ReactDOM = ReactDOM;
+window.debugToast = (type, message, duration = 4000) => {
+  if (toast[type]) {
+    toast[type](message, { autoClose: duration });
+  } else {
+    console.error('Invalid toast type. Use: success, error, info, or warning');
+  }
+};
 
-console.log('React exposed to window');
+console.log('React and debug helpers exposed to window');
 
 try {
   console.log('Attempting to get root element');
