@@ -3503,16 +3503,32 @@ input[type="text"]:focus, input[type="number"]:focus {
   border-radius: 8px;
   padding: 0 16px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 12px rgba(255, 255, 255, 0.4); /* Stronger white glow */
-  padding-right: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 .website-input-form .input-wrapper:focus-within {
   border-color: var(--gold-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 16px rgba(255, 255, 255, 0.5); /* Added stronger white glow when focused */
-  background: rgba(28, 30, 25, 0.6); /* Keep the same background when focused */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 25px rgba(255, 255, 255, 0.8);
+  background: rgba(28, 30, 25, 0.6);
+  animation: borderGlow 2s infinite;
+}
+
+/* Override for compact version - remove all glow effects */
+.website-input-form.compact .input-wrapper {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.website-input-form.compact .input-wrapper:focus-within {
+  border-color: var(--gold-primary);
+  box-shadow: none;
+  background: transparent !important;
+  animation: none;
 }
 
 .website-input-form input {
