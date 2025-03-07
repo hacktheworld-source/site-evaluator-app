@@ -50,3 +50,6 @@ functions/*.log
 .firebase/
 firebase-debug.log
 ui-debug.log
+
+# Development mock tools
+/src/utils/devMock.ts

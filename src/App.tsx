@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import WebsiteInput from './components/WebsiteInput';
 import EvaluationResults from './components/EvaluationResults';
 import Auth from './components/Auth';
@@ -22,7 +22,7 @@ import PaymentMethodSuccess from './components/PaymentMethodSuccess';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { paymentService, UserData } from './services/paymentService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBolt, faDollarSign, faCreditCard } from '@fortawesome/free-solid-svg-icons';
+import { faBolt, faBars, faTimes, faUser, faCoins, faSignOutAlt, faFileAlt, faShieldAlt } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { db } from './services/firebase';
 import { getFirestore, collection, doc, onSnapshot, DocumentSnapshot, updateDoc } from 'firebase/firestore';
@@ -30,6 +30,7 @@ import { Message } from './components/ChatInterface';
 import Footer from './components/Footer';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import { setupDevTools } from './utils/devMock';
 
 console.log('App loaded');
 
@@ -101,7 +102,7 @@ const LegalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-const AppContent: React.FC = () => {
+const AppContent = forwardRef((props, ref) => {
   const [user, loading, authError] = useAuthState(auth);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +123,12 @@ const AppContent: React.FC = () => {
   const [isPayAsYouGo, setIsPayAsYouGo] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMetricsPanelCollapsed, setIsMetricsPanelCollapsed] = useState(false);
+  const metricsHeaderRef = useRef<HTMLDivElement>(null);
+  const metricsPanelRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef(0);
+  const touchMoveRef = useRef(0);
 
   const FUN_STATUS_MESSAGES = [
     "Mixing potions...",
@@ -593,6 +600,48 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.innerWidth > 768) return; // Only apply on mobile
+    touchStartRef.current = e.touches[0].clientY;
+    touchMoveRef.current = touchStartRef.current;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.innerWidth > 768) return; // Only apply on mobile
+    touchMoveRef.current = e.touches[0].clientY;
+    // We don't call preventDefault() anymore to avoid the passive listener issue
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (window.innerWidth > 768) return; // Only apply on mobile
+    
+    const deltaY = touchMoveRef.current - touchStartRef.current;
+    console.log('Touch delta Y:', deltaY); // Debugging
+    
+    // Make the threshold smaller for better responsiveness
+    if (deltaY > 20 && !isMetricsPanelCollapsed) {
+      console.log('Collapsing panel');
+      setIsMetricsPanelCollapsed(true);
+    } 
+    // If dragged up more than 20px and panel is collapsed, expand it
+    else if (deltaY < -20 && isMetricsPanelCollapsed) {
+      console.log('Expanding panel');
+      setIsMetricsPanelCollapsed(false);
+    }
+  };
+
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    if (window.innerWidth > 768) return; // Only apply on mobile
+    
+    // Stop propagation to prevent other click handlers from firing
+    e.stopPropagation();
+    
+    // Toggle with explicit state setting for better reliability
+    const newState = !isMetricsPanelCollapsed;
+    console.log('Header click - setting collapsed:', newState);
+    setIsMetricsPanelCollapsed(newState);
+  };
+
   const renderPage = () => {
     return (
       <>
@@ -627,10 +676,26 @@ const AppContent: React.FC = () => {
 
           <div className={`post-analysis-content ${analysisState === 'post' ? 'fade-in' : ''}`}>
             <div className={`analysis-layout ${evaluationResults ? 'has-results' : ''}`}>
-              <div className="metrics-panel">
+              <div 
+                ref={metricsPanelRef}
+                className={`metrics-panel ${isMetricsPanelCollapsed ? 'collapsed' : ''}`}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                style={{ 
+                  // Add inline style as a fallback
+                  transform: isMetricsPanelCollapsed ? 
+                    'translateY(calc(100% - var(--metrics-handle-height)))' : 
+                    'translateY(0)' 
+                }}
+              >
                 {evaluationResults && (
                   <>
-                    <div className="metrics-header">
+                    <div 
+                      ref={metricsHeaderRef}
+                      className="metrics-header" 
+                      onClick={handleHeaderClick}
+                    >
                       <h3>Analysis Results</h3>
                       <MetricsSearch
                         onSearch={handleMetricsSearch}
@@ -738,6 +803,98 @@ const AppContent: React.FC = () => {
         return renderPage();
     }
   };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  // Use the ref to expose component instance
+  useImperativeHandle(ref, () => ({
+    setState: (newState: any) => {
+      // Update component state for mocking
+      if (newState.analysisState !== undefined) setAnalysisState(newState.analysisState);
+      if (newState.fadeOutComplete !== undefined) setFadeOutComplete(newState.fadeOutComplete);
+      if (newState.evaluationResults !== undefined) setEvaluationResults(newState.evaluationResults);
+      if (newState.isLoading !== undefined) setIsLoading(newState.isLoading);
+      if (newState.error !== undefined) setError(newState.error);
+      if (newState.statusMessage !== undefined) setStatusMessage(newState.statusMessage);
+      if (newState.funStatusMessage !== undefined) setFunStatusMessage(newState.funStatusMessage);
+      if (newState.websiteUrl !== undefined) setWebsiteUrl(newState.websiteUrl);
+      if (newState.rawInput !== undefined) setRawInput(newState.rawInput);
+      if (newState.isGenerating !== undefined) setIsGenerating(newState.isGenerating);
+      if (newState.isWaitingForResponse !== undefined) setIsWaitingForResponse(newState.isWaitingForResponse);
+    },
+    getState: () => ({
+      analysisState,
+      fadeOutComplete,
+      evaluationResults,
+      isLoading,
+      error,
+      statusMessage,
+      funStatusMessage,
+      websiteUrl,
+      rawInput,
+      isGenerating,
+      isWaitingForResponse
+    })
+  }));
+
+  // Place the useEffect here inside the component function, not at the top level
+  useEffect(() => {
+    // Reset the collapsed state when going to post-analysis view
+    if (analysisState === 'post') {
+      setIsMetricsPanelCollapsed(false);
+    }
+  }, [analysisState]);
+
+  // Update the useEffect debug function to ensure it modifies the DOM correctly
+  useEffect(() => {
+    // Ensure this code only runs in the browser
+    if (typeof window !== 'undefined' && metricsPanelRef.current) {
+      // Log state changes to help debug
+      console.log('Metrics panel collapsed state:', isMetricsPanelCollapsed);
+      
+      // Force a style update directly on the DOM element as a fallback
+      if (isMetricsPanelCollapsed) {
+        metricsPanelRef.current.style.transform = `translateY(calc(100% - var(--metrics-handle-height)))`;
+      } else {
+        metricsPanelRef.current.style.transform = 'translateY(0)';
+      }
+    }
+  }, [isMetricsPanelCollapsed]);
+
+  // Add additional debugging to help track panel state and dimensions
+  useEffect(() => {
+    // Only run in development and in browser
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      // Create a debug function in the window object
+      (window as any).debugMetricsPanel = {
+        getState: () => ({
+          isCollapsed: isMetricsPanelCollapsed,
+          panel: metricsPanelRef.current,
+          header: metricsHeaderRef.current,
+          dimensions: metricsPanelRef.current ? {
+            height: metricsPanelRef.current.offsetHeight,
+            width: metricsPanelRef.current.offsetWidth,
+            top: metricsPanelRef.current.getBoundingClientRect().top,
+            bottom: metricsPanelRef.current.getBoundingClientRect().bottom
+          } : null,
+          toggleCollapsed: () => setIsMetricsPanelCollapsed(prev => !prev)
+        })
+      };
+      
+      // Log metrics panel info on first load
+      if (metricsPanelRef.current) {
+        console.log('Metrics panel loaded:', {
+          element: metricsPanelRef.current,
+          height: metricsPanelRef.current.offsetHeight,
+          transform: metricsPanelRef.current.style.transform,
+          classes: metricsPanelRef.current.className
+        });
+      }
+    }
+  }, [isMetricsPanelCollapsed]);
+
   if (loading) return (
     <div style={{
       position: 'fixed',
@@ -761,43 +918,163 @@ const AppContent: React.FC = () => {
         <div className="app-title" onClick={() => goToPage('home')}>
           <h1>OliveSays<span className="beta-label">Beta</span></h1>
         </div>
-        <div className="header-links">
+        
+        {/* Desktop menu */}
+        <div className="header-links desktop-only">
           <Link to="/terms-of-service">Terms of Service</Link>
           <Link to="/privacy-policy">Privacy Policy</Link>
         </div>
-        {user ? (
-          <div className="user-menu-container">
-            <div className="points-counter" onClick={() => goToPage('points')}>
-              <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
-              {userData?.isPayAsYouGo && (
-                <FontAwesomeIcon 
-                  icon={faBolt} 
-                  className="pay-as-you-go-icon" 
-                  title="Pay-as-you-go enabled"
+        
+        {/* Desktop user menu */}
+        <div className="user-menu-container desktop-only">
+          {user ? (
+            <>
+              <div className="points-counter" onClick={() => goToPage('points')}>
+                <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
+                {userData?.isPayAsYouGo && (
+                  <FontAwesomeIcon 
+                    icon={faBolt} 
+                    className="pay-as-you-go-icon" 
+                    title="Pay-as-you-go enabled"
+                  />
+                )}
+              </div>
+              <button 
+                className="user-menu-button" 
+                onClick={() => goToPage('profile')}
+                title="View Profile"
+              >
+                <img
+                  src={getProfilePicture(user)}
+                  alt="User Avatar"
+                  className="user-avatar"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = defaultUserIcon;
+                  }}
                 />
-              )}
-            </div>
-            <button 
-              className="user-menu-button" 
-              onClick={() => goToPage('profile')}
-              title="View Profile"
-            >
+              </button>
+            </>
+          ) : (
+            <button onClick={handleSignInClick} className="royal-olive">Sign In / Sign Up</button>
+          )}
+        </div>
+        
+        {/* Mobile hamburger button */}
+        <button className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+          <FontAwesomeIcon icon={mobileMenuOpen ? faTimes : faBars} />
+        </button>
+      </header>
+      
+      {/* Mobile menu overlay */}
+      <div className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={toggleMobileMenu}>
+        <div className="mobile-menu" onClick={e => e.stopPropagation()}>
+          <div className="mobile-menu-header">
+            <h2>Menu</h2>
+            <button className="close-menu-button" onClick={toggleMobileMenu}>
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          </div>
+          
+          {user ? (
+            <div className="mobile-user-info">
               <img
                 src={getProfilePicture(user)}
                 alt="User Avatar"
-                className="user-avatar"
+                className="mobile-user-avatar"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
                   target.src = defaultUserIcon;
                 }}
               />
-            </button>
-          </div>
-        ) : (
-          <button onClick={handleSignInClick} className="royal-olive">Sign In / Sign Up</button>
-        )}
-      </header>
+              <div className="mobile-user-details">
+                <p className="mobile-user-email">{user.email}</p>
+                <div className="mobile-points-counter" onClick={() => {
+                  goToPage('points');
+                  toggleMobileMenu();
+                }}>
+                  <FontAwesomeIcon icon={faCoins} />
+                  <span>${userData?.balance?.toFixed(2) || '0.00'}</span>
+                  {userData?.isPayAsYouGo && (
+                    <FontAwesomeIcon 
+                      icon={faBolt} 
+                      className="pay-as-you-go-icon" 
+                      title="Pay-as-you-go enabled"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => {
+              handleSignInClick();
+              toggleMobileMenu();
+            }} className="mobile-sign-in-button royal-olive">Sign In / Sign Up</button>
+          )}
+          
+          <nav className="mobile-nav">
+            <ul>
+              <li>
+                <button onClick={() => {
+                  goToPage('home');
+                  toggleMobileMenu();
+                }}>
+                  <FontAwesomeIcon icon={faUser} />
+                  Home
+                </button>
+              </li>
+              {user && (
+                <>
+                  <li>
+                    <button onClick={() => {
+                      goToPage('profile');
+                      toggleMobileMenu();
+                    }}>
+                      <FontAwesomeIcon icon={faUser} />
+                      Profile
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => {
+                      goToPage('points');
+                      toggleMobileMenu();
+                    }}>
+                      <FontAwesomeIcon icon={faCoins} />
+                      Points
+                    </button>
+                  </li>
+                </>
+              )}
+              <li>
+                <Link to="/terms-of-service" onClick={toggleMobileMenu}>
+                  <FontAwesomeIcon icon={faFileAlt} />
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy-policy" onClick={toggleMobileMenu}>
+                  <FontAwesomeIcon icon={faShieldAlt} />
+                  Privacy Policy
+                </Link>
+              </li>
+              {user && (
+                <li>
+                  <button onClick={() => {
+                    handleSignOut();
+                    toggleMobileMenu();
+                  }}>
+                    <FontAwesomeIcon icon={faSignOutAlt} />
+                    Sign Out
+                  </button>
+                </li>
+              )}
+            </ul>
+          </nav>
+        </div>
+      </div>
+      
       <div className={`content-wrapper`}>
         <main className="main-content">
           {currentPage === 'payment-success' ? (
@@ -827,29 +1104,37 @@ const AppContent: React.FC = () => {
       />
     </div>
   );
-};
+});
 
 const App: React.FC = () => {
+  const appRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Initialize development tools if in development mode
+    if (process.env.NODE_ENV === 'development') {
+      // Wait for component to be fully mounted before initializing dev tools
+      setTimeout(() => {
+        setupDevTools(appRef.current);
+      }, 500);
+      
+      // Add a special flag to window to indicate we're in development mode with mocks
+      // This can be used by child components to avoid making API calls
+      (window as any).__DEV_MOCK_ENABLED__ = true;
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
         <Routes>
-          <Route path="/" element={<AppContent />} />
+          <Route path="/" element={<AppContent ref={appRef} />} />
           <Route
             path="/terms-of-service"
-            element={
-              <LegalLayout>
-                <TermsOfService />
-              </LegalLayout>
-            }
+            element={<LegalLayout><TermsOfService /></LegalLayout>}
           />
           <Route
             path="/privacy-policy"
-            element={
-              <LegalLayout>
-                <PrivacyPolicy />
-              </LegalLayout>
-            }
+            element={<LegalLayout><PrivacyPolicy /></LegalLayout>}
           />
         </Routes>
       </Router>

@@ -22,12 +22,22 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
   initialRawInput = ''
 }) => {
   const [website, setWebsite] = useState(variant === 'compact' ? initialRawInput : initialUrl);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
     if (variant === 'compact' && initialRawInput) {
       setWebsite(initialRawInput);
     }
   }, [initialRawInput, variant]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const formatUrl = (url: string): string => {
     if (!url.match(/^https?:\/\//i)) {
@@ -52,11 +62,15 @@ const WebsiteInput: React.FC<WebsiteInputProps> = ({
       return <div className="royal-spinner" />;
     }
     
-    if (variant === 'compact') {
+    if (variant === 'compact' || isMobile) {
       return <FontAwesomeIcon icon={faArrowRight} />;
     }
     
-    return isLoggedIn ? "Get My Analysis" : "Get Your Free Analysis";
+    return (
+      <span>
+        {isLoggedIn ? "Get My Analysis" : "Get Your Free Analysis"}
+      </span>
+    );
   };
 
   return (

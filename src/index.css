@@ -42,6 +42,7 @@
   --header-height: 70px;
   --footer-height: 30px;
   --content-padding: 40px;
+  --metrics-handle-height: 50px;
 }
 
 body {
@@ -992,6 +993,7 @@ input[type="text"]:focus, input[type="number"]:focus {
   width: 100%;
   max-width: 500px;
   margin: 20px auto;
+  box-sizing: border-box;
 }
 
 .input-wrapper {
@@ -1132,6 +1134,34 @@ input[type="text"]:focus, input[type="number"]:focus {
   0% { opacity: 0.7; }
   50% { opacity: 1; }
   100% { opacity: 0.7; }
+}
+
+/* Global mobile styles for ALL status messages throughout the app */
+@media (max-width: 768px) {
+  .status-message {
+    max-width: 90%;
+    padding: 15px 10px;
+    gap: 8px;
+  }
+  
+  .status-message .fun-message {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-message {
+    max-width: 95%;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  
+  .status-message .fun-message {
+    font-size: 18px;
+    line-height: 1.2;
+    word-wrap: break-word;
+  }
 }
 
 .status-messages {
@@ -1839,9 +1869,11 @@ input[type="text"]:focus, input[type="number"]:focus {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: 0px;
+    padding: 20px 15px 40px;
     height: auto;
     overflow: auto;
+    min-height: calc(100vh - var(--header-height) - 20px);
+    box-sizing: border-box;
   }
   
   .pre-analysis-content-wrapper {
@@ -1850,26 +1882,92 @@ input[type="text"]:focus, input[type="number"]:focus {
     top: auto;
     transform: none;
     max-width: 100%;
+    width: 100%;
     text-align: center;
     align-items: center;
-    margin: 20px 0;
+    margin: 10px 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  .pre-analysis-content h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    padding: 0 10px;
+    word-wrap: break-word;
+    line-height: 1.2;
+  }
+  
+  .app-description {
+    font-size: 1.1em;
+    margin-bottom: 25px;
+    padding: 0 10px;
+    max-width: 100%;
   }
   
   .pre-analysis-content::before {
     display: none;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    visibility: hidden;
-    position: absolute;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    pointer-events: none;
   }
   
   .pre-analysis-content::after {
     display: none;
+  }
+}
+
+/* Additional breakpoint for smaller mobile devices */
+@media (max-width: 480px) {
+  .pre-analysis-content {
+    padding: 15px 10px 30px;
+  }
+  
+  .pre-analysis-content h1 {
+    font-size: 1.5em;
+    margin-bottom: 15px;
+    padding: 0 5px;
+  }
+  
+  .app-description {
+    font-size: 0.95em;
+    margin-bottom: 20px;
+    padding: 0 5px;
+  }
+  
+  .website-input-form {
+    width: 100%;
+    max-width: 100%;
+    margin: 10px 0;
+    padding: 0 5px;
+    box-sizing: border-box;
+  }
+  
+  .input-wrapper {
+    padding: 12px 5px 0px 5px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .evaluate-submit-button {
+    font-size: 13px;
+    padding: 8px 16px;
+    min-width: 90px;
+  }
+}
+
+/* Fix for website input form on mobile */
+@media (max-width: 480px) {
+  .website-input-form .input-wrapper {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  
+  .website-input-form input {
+    flex: 1;
+    width: calc(100% - 90px);
+    box-sizing: border-box;
+    font-size: 14px;
   }
 }
 
@@ -2096,9 +2194,8 @@ input[type="text"]:focus, input[type="number"]:focus {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 15px 20px;
-  margin: 0;
-  background: none;
+  padding: 20px;
+  position: relative;
 }
 
 .metric-value pre {
@@ -4379,4 +4476,1084 @@ textarea::placeholder {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+}
+
+/* Mobile optimizations for website input form */
+@media (max-width: 768px) {
+  .website-input-form {
+    max-width: 100%;
+    margin: 15px auto;
+  }
+  
+  .input-wrapper {
+    padding: 15px 5px 0px 5px;
+  }
+  
+  .evaluate-submit-button {
+    font-size: 14px;
+    padding: 10px 18px;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .website-input-form {
+    margin: 10px auto;
+  }
+  
+  .input-wrapper {
+    padding: 12px 5px 0px 5px;
+  }
+  
+  .evaluate-submit-button {
+    font-size: 13px;
+    padding: 8px 16px;
+    min-width: 100px;
+  }
+}
+
+/* Specific fixes for website input on mobile */
+@media (max-width: 480px) {
+  /* Fix for the header text and layout */
+  .app-title h1 {
+    font-size: 1.5rem;
+    padding: 0 5px;
+  }
+  
+  /* Improve the input form container for better mobile display */
+  .website-input-form {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 5px;
+    margin: 10px auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .website-input-form .input-wrapper {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  /* Fix input field and submit button alignment */
+  .website-input-form input {
+    width: 100%;
+    padding: 12px 8px;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+  
+  .evaluate-submit-button {
+    height: auto;
+    min-height: 40px;
+    padding: 8px 15px;
+    font-size: 14px;
+    min-width: 80px;
+    white-space: nowrap;
+  }
+  
+  /* Fix for Olive heading on pre-analysis page */
+  .pre-analysis-content h1 {
+    font-size: 1.5em;
+    line-height: 1.3;
+    padding: 0 10px;
+    margin: 10px 0 15px;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+  
+  .animated-eye {
+    margin: 10px 0;
+  }
+  
+  .animated-eye img {
+    max-width: 150px;
+    height: auto;
+  }
+}
+
+/* Mobile optimization for the app header */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 15px;
+    height: calc(var(--header-height) - 10px);
+  }
+  
+  .app-title {
+    font-size: 24px;
+    margin-right: 10px;
+  }
+  
+  .header-links {
+    gap: 15px;
+  }
+  
+  .header-links a {
+    font-size: 0.9em;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0 10px;
+    left: 10px;
+    right: 10px;
+    top: 5px;
+  }
+  
+  .app-title {
+    font-size: 20px;
+    margin-right: 5px;
+  }
+  
+  .beta-label {
+    font-size: 0.65em;
+    padding: 2px 6px;
+    top: -8px;
+    right: -20px;
+  }
+  
+  .header-links {
+    gap: 8px;
+  }
+  
+  .header-links a {
+    font-size: 0.8em;
+    padding: 6px 8px;
+  }
+  
+  .user-menu-container {
+    margin-left: 5px;
+  }
+}
+
+/* Further refinements for the pre-analysis content on mobile */
+@media (max-width: 480px) {
+  /* Adjust top margin to account for header spacing */
+  .pre-analysis-content {
+    padding-top: calc(var(--header-height) - 30px);
+    margin-top: 0;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Ensure input form and button are properly contained */
+  .website-input-form .input-wrapper {
+    display: flex;
+    align-items: center;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 95vw;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  /* Fix any text overflow issues */
+  .app-description {
+    width: 100%;
+    max-width: 95vw;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Constrain form width */
+  .website-input-form {
+    width: 95%;
+    max-width: 95%;
+  }
+}
+
+/* Extra small screen adjustments - show only essential header elements */
+@media (max-width: 360px) {
+  .app-header {
+    padding: 0 6px;
+  }
+  
+  .app-title {
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  
+  /* Hide text links and show only icons if applicable */
+  .header-links span {
+    display: none;
+  }
+  
+  .header-links a {
+    font-size: 0;
+    padding: 6px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .header-links a i, 
+  .header-links a svg {
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  /* Adjust beta label */
+  .beta-label {
+    font-size: 0.6em;
+    padding: 1px 4px;
+    top: -6px;
+    right: -15px;
+  }
+  
+  /* Adjust points display */
+  .points-counter {
+    font-size: 14px;
+    margin-right: 8px;
+  }
+  
+  /* Ensure the input doesn't overflow */
+  .website-input-form {
+    width: 90%;
+    max-width: 90%; 
+  }
+  
+  .website-input-form .input-wrapper {
+    max-width: 90vw;
+  }
+}
+
+/* Desktop/Mobile visibility classes */
+.desktop-only {
+  display: flex;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--off-white);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+/* Mobile Menu Styles */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s linear;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--deep-black);
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  z-index: 2001;
+  border-left: 1px solid var(--glass-border);
+}
+
+.mobile-menu-overlay.open .mobile-menu {
+  right: 0;
+}
+
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-menu-header h2 {
+  margin: 0;
+  color: var(--off-white);
+  font-size: 1.5rem;
+}
+
+.close-menu-button {
+  background: none;
+  border: none;
+  color: var(--off-white);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--gold-primary);
+}
+
+.mobile-user-details {
+  margin-left: 15px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mobile-user-email {
+  margin: 0 0 5px;
+  color: var(--off-white);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-points-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-sign-in-button {
+  width: 100%;
+  margin: 15px 0 25px;
+  padding: 12px;
+  font-size: 1rem;
+}
+
+.mobile-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-nav li {
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-nav button,
+.mobile-nav a {
+  background: none;
+  border: none;
+  color: var(--off-white);
+  text-align: left;
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-nav button:hover,
+.mobile-nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-nav button svg,
+.mobile-nav a svg {
+  width: 18px;
+  color: var(--gold-primary);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: block;
+  }
+}
+
+/* Mobile submit button style to match post-analysis compact button */
+@media (max-width: 768px) {
+  .website-input-form:not(.compact) .evaluate-submit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: var(--off-white);
+    color: var(--deep-black);
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease-out;
+    position: relative;
+    overflow: hidden;
+    min-width: unset;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Specific fix for compact button on mobile to ensure it's a perfect circle */
+  .website-input-form.compact .evaluate-submit-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: var(--off-white);
+    color: var(--deep-black);
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+    position: absolute;
+    right: 12px; /* Adjusted position */
+    top: 50%; /* Center vertically */
+    transform: translateY(-50%); /* Perfect vertical centering */
+    overflow: hidden;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .post-analysis-content {
+    padding-top: var(--header-height);
+    padding-bottom: var(--footer-height);
+  }
+  
+  .website-input-form:not(.compact) .evaluate-submit-button:hover {
+    background-color: var(--deep-black);
+    color: var(--off-white);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .website-input-form:not(.compact) .evaluate-submit-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  /* Hide the text in the button and only show icon on mobile */
+  .website-input-form:not(.compact) .evaluate-submit-button span {
+    display: none;
+  }
+}
+
+/* Additional fix to ensure no horizontal scrolling on mobile menu */
+.mobile-menu * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-menu-overlay.open .mobile-menu {
+  right: 0;
+  max-width: 100vw; /* Ensure it doesn't go beyond viewport width */
+}
+
+/* Smaller screens adjustments */
+@media (max-width: 360px) {
+  .mobile-menu {
+    width: 260px;
+    padding: 15px;
+  }
+  
+  .mobile-menu-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .mobile-user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .mobile-nav button,
+  .mobile-nav a {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Additional horizontal scroll fix for Safari and other browsers */
+@supports (-webkit-touch-callout: none) {
+  .mobile-menu {
+    width: 280px;
+    padding-right: 25px; /* Extra padding for Safari */
+  }
+}
+
+/* Post-analysis layout mobile optimization */
+@media (max-width: 768px) {
+  .analysis-layout {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
+    height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  .analysis-layout.has-results {
+    grid-template-columns: unset;
+  }
+  
+  .analysis-main {
+    grid-column: unset;
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+}
+
+/* Small mobile phones */
+@media (max-width: 480px) {
+  .analysis-layout {
+    padding: 0;
+  }
+  
+  .analysis-main {
+    padding: 0 8px;
+  }
+}
+
+.metrics-panel {
+  background: none;
+  backdrop-filter: none;
+  border-radius: 0;
+  padding: 20px;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-20px);
+  transition: 
+    width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 0.3s ease,
+    visibility 0s linear 0.3s,
+    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.analysis-layout.has-results .metrics-panel {
+  width: 400px;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  transition: 
+    width 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 0.3s ease,
+    visibility 0s linear 0s,
+    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Mobile metrics panel optimization */
+@media (max-width: 768px) {
+  .metrics-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0; /* Add right: 0 to ensure it's anchored to the right edge */
+    width: 100%;
+    max-width: 100vw; /* Ensure it doesn't exceed viewport width */
+    max-height: 70vh;
+    z-index: 10;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    transform: translateY(0); /* Explicitly set initial transform */
+    will-change: transform;
+    overflow: hidden;
+    background-color: var(--deep-black);
+    border-top: 1px solid var(--glass-border);
+    box-sizing: border-box; /* Ensure padding is included in width calculation */
+  }
+  
+  /* Add a visual handle at the top of the metrics panel */
+  .metrics-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    z-index: 2;
+  }
+  
+  /* Collapsed state - just show a small part of the header */
+  .metrics-panel.collapsed {
+    transform: translateY(calc(100% - var(--metrics-handle-height) - 30px)) !important; /* Added 30px to show more of the header */
+  }
+  
+  /* Ensure the header is always visible in collapsed state */
+  .metrics-header {
+    position: relative;
+    padding: 15px 15px 10px;
+    padding-bottom: 0px;
+    background: inherit;
+    z-index: 1;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    min-height: var(--metrics-handle-height);
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Add width control */
+    box-sizing: border-box; /* Add box-sizing */
+    overflow-x: hidden; /* Prevent horizontal overflow */
+  }
+  
+  /* Style the header differently in collapsed state to make it more apparent */
+  .metrics-panel.collapsed .metrics-header {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+  }
+  
+  /* Make the header text clearer when collapsed */
+  .metrics-panel.collapsed .metrics-header h3 {
+    text-align: center;
+    margin-bottom: 5px;
+  }
+  
+  /* Make sure scrollable content doesn't affect dragging behavior */
+  .metrics-scrollable {
+    max-height: calc(70vh - var(--metrics-handle-height) - 20px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 0 15px 20px;
+    width: 100%; /* Add width control */
+    max-width: 100%; /* Ensure it doesn't exceed container width */
+    box-sizing: border-box; /* Include padding in width calculation */
+    overflow-x: hidden; /* Prevent horizontal overflow */
+    margin-top: 0px;
+  }
+
+  /* Override any existing transform animations for mobile */
+  .analysis-layout.has-results .metrics-panel {
+    animation: none;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+  
+  /* Make sure the collapsed state overrides this */
+  .analysis-layout.has-results .metrics-panel.collapsed {
+    transform: translateY(calc(100% - var(--metrics-handle-height) - 30px)) !important; /* Added 30px to show more of the header */
+  }
+  
+  /* Adjust the chat container to make room for the metrics panel */
+  .chat-container {
+    padding-bottom: var(--metrics-handle-height);
+  }
+  
+  /* Ensure metrics search appears properly */
+  .metrics-search {
+    position: relative;
+    margin-top: 10px;
+    width: 100%;
+    max-width: 100%; /* Ensure it doesn't exceed container width */
+    box-sizing: border-box; /* Include padding in width calculation */
+  }
+  
+  /* Ensure the search input is fully contained */
+  .metrics-search-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Ensure metric boxes are properly contained */
+  .metric-box {
+    max-width: 100%;
+    box-sizing: border-box;
+    word-break: break-word; /* Allow long words to break */
+  }
+  
+  .metric-value {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  
+  .metric-value pre {
+    white-space: pre-wrap; /* Allow code to wrap */
+    word-break: break-word;
+  }
+}
+
+/* Mobile optimization for chat container and messages */
+@media (max-width: 768px) {
+  .chat-container {
+    width: 100%;
+    height: 100%;
+    max-height: calc(100vh - var(--header-height) - 20px);
+    box-sizing: border-box;
+  }
+  
+  .chat-interface {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  
+  .chat-messages {
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .message {
+    max-width: 85%;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  
+  .message.user {
+    margin-left: auto;
+  }
+  
+  .message.assistant {
+    margin-right: auto;
+  }
+  
+  .message-content {
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+  
+  .message-content p {
+    margin: 0 0 8px 0;
+  }
+  
+  .message-content ul, 
+  .message-content ol {
+    padding-left: 20px;
+    margin: 8px 0;
+  }
+  
+  .chat-phase-indicator-wrapper {
+    padding: 0 5px;
+  }
+  
+  .chat-phase-indicator {
+    padding: 10px 5px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .phase-item {
+    padding: 5px 10px;
+    font-size: 0.85em;
+    white-space: nowrap;
+  }
+}
+
+/* Small mobile phones */
+@media (max-width: 480px) {
+  .chat-messages {
+    padding: 8px 10px;
+  }
+  
+  .message {
+    max-width: 90%;
+  }
+  
+  .message-content {
+    font-size: 0.9em;
+  }
+  
+  .phase-item {
+    padding: 4px 8px;
+    font-size: 0.8em;
+  }
+  
+  .chat-input {
+    padding: 10px 8px;
+  }
+  
+  .chat-input input {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  
+  .chat-submit-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* Optimize the compact header for mobile */
+@media (max-width: 768px) {
+  .compact-header {
+    padding: 0 5px 15px;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .website-input-form.compact {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .website-input-form.compact .input-wrapper {
+    width: 100%;
+    padding: 5px 10px; /* Add more vertical padding */
+    margin: 3px 0; /* Add a small margin for spacing */
+    height: auto; /* Allow height to adjust based on content and padding */
+    min-height: 48px; /* Set a minimum height */
+  }
+  
+  /* Adjust the input field within the wrapper */
+  .website-input-form.compact .input-wrapper input {
+    padding: 8px 40px 8px 0;
+    height: 40px; /* Slightly taller input */
+  }
+}
+
+/* Optimize the floating action button for mobile */
+@media (max-width: 768px) {
+  .floating-action-container {
+    bottom: 15px;
+    right: 15px;
+  }
+  
+  .floating-action-button {
+    height: 44px;
+    min-width: 100px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-action-container {
+    bottom: 10px;
+    right: 10px;
+  }
+  
+  .floating-action-button {
+    height: 40px;
+    min-width: 90px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}
+
+/* Make sure the collapsed state overrides this */
+.analysis-layout.has-results .metrics-panel.collapsed {
+  transform: translateY(calc(100% - var(--metrics-handle-height) - 30px)) !important; /* Added 30px to show more of the header */
+}
+
+/* Override any other transform transitions that might interfere */
+@media (max-width: 768px) {
+  /* Reset any other transform transitions from other styles */
+  .analysis-layout .metrics-panel,
+  .metrics-panel,
+  .analysis-layout.has-results .metrics-panel {
+    animation: none !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+  }
+
+  /* Ensure the collapsed state is always applied */
+  .metrics-panel.collapsed,
+  .analysis-layout .metrics-panel.collapsed,
+  .analysis-layout.has-results .metrics-panel.collapsed {
+    transform: translateY(calc(100% - var(--metrics-handle-height) - 30px)) !important; /* Added 30px to show more of the header */
+  }
+
+  /* Ensure the expanded state is always applied */
+  .metrics-panel:not(.collapsed),
+  .analysis-layout .metrics-panel:not(.collapsed),
+  .analysis-layout.has-results .metrics-panel:not(.collapsed) {
+    transform: translateY(0) !important;
+  }
+}
+
+/* Mobile styles for post-analysis status messages */
+@media (max-width: 768px) {
+  .post-analysis-content .status-message {
+    max-width: 90%;
+    padding: 15px 10px;
+    gap: 8px;
+  }
+  
+  .post-analysis-content .status-message .fun-message {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+}
+
+/* Even smaller screens need more compact styling */
+@media (max-width: 480px) {
+  .post-analysis-content .status-message {
+    max-width: 95%;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  
+  .post-analysis-content .status-message .fun-message {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* Add mobile-friendly styles for status messages in post-analysis content */
+@media (max-width: 768px) {
+  .analysis-main .status-message {
+    max-width: 90%;
+    padding: 15px 10px;
+    gap: 8px;
+  }
+  
+  .analysis-main .status-message .fun-message {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .analysis-main .status-message {
+    max-width: 95%;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  
+  .analysis-main .status-message .fun-message {
+    font-size: 18px;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-phase-indicator-wrapper {
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .chat-phase-indicator {
+    padding: 10px 0;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    box-sizing: border-box;
+  }
+  
+  .phase-item {
+    padding: 5px 8px;
+    font-size: 0.85em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  /* Add padding to first and last items to ensure they're not flush against the edge */
+  .phase-item:first-child {
+    padding-left: 15px;
+  }
+  
+  .phase-item:last-child {
+    padding-right: 15px;
+  }
+}
+
+/* Additional optimizations for smaller mobile screens */
+@media (max-width: 480px) {
+  .chat-phase-indicator {
+    padding: 8px 0;
+  }
+  
+  .phase-item {
+    padding: 4px 6px;
+    font-size: 0.8em;
+  }
+  
+  .phase-item:first-child {
+    padding-left: 12px;
+  }
+  
+  .phase-item:last-child {
+    padding-right: 12px;
+  }
 }

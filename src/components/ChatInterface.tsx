@@ -17,6 +17,11 @@ const URL_REGEX = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])|(\b(?:[a-z\d]+\.){1,2}[a-
 
 const API_DEBUG = true;
 
+// Check if we're in development mock mode
+const isDevMockEnabled = () => {
+  return typeof window !== 'undefined' && !!(window as any).__DEV_MOCK_ENABLED__;
+};
+
 const debugLog = (message: string, data?: any) => {
   if (API_DEBUG) {
     console.log(`[ChatInterface] ${message}`, data || '');
@@ -221,6 +226,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const startVisionAnalysis = async () => {
+    if (isDevMockEnabled()) {
+      debugLog('Development mock mode enabled, skipping actual API call');
+      // Simulate a delayed response in development mode
+      return new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
     if (messages.length === 0) {
       try {
         const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/analyze`, {
@@ -413,6 +424,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const handleSendMessage = async () => {
+    if (isDevMockEnabled()) {
+      debugLog('Development mock mode enabled, skipping actual API call for chat message');
+      // Just add the user message without making API calls
+      const newUserMessage = { 
+        role: 'user' as const, 
+        content: chatState.userInput 
+      };
+      
+      setMessages(prev => [...prev, newUserMessage]);
+      setUserInput('');
+      
+      // Simulate a response after a delay
+      setTimeout(() => {
+        const mockResponse = {
+          role: 'assistant' as const,
+          content: 'This is a simulated response in development mode. No actual API call was made.'
+        };
+        setMessages(prev => [...prev, mockResponse]);
+      }, 1000);
+      
+      return;
+    }
+
     if (!userInput.trim() || !auth.currentUser?.uid) return;
 
     const userId = auth.currentUser.uid;
@@ -500,6 +534,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const handleContinue = async () => {
+    if (isDevMockEnabled()) {
+      debugLog('Development mock mode enabled, skipping actual API call for phase continuation');
+      
+      const currentIndex = phases.indexOf(currentPhase!);
+      if (currentIndex < phases.length - 1) {
+        const nextPhase = phases[currentIndex + 1];
+        setCurrentPhase(nextPhase);
+        
+        // Simulate a delayed response
+        setTimeout(() => {
+          // Add a mock message for this phase
+          const mockMessage = {
+            role: 'assistant' as const,
+            content: `This is a simulated response for the ${nextPhase} phase in development mode.`,
+            phase: nextPhase,
+            score: 85
+          };
+          
+          setMessages(prev => [...prev, mockMessage]);
+          setIsThinking(false);
+        }, 1000);
+      }
+      
+      return;
+    }
+
     const currentIndex = phases.indexOf(currentPhase!);
     if (currentIndex < phases.length - 1) {
       const nextPhase = phases[currentIndex + 1];
@@ -956,6 +1016,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, []);
 
   const handleGenerateReport = async () => {
+    if (isDevMockEnabled()) {
+      debugLog('Development mock mode enabled, skipping actual report generation');
+      toast.success('Mock report generated in development mode');
+      return;
+    }
+
     if (!messages.length || !evaluationResults || !auth.currentUser?.uid) {
       toast.error('Please sign in to generate a report');
       return;
