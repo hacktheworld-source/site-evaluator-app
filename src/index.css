@@ -5486,7 +5486,7 @@ textarea::placeholder {
 /* Optimize the floating action button for mobile */
 @media (max-width: 768px) {
   .floating-action-container {
-    bottom: 15px;
+    bottom: 100px;
     right: 15px;
   }
   
@@ -5500,7 +5500,7 @@ textarea::placeholder {
 
 @media (max-width: 480px) {
   .floating-action-container {
-    bottom: 10px;
+    bottom: 90px;
     right: 10px;
   }
   
