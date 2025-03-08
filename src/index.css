@@ -898,6 +898,15 @@ input[type="text"]:focus, input[type="number"]:focus {
     width: 100%;
     box-sizing: border-box;
   }
+  
+  .reports-list {
+    padding-left: 5px;
+    padding-right: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding-bottom: 10px;
+    margin: 0 5px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -5728,6 +5737,10 @@ textarea::placeholder {
   .reports-list {
     padding-left: 5px;
     padding-right: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding-bottom: 10px;
+    margin: 0 5px;
   }
   
   .profile-page {
