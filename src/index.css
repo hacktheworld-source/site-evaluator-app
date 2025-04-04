@@ -1101,22 +1101,48 @@ input[type="text"]:focus, input[type="number"]:focus {
   position: relative;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  transition: border-bottom-color 0.3s ease;
-  padding: 20px 10px 0px 10px;
-}
-
-.input-wrapper:focus-within {
-  border-bottom-color: var(--off-white);
-  background: transparent; /* Keep the same background when focused */
+  gap: 10px;
+  background: rgba(28, 30, 25, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .input-wrapper input {
-  flex-grow: 1;
-  padding-right: 40px;
-  background: transparent;
-  border: none;
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
   color: var(--off-white);
+  padding: 14px 0;
+  font-size: 16px;
+  box-shadow: none !important;
+  min-width: 0; /* This is important to allow the input to shrink */
+}
+
+.evaluate-submit-button {
+  flex-shrink: 0; /* Prevent button from shrinking */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background-color: var(--off-white);
+  color: var(--deep-black);
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+  width: fit-content;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-left: auto; /* Push button to the right */
 }
 
 .loading-indicator {
