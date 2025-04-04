@@ -54,17 +54,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: 
-    radial-gradient(50% 50% at 25% 25%, rgba(36, 41, 24, 0.12) 0%, transparent 70%),
-    radial-gradient(60% 50% at 75% 30%, rgba(10, 12, 7, 0.18) 0%, transparent 75%),
-    radial-gradient(70% 60% at 35% 50%, rgba(21, 26, 14, 0.1) 0%, transparent 65%),
-    radial-gradient(40% 60% at 60% 85%, rgba(36, 41, 24, 0.08) 0%, transparent 60%),
-    radial-gradient(65% 55% at 15% 70%, rgba(10, 12, 7, 0.15) 0%, transparent 65%),
-    radial-gradient(30% 40% at 88% 22%, rgba(36, 41, 24, 0.1) 0%, transparent 55%),
-    radial-gradient(55% 65% at 40% 80%, rgba(21, 26, 14, 0.12) 0%, transparent 70%),
-    radial-gradient(45% 45% at 92% 80%, rgba(10, 12, 7, 0.15) 0%, transparent 60%),
-    linear-gradient(135deg, var(--deep-black) 0%, var(--olive-black) 25%, var(--deep-black) 50%, rgba(10, 12, 7, 0.95) 75%, var(--deep-black) 100%);
+    radial-gradient(50% 50% at 25% 25%, rgba(36, 41, 24, 0.08) 0%, transparent 70%),
+    radial-gradient(60% 50% at 75% 30%, rgba(10, 12, 7, 0.12) 0%, transparent 75%),
+    radial-gradient(70% 60% at 35% 50%, rgba(21, 26, 14, 0.07) 0%, transparent 65%),
+    radial-gradient(40% 60% at 60% 85%, rgba(36, 41, 24, 0.05) 0%, transparent 60%),
+    radial-gradient(65% 55% at 15% 70%, rgba(10, 12, 7, 0.1) 0%, transparent 65%),
+    radial-gradient(30% 40% at 88% 22%, rgba(36, 41, 24, 0.08) 0%, transparent 55%),
+    radial-gradient(55% 65% at 40% 80%, rgba(21, 26, 14, 0.09) 0%, transparent 70%),
+    radial-gradient(45% 45% at 92% 80%, rgba(10, 12, 7, 0.1) 0%, transparent 60%),
+    radial-gradient(40% 30% at 20% 40%, rgba(65, 35, 20, 0.04) 0%, transparent 65%),
+    radial-gradient(35% 25% at 80% 60%, rgba(80, 30, 15, 0.03) 0%, transparent 70%),
+    linear-gradient(135deg, #050505 0%, #080a06 25%, #050606 50%, rgba(6, 6, 6, 0.97) 75%, #040404 100%);
   background-attachment: fixed;
-  color: var(--text-primary); /* Changed from --off-white to --text-primary */
+  color: var(--text-primary);
 }
 
 /* Mobile scrolling rule */
@@ -5765,5 +5767,308 @@ textarea::placeholder {
     padding: 0 10px;
     width: 100%;
     box-sizing: border-box;
+  }
+}
+
+/* Add these styles for large screens after the pre-analysis-content media queries (around line 2017) */
+@media (min-width: 1600px) {
+  .pre-analysis-content h1 {
+    font-size: 4em;
+  }
+  
+  .pre-analysis-content-wrapper {
+    max-width: 800px;
+  }
+  
+  .pre-analysis-content::before {
+    width: 900px;
+    height: 900px;
+  }
+  
+  .app-description {
+    font-size: 1.5em;
+  }
+  
+  .website-input-form:not(.compact) {
+    width: 100%;
+    max-width: 800px;
+  }
+  
+  .website-input-form:not(.compact) .input-wrapper {
+    height: 70px;
+  }
+  
+  .website-input-form:not(.compact) input {
+    font-size: 1.3em;
+    padding: 25px 20px;
+  }
+  
+  .website-input-form:not(.compact) .evaluate-submit-button {
+    font-size: 1.3em;
+    padding: 12px 30px;
+  }
+}
+
+@media (min-width: 2000px) {
+  .pre-analysis-content h1 {
+    font-size: 5em;
+  }
+  
+  .pre-analysis-content-wrapper {
+    max-width: 1000px;
+  }
+  
+  .pre-analysis-content::before {
+    width: 1100px;
+    height: 1100px;
+  }
+  
+  .app-description {
+    font-size: 1.8em;
+  }
+  
+  .website-input-form:not(.compact) {
+    max-width: 1000px;
+  }
+  
+  .website-input-form:not(.compact) .input-wrapper {
+    height: 80px;
+  }
+  
+  .website-input-form:not(.compact) input {
+    font-size: 1.5em;
+    padding: 30px 25px;
+  }
+  
+  .website-input-form:not(.compact) .evaluate-submit-button {
+    font-size: 1.5em;
+    padding: 15px 40px;
+  }
+}
+
+/* Add these styles for analysis layout after .analysis-layout.has-results (around line 2112) */
+@media (min-width: 1600px) {
+  .analysis-layout {
+    grid-template-columns: minmax(20px, 1fr) minmax(800px, 1200px) minmax(20px, 1fr);
+  }
+  
+  .analysis-layout.has-results {
+    grid-template-columns: minmax(400px, 30%) minmax(0, 1fr) 0;
+  }
+  
+  .analysis-layout.has-results .metrics-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .chat-interface {
+    font-size: 1.2em;
+  }
+  
+  .metric-box {
+    max-width: 450px;
+    padding: 20px;
+  }
+  
+  .metric-box h4 {
+    font-size: 1.1em;
+  }
+  
+  .metric-value {
+    font-size: 1em;
+  }
+}
+
+@media (min-width: 2000px) {
+  .analysis-layout {
+    grid-template-columns: minmax(20px, 1fr) minmax(800px, 1400px) minmax(20px, 1fr);
+  }
+  
+  .chat-interface {
+    font-size: 1.4em;
+  }
+  
+  .metric-box {
+    max-width: 550px;
+    padding: 24px;
+  }
+  
+  .metric-box h4 {
+    font-size: 1.2em;
+  }
+  
+  .metric-value {
+    font-size: 1.1em;
+  }
+}
+
+/* Enhance metrics-panel styling for larger screens */
+@media (min-width: 1600px) {
+  .metrics-panel {
+    padding: 30px;
+  }
+  
+  .metrics-scrollable {
+    gap: 20px;
+  }
+  
+  .metrics-header h3 {
+    font-size: 1.6em;
+    margin-bottom: 20px;
+  }
+  
+  .screenshot-preview {
+    height: 250px;
+    margin-bottom: 30px;
+  }
+  
+  .metric-value pre {
+    font-size: 1.1em;
+    line-height: 1.5;
+  }
+  
+  /* Improve chat container spacing */
+  .chat-container {
+    padding: 0 15px;
+  }
+  
+  .chat-messages {
+    padding: 20px 15px;
+  }
+  
+  .message {
+    padding: 18px 22px;
+    margin-bottom: 22px;
+    border-radius: 12px;
+  }
+  
+  .message-content {
+    font-size: 1.15em;
+    line-height: 1.6;
+  }
+  
+  .chat-input {
+    padding: 18px 22px;
+    margin-top: 15px;
+  }
+  
+  .chat-input input {
+    font-size: 1.15em;
+    padding: 15px 20px;
+  }
+  
+  .chat-submit-button {
+    font-size: 1.15em;
+    padding: 12px 25px;
+  }
+}
+
+@media (min-width: 2000px) {
+  .metrics-panel {
+    padding: 35px;
+  }
+  
+  .metrics-scrollable {
+    gap: 25px;
+  }
+  
+  .metrics-header h3 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+  }
+  
+  .screenshot-preview {
+    height: 300px;
+    margin-bottom: 35px;
+  }
+  
+  .metric-value pre {
+    font-size: 1.2em;
+    line-height: 1.6;
+  }
+  
+  /* Further enhance chat container */
+  .chat-container {
+    padding: 0 20px;
+  }
+  
+  .chat-messages {
+    padding: 25px 20px;
+  }
+  
+  .message {
+    padding: 22px 28px;
+    margin-bottom: 28px;
+    border-radius: 14px;
+  }
+  
+  .message-content {
+    font-size: 1.25em;
+    line-height: 1.7;
+  }
+  
+  .chat-input {
+    padding: 22px 28px;
+    margin-top: 20px;
+  }
+  
+  .chat-input input {
+    font-size: 1.25em;
+    padding: 18px 25px;
+  }
+  
+  .chat-submit-button {
+    font-size: 1.25em;
+    padding: 15px 30px;
+  }
+  
+  /* Adjust compact header for larger screens */
+  .compact-header {
+    padding: 15px 20px;
+    margin-bottom: 20px;
+  }
+  
+  .website-input-form.compact .input-wrapper {
+    height: 60px;
+  }
+  
+  .website-input-form.compact input {
+    font-size: 1.2em;
+    padding: 18px 25px;
+  }
+  
+  .website-input-form.compact .evaluate-submit-button {
+    font-size: 1.2em;
+    padding: 12px 25px;
+  }
+}
+
+/* Ensure the large screen media queries for the analysis layout are preserved */
+@media (min-width: 1600px) {
+  /* Scale up the animated eye on larger screens */
+  .pre-analysis-content .animated-eye {
+    margin: 20px 0;
+    transform: scale(1.3);
+  }
+  
+  .pre-analysis-content .animated-eye img {
+    max-width: 180px;
+  }
+}
+
+@media (min-width: 2000px) {
+  /* Further scale up the animated eye on very large screens */
+  .pre-analysis-content .animated-eye {
+    margin: 30px 0;
+    transform: scale(1.6);
+  }
+  
+  .pre-analysis-content .animated-eye img {
+    max-width: 200px;
+  }
+  
+  /* Also scale the small eye in the post-analysis view */
+  .compact-header .animated-eye.small img {
+    max-width: 100px;
   }
 }

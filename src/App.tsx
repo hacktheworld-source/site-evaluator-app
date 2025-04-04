@@ -34,6 +34,11 @@ import { setupDevTools } from './utils/devMock';
 
 console.log('App loaded');
 
+// Initialize dev tools if in development mode
+if (process.env.NODE_ENV === 'development') {
+  setupDevTools();
+}
+
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;

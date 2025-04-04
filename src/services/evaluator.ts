@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getRateLimiter } from '../../backend/src/services/rateLimiter';
+import { getRateLimiter } from '../utils/rateLimiter';
 import { compressImage } from '../utils/imageCompression';
 
 // Remove the OpenAI import and initialization
